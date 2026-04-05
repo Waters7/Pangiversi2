@@ -1,4 +1,4 @@
-  <!-- ═══════════════════════════════
+<!-- ═══════════════════════════════
      SIDEBAR (always fixed)
   ═══════════════════════════════ -->
   <aside id="sidebar" :class="sidebarOpen ? 'open' : ''">
@@ -20,34 +20,95 @@
 
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pt-1 pb-2">Menu Utama</p>
 
-      <a href="{{ route('dashboard') }}" class="nav-item {{request()->routeIs('dashboard') ? 'nav-active text-white' : 'text-slate-400'}} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <a href="{{ route('dashboard') }}"
+         class="nav-item {{ request()->routeIs('dashboard') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
         Dashboard
       </a>
 
-      <a href="{{ route('usulan') }}" class="nav-item {{request()->routeIs('usulan') ? 'nav-active text-white' : 'text-slate-400'}} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-        Usulan
-      </a>
+      {{-- Dropdown Usulan --}}
+      {{-- Dropdown Usulan --}}
+      <div> {{-- hapus x-data dari sini --}}
+
+          <button
+            type="button"
+            @click.stop="usulanOpen = !usulanOpen"
+            class="nav-item w-full {{ request()->routeIs('usulan*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <path d="M9 12h6M9 16h4"/>
+            </svg>
+            Usulan
+            <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+                :class="usulanOpen ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+
+          <div
+            x-show="usulanOpen"
+            x-transition
+            class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+
+            <a href="{{ route('usulan.list') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('usulan.list') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 10h16M4 14h10"/>
+              </svg>
+              Daftar Usulan
+            </a>
+
+            <a href="{{ route('usulan.create') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('usulan.create') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Buat Usulan
+            </a>
+
+          </div>
+      </div>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
         Persetujuan
         <span class="ml-auto text-xs font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">5</span>
       </a>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/>
+          <line x1="9" y1="17" x2="12" y2="17"/>
+        </svg>
         Dokumen
       </a>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="1" y="4" width="22" height="16" rx="2"/>
+          <line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
         Keuangan & LPJ
       </a>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
         Laporan
       </a>
 
@@ -55,12 +116,19 @@
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pb-2">Administrasi</p>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
         Master Data
       </a>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+        </svg>
         Administrasi Sistem
       </a>
     </nav>
