@@ -32,9 +32,7 @@
       </a>
 
       {{-- Dropdown Usulan --}}
-      {{-- Dropdown Usulan --}}
-      <div> {{-- hapus x-data dari sini --}}
-
+      <div x-data="{ usulanOpen: false }">
           <button
             type="button"
             @click.stop="usulanOpen = !usulanOpen"
@@ -148,6 +146,6 @@
   </aside>
 
   <!-- Overlay (mobile only) -->
-  <div class="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
-     :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-     @click="sidebarOpen = false; $event.stopPropagation()"></div>
+    <div class="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
+       :class="sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
+       @click="sidebarOpen = false"></div>
