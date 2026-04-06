@@ -18,7 +18,7 @@
       </div>
 
       <!-- Stat Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
 
         <div class="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 border border-slate-100 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
           <div class="flex items-center justify-between mb-3">
@@ -60,7 +60,26 @@
             <span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Ditolak</span>
           </div>
           <p class="text-2xl md:text-3xl font-bold text-slate-800">3</p>
-          <p class="text-xs text-slate-500 mt-0.5">LPJ Belum Diverifikasi</p>
+          <p class="text-xs text-slate-500 mt-0.5">Usulan ditolak</p>
+        </div>
+
+        <div class="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 border border-slate-100 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+              Selesai
+            </span>
+          </div>
+
+          <p class="text-2xl md:text-3xl font-bold text-slate-800">3</p>
+          <p class="text-xs text-slate-500 mt-0.5">LPJ Selesai</p>
         </div>
       </div>
 

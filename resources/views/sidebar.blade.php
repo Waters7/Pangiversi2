@@ -32,7 +32,7 @@
       </a>
 
       {{-- Dropdown Usulan --}}
-      <div x-data="{ usulanOpen: false }">
+      <div x-data="{ usulanOpen: {{request()->routeIs('usulan*') ? 'true' : 'false' }} }">
           <button
             type="button"
             @click.stop="usulanOpen = !usulanOpen"
@@ -77,7 +77,7 @@
           </div>
       </div>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('persetujuan') }}" class="nav-item {{ request()->routeIs('persetujuan*') ? 'nav-active text-white' : 'text-slate-400' }}  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
