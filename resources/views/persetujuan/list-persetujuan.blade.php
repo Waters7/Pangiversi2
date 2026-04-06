@@ -66,6 +66,7 @@
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Pemohon</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Tujuan</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Periode</th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Status</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Aksi</th>
                     </tr>
                 </thead>
@@ -95,36 +96,22 @@
                         </td>
 
                         <td class="px-4 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                {{-- detail --}}
-                                <a href=" {{ route('persetujuan.detail') }}"
-                                   class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 flex items-center justify-center transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                Menunggu
+                            </span>
+                        </td>
+
+                        <td class="px-4 py-4">
+                            <div class="flex items-center justify-center">
+                                <a href="{{ route('persetujuan.detail') }}"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-700 text-xs font-semibold transition border border-slate-200 hover:border-teal-200">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
+                                    Lihat
                                 </a>
-
-                                {{-- approve --}}
-                                <button
-                                    class="w-8 h-8 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-700 flex items-center justify-center transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
-                                         viewBox="0 0 24 24">
-                                        <path d="M9 12l2 2 4-4"/>
-                                        <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </button>
-
-                                {{-- reject --}}
-                                <button
-                                    class="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
-                                         viewBox="0 0 24 24">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                </button>
-
                             </div>
                         </td>
                     </tr>

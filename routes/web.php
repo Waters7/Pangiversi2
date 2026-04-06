@@ -17,3 +17,19 @@ Route::get('/persetujuan', function () {
 Route::get('/persetujuan/usl-2025-001', function () {
     return view('persetujuan.detail-usulan');
 })->name('persetujuan.detail');
+
+Route::get('/dokumen', function () {
+    return view('dokumen.dokumen');
+})->name('dokumen');
+
+Route::get('/keuangan', function () {
+    return view('keuangan');
+})->name('keuangan');
+
+Route::get('/register', function () {
+    return view('register');
+})->name('register');
+
+Route::get('/login', function () {
+    return view('login');
+})->name('login');

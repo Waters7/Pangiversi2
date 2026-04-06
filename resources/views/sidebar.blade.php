@@ -85,7 +85,7 @@
         <span class="ml-auto text-xs font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">5</span>
       </a>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('dokumen') }}" class="nav-item {{ request()->routeIs('dokumen*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -95,12 +95,12 @@
         Dokumen
       </a>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('keuangan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('keuangan') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="1" y="4" width="22" height="16" rx="2"/>
           <line x1="1" y1="10" x2="23" y2="10"/>
         </svg>
-        Keuangan & LPJ
+        Keuangan
       </a>
 
       <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
