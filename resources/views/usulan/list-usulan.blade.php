@@ -10,7 +10,7 @@
             <h1 class="text-xl font-bold text-slate-800">Usulan Perjalanan Dinas</h1>
             <p class="text-xs text-slate-400 mt-0.5">Kelola dan pantau seluruh usulan perjalanan dinas Anda</p>
         </div>
-        <a href="#"
+        <a href="{{ route('usulan.create') }}"
            class="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200 whitespace-nowrap">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>

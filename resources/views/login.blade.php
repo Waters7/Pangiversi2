@@ -42,12 +42,12 @@
             <form action="#" method="POST" class="space-y-4">
                 @csrf
 
-                {{-- Email --}}
+                {{-- NIP --}}
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">
-                        Email <span class="text-red-500">*</span>
+                        NIP <span class="text-red-500">*</span>
                     </label>
-                    <input type="email" name="email" placeholder="nama@mail.com"
+                    <input type="NIP" name="NIP" placeholder="11223387456"
                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
                 </div>
 

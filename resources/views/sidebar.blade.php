@@ -103,7 +103,7 @@
         Keuangan
       </a>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('laporan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('laporan') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
         </svg>
@@ -113,7 +113,7 @@
       <div class="border-t border-white/10 my-3"></div>
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pb-2">Administrasi</p>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('master') }}" class="{{ request()->routeIs('master') ? 'nav-active text-white' : 'text-slate-400' }} nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <ellipse cx="12" cy="5" rx="9" ry="3"/>
           <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
@@ -122,7 +122,7 @@
         Master Data
       </a>
 
-      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 transition-all">
+      <a href="{{ route('administrasi') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('administrasi') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>

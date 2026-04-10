@@ -281,17 +281,17 @@
 
                     <div class="p-6 space-y-5">
 
-                        {{-- Surat Undangan / Disposisi (wajib) --}}
+                        {{-- Surat Tugas --}}
                         <div>
                             <label for="lampiran_undangan" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Surat Undangan / Disposisi <span class="text-red-500">*</span>
+                                Surat Tugas <span class="text-red-500">*</span>
                             </label>
-                            <input type="file" name="lampiran_undangan" id="lampiran_undangan"
+                            <input type="file" name="surat_tugas" id="lampiran_undangan"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition @error('lampiran_undangan') border-red-500 @else border-slate-200 @enderror"
                                    required>
                             <p class="text-xs text-slate-400 mt-1">Format: PDF, JPG, PNG — maks. 5 MB</p>
-                            @error('lampiran_undangan')
+                            @error('surat_tugas')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>

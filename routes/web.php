@@ -26,6 +26,18 @@ Route::get('/keuangan', function () {
     return view('keuangan');
 })->name('keuangan');
 
+Route::get('/laporan', function () {
+    return view('laporan');
+})->name('laporan');
+
+Route::get('/master', function () {
+    return view('master-data');
+})->name('master');
+
+Route::get('/administrasi', function () {
+    return view('administrasi-sistem');
+})->name('administrasi');
+
 Route::get('/register', function () {
     return view('register');
 })->name('register');
