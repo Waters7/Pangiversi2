@@ -6,21 +6,27 @@
 
     {{-- Page Header --}}
     <div class="mb-6 flex items-center gap-3">
-        <a href="{{ route('dashboard') }}"
+        <a href="{{ route('usulan.show', $usulan) }}"
            class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition shadow-sm">
             <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6"/>
             </svg>
         </a>
         <div>
-            <h1 class="text-xl font-bold text-slate-800">Buat Usulan Perjalanan Dinas</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Lengkapi semua data sebelum mengajukan ke atasan</p>
+            <h1 class="text-xl font-bold text-slate-800">Edit Usulan</h1>
+            <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }}</p>
+        </div>
+        <div class="ml-auto">
+            <span class="inline-block text-xs font-bold px-3 py-1.5 rounded-full {{ $usulan->status_badge }}">
+                {{ $usulan->status_text }}
+            </span>
         </div>
     </div>
 
     {{-- Main Form --}}
-    <form action="{{ route('usulan.store') }}" method="POST" enctype="multipart/form-data" id="formUsulan">
+    <form action="{{ route('usulan.update', $usulan) }}" method="POST" enctype="multipart/form-data" id="formUsulan">
         @csrf
+        @method('PUT')
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-5">
@@ -51,7 +57,8 @@
                                     required>
                                 <option value="">-- Pilih Jenis Kegiatan --</option>
                                 @foreach($kegiatan as $k)
-                                    <option value="{{ $k->id }}" {{ old('id_kegiatan') == $k->id ? 'selected' : '' }}>
+                                    <option value="{{ $k->id }}"
+                                        {{ old('id_kegiatan', $usulan->id_kegiatan) == $k->id ? 'selected' : '' }}>
                                         {{ $k->nama }}
                                     </option>
                                 @endforeach
@@ -72,7 +79,7 @@
                             <input type="text" name="no_tugas" id="no_tugas"
                                    class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
                                    placeholder="cth: Undangan Rapat No. 123/..., SK Direktur No. ..."
-                                   value="{{ old('no_tugas') }}" required>
+                                   value="{{ old('no_tugas', $usulan->no_tugas) }}" required>
                             <p class="text-xs text-slate-400 mt-1">Nomor surat undangan, SK, atau surat tugas dasar</p>
                             @error('no_tugas')
                                 <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -91,7 +98,7 @@
                                 <input type="text" name="lokasi" id="lokasi"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('lokasi') ? 'border-red-500' : 'border-slate-200' }}"
                                        placeholder="cth: Jakarta, Surabaya, Bandung..."
-                                       value="{{ old('lokasi') }}" required>
+                                       value="{{ old('lokasi', $usulan->lokasi) }}" required>
                                 @error('lokasi')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
@@ -104,7 +111,7 @@
                                 <input type="text" name="instansi" id="instansi"
                                        class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
                                        placeholder="cth: Kemenkes RI, Hotel Grand..."
-                                       value="{{ old('instansi') }}">
+                                       value="{{ old('instansi', $usulan->instansi) }}">
                             </div>
                         </div>
 
@@ -116,7 +123,7 @@
                                 </label>
                                 <input type="date" name="tanggal_mulai" id="tanggal_mulai"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('tanggal_mulai') ? 'border-red-500' : 'border-slate-200' }}"
-                                       value="{{ old('tanggal_mulai') }}" required>
+                                       value="{{ old('tanggal_mulai', $usulan->tanggal_mulai) }}" required>
                                 @error('tanggal_mulai')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
@@ -128,22 +135,21 @@
                                 </label>
                                 <input type="date" name="tanggal_selesai" id="tanggal_selesai"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('tanggal_selesai') ? 'border-red-500' : 'border-slate-200' }}"
-                                       value="{{ old('tanggal_selesai') }}" required>
+                                       value="{{ old('tanggal_selesai', $usulan->tanggal_selesai) }}" required>
                                 @error('tanggal_selesai')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
 
-                        {{-- Keterangan --}}
+                        {{-- Uraian --}}
                         <div>
                             <label for="uraian" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Uraian Tujuan Perjalanan <span class="text-red-500">*</span>
+                                Uraian Tujuan Perjalanan
                             </label>
                             <textarea name="uraian" id="uraian" rows="3"
                                       class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition resize-none border {{ $errors->has('uraian') ? 'border-red-500' : 'border-slate-200' }}"
-                                      placeholder="Jelaskan secara singkat maksud dan tujuan perjalanan dinas ini..."
-                                      >{{ old('uraian') }}</textarea>
+                                      placeholder="Jelaskan secara singkat maksud dan tujuan perjalanan dinas ini...">{{ old('uraian', $usulan->uraian) }}</textarea>
                             @error('uraian')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
@@ -162,7 +168,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">Lampiran Dokumen</h3>
-                            <p class="text-xs text-slate-400">Upload dokumen pendukung perjalanan dinas</p>
+                            <p class="text-xs text-slate-400">Kosongkan jika tidak ingin mengganti file</p>
                         </div>
                     </div>
 
@@ -170,15 +176,15 @@
 
                         {{-- Surat Tugas --}}
                         <div>
-                            <label for="lampiran_undangan" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Surat Tugas <span class="text-red-500">*</span>
+                            <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                Surat Tugas
+                                <span class="text-xs font-normal text-slate-400 ml-1">(kosongkan jika tidak diganti)</span>
                             </label>
-                            <input type="file" name="surat_tugas" id="lampiran_undangan"
+                            <input type="file" name="surat_tugas" id="surat_tugas"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    data-max-mb="5"
                                    data-allowed="pdf,jpg,jpeg,png"
-                                   class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}"
-                                   required>
+                                   class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}">
                             <p class="text-xs text-slate-400 mt-1">Format: PDF, JPG, PNG — maks. 5 MB</p>
                             <p class="file-error hidden text-red-500 text-xs mt-1"></p>
                             @error('surat_tugas')
@@ -186,7 +192,7 @@
                             @enderror
                         </div>
 
-                        {{-- Rundown Kegiatan (opsional) --}}
+                        {{-- Rundown Kegiatan --}}
                         <div>
                             <label for="lampiran_tor" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Rundown Kegiatan
@@ -204,7 +210,7 @@
                             @enderror
                         </div>
 
-                        {{-- Dokumen lain (opsional) --}}
+                        {{-- Dokumen lain --}}
                         <div>
                             <label for="lampiran_lain" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Dokumen Lainnya
@@ -224,14 +230,13 @@
                             @enderror
                         </div>
 
-                        {{-- Info --}}
                         <div class="flex items-start gap-3 p-3.5 bg-blue-50 rounded-xl border border-blue-100">
                             <svg class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                             </svg>
                             <p class="text-xs text-blue-700">
-                                Surat tugas <strong>wajib</strong> dilampirkan sesuai dengan
-                                tipe file yang diizinkan: PDF, JPG, PNG, DOC, DOCX. Maksimal ukuran per file: 5 MB.
+                                Kosongkan kolom file jika tidak ingin mengganti lampiran yang sudah ada sebelumnya.
+                                Maksimal ukuran per file: <strong>5 MB</strong>.
                             </p>
                         </div>
 
@@ -244,7 +249,6 @@
             <div class="xl:col-span-1">
                 <div class="sticky top-20 space-y-4">
 
-                    {{-- Action Buttons --}}
                     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
                         <h3 class="font-bold text-slate-800 text-sm mb-1">Tindakan</h3>
 
@@ -253,7 +257,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                             </svg>
-                            Kirim ke Atasan
+                            Simpan & Ajukan
                         </button>
 
                         <button type="submit" name="action" value="draft"
@@ -264,13 +268,21 @@
                             Simpan Draft
                         </button>
 
-                        <a href="{{ route('dashboard') }}"
+                        <a href="{{ route('usulan.show', $usulan) }}"
                            class="w-full flex items-center justify-center gap-2 px-5 py-3 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                             Batal
                         </a>
+                    </div>
+
+                    {{-- Info No. Usulan --}}
+                    <div class="bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                        <p class="text-xs text-slate-400 mb-1">No. Usulan</p>
+                        <p class="text-sm font-bold text-slate-700">{{ $usulan->no_usulan }}</p>
+                        <p class="text-xs text-slate-400 mt-2 mb-1">Dibuat pada</p>
+                        <p class="text-xs font-semibold text-slate-600">{{ $usulan->created_at->format('d M Y, H:i') }}</p>
                     </div>
 
                     {{-- Validation Summary --}}
@@ -301,25 +313,17 @@
 @push('scripts')
 <script>
 (function () {
-    const MAX_MB = 5;
-    const MAX_BYTES = MAX_MB * 1024 * 1024;
+    const MAX_BYTES = 5 * 1024 * 1024;
 
-    /**
-     * Validate a single file input element.
-     * Returns true if valid, false if not.
-     */
     function validateInput(input) {
         const errorEl = input.parentElement.querySelector('.file-error');
         const allowed = (input.dataset.allowed || '').split(',').map(e => e.trim().toLowerCase());
         const maxFiles = parseInt(input.dataset.maxFiles || '1', 10);
         const files = Array.from(input.files);
 
-        // Clear previous error
         showError(input, errorEl, null);
-
         if (files.length === 0) return true;
 
-        // Max file count (multiple)
         if (files.length > maxFiles) {
             showError(input, errorEl, `Maksimal ${maxFiles} file yang dapat dipilih.`);
             input.value = '';
@@ -328,23 +332,18 @@
 
         for (const file of files) {
             const ext = file.name.split('.').pop().toLowerCase();
-
-            // Extension check
             if (allowed.length && !allowed.includes(ext)) {
                 showError(input, errorEl, `Format file tidak diizinkan: .${ext}. Gunakan: ${allowed.join(', ')}.`);
                 input.value = '';
                 return false;
             }
-
-            // Size check
             if (file.size > MAX_BYTES) {
                 const mb = (file.size / 1024 / 1024).toFixed(1);
-                showError(input, errorEl, `File "${file.name}" terlalu besar (${mb} MB). Maksimal ${MAX_MB} MB.`);
+                showError(input, errorEl, `File "${file.name}" terlalu besar (${mb} MB). Maksimal 5 MB.`);
                 input.value = '';
                 return false;
             }
         }
-
         return true;
     }
 
@@ -363,12 +362,10 @@
         }
     }
 
-    // Attach change listener to all file inputs
     document.querySelectorAll('input[type="file"][data-max-mb]').forEach(input => {
         input.addEventListener('change', () => validateInput(input));
     });
 
-    // Block form submission if any file input has an error
     document.getElementById('formUsulan').addEventListener('submit', function (e) {
         let hasError = false;
         document.querySelectorAll('input[type="file"][data-max-mb]').forEach(input => {

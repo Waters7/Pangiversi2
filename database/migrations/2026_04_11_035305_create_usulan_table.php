@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('no_usulan')->nullable(false);
             $table->string('no_tugas')->nullable(false);
-            $table->enum('status',['menunggu','disetujui','ditolak', 'selesai',])->default('pending');
+            $table->enum('status', ['draft', 'diajukan', 'menunggu', 'disetujui', 'ditolak', 'selesai'])->default('draft');
             $table->string('lokasi')->nullable(false);
             $table->string('instansi')->nullable(false);
             $table->string('tanggal_mulai')->nullable(false);
@@ -26,7 +26,6 @@ return new class extends Migration
             $table->timestamps();
         });
     }
-
 
     /**
      * Reverse the migrations.

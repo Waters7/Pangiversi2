@@ -8,11 +8,13 @@ Route::get('/', function () {
 })->name('dashboard');
 
 // Usulan Routes
-Route::get('/usulan', [UsulanController::class,'create'])->name('usulan.create');
+Route::get('/usulan', [UsulanController::class, 'create'])->name('usulan.create');
+Route::post('/usulan', [UsulanController::class, 'store'])->name('usulan.store');
 Route::get('/list-usulan', [UsulanController::class, 'index'])->name('usulan.list');
-
-
-
+Route::get('/usulan/{usulan}', [UsulanController::class, 'show'])->name('usulan.show');
+Route::get('/usulan/{usulan}/edit', [UsulanController::class, 'edit'])->name('usulan.edit');
+Route::put('/usulan/{usulan}', [UsulanController::class, 'update'])->name('usulan.update');
+Route::delete('/usulan/{usulan}', [UsulanController::class, 'destroy'])->name('usulan.destroy');
 
 Route::get('/persetujuan', function () {
     return view('persetujuan.list-persetujuan');

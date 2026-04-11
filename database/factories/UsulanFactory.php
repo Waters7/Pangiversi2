@@ -22,7 +22,7 @@ class UsulanFactory extends Factory
         return [
             'no_usulan' => $this->faker->unique()->numerify('USL-2025-###'),
             'no_tugas' => $this->faker->unique()->numerify('TGS-2025-###'),
-            'status' => $this->faker->randomElement(['menunggu','disetujui','ditolak', 'selesai',]),
+            'status' => $this->faker->randomElement(['draft', 'diajukan', 'menunggu', 'disetujui', 'ditolak', 'selesai']),
             'lokasi' => $this->faker->city(),
             'instansi' => $this->faker->company(),
             'tanggal_mulai' => $this->faker->date(),
