@@ -1,16 +1,19 @@
 <?php
 
+use App\Http\Controllers\UsulanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('dashboard');
 })->name('dashboard');
-Route::get('/usulan', function () {
-    return view('usulan.add-usulan');
-})->name('usulan.create');
-Route::get('/list-usulan', function () {
-    return view('usulan.list-usulan');
-})->name('usulan.list');
+
+// Usulan Routes
+Route::get('/usulan', [UsulanController::class,'create'])->name('usulan.create');
+Route::get('/list-usulan', [UsulanController::class, 'index'])->name('usulan.list');
+
+
+
+
 Route::get('/persetujuan', function () {
     return view('persetujuan.list-persetujuan');
 })->name('persetujuan');
@@ -23,7 +26,7 @@ Route::get('/dokumen', function () {
 })->name('dokumen');
 
 Route::get('/keuangan', function () {
-    return view('keuangan');
+    return view('keuangan.keuangan');
 })->name('keuangan');
 
 Route::get('/laporan', function () {
