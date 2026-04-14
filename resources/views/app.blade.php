@@ -70,17 +70,17 @@
         </button>
         <div>
           <h1 class="text-base font-bold text-slate-800">Dashboard</h1>
-          <p class="text-xs text-slate-400">Sabtu, 04 April 2026</p>
+          <p class="text-xs text-slate-400">{{ now()->translatedFormat('l, d F Y') }}</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
         
         <div class="hidden sm:flex items-center gap-2.5">
-          <img src="https://ui-avatars.com/api/?name=Admin+PANGI&background=14b8a6&color=fff"
+          <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->nama) }}&background=14b8a6&color=fff"
              class="w-8 h-8 rounded-full" alt="avatar"/>
           <div class="leading-tight">
-            <p class="text-sm font-semibold text-slate-700">John Doe</p>
-            <p class="text-xs text-slate-400">Administrator</p>
+            <p class="text-sm font-semibold text-slate-700">{{ auth()->user()->nama }}</p>
+            <p class="text-xs text-slate-400">{{ auth()->user()->role_label }}</p>
           </div>
         </div>
       </div>

@@ -188,11 +188,11 @@
 
                         {{-- Rundown Kegiatan (opsional) --}}
                         <div>
-                            <label for="lampiran_tor" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                            <label for="rundown_doc" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Rundown Kegiatan
                                 <span class="text-xs font-normal text-slate-400 ml-1">(opsional)</span>
                             </label>
-                            <input type="file" name="lampiran_tor" id="lampiran_tor"
+                            <input type="file" name="rundown" id="rundown_doc"
                                    accept=".pdf,.doc,.docx"
                                    data-max-mb="5"
                                    data-allowed="pdf,doc,docx"
@@ -207,19 +207,17 @@
                         {{-- Dokumen lain (opsional) --}}
                         <div>
                             <label for="lampiran_lain" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Dokumen Lainnya
-                                <span class="text-xs font-normal text-slate-400 ml-1">(opsional, maks. 3 file)</span>
+                                Dokumen pendukung lainnya
+                                <span class="text-xs font-normal text-slate-400 ml-1">(opsional)</span>
                             </label>
-                            <input type="file" name="lampiran_lain[]" id="lampiran_lain"
+                            <input type="file" name="dokumen_pendukung" id="dokumen_pendukung"
                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                    data-max-mb="5"
                                    data-allowed="pdf,jpg,jpeg,png,doc,docx"
-                                   data-max-files="3"
-                                   multiple
                                    class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                             <p class="text-xs text-slate-400 mt-1">Format: PDF, DOC, JPG, PNG — maks. 5 MB per file</p>
                             <p class="file-error hidden text-red-500 text-xs mt-1"></p>
-                            @error('lampiran_lain')
+                            @error('dokumen_pendukung')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>

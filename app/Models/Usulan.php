@@ -11,6 +11,11 @@ class Usulan extends Model
 
     protected $table = 'usulan';
 
+    public function getRouteKeyName(): string
+    {
+        return 'no_usulan';
+    }
+
     protected $fillable = [
         'no_usulan',
         'no_tugas',
@@ -20,6 +25,7 @@ class Usulan extends Model
         'tanggal_mulai',
         'tanggal_selesai',
         'uraian',
+        'catatan',
         'id_user',
         'id_kegiatan',
     ];
@@ -32,6 +38,16 @@ class Usulan extends Model
     public function kegiatan()
     {
         return $this->belongsTo(Kegiatan::class, 'id_kegiatan');
+    }
+
+    public function dokumen()
+    {
+        return $this->hasMany(Dokumen::class, 'id_usulan');
+    }
+
+    public function keuangan()
+    {
+        return $this->hasOne(Keuangan::class, 'id_usulan');
     }
 
     public function getStatusBadgeAttribute()
@@ -63,6 +79,16 @@ class Usulan extends Model
     public function getPeriodeAttribute()
     {
         return date('d M Y', strtotime($this->tanggal_mulai)).' — '.date('d M Y', strtotime($this->tanggal_selesai));
+    }
+
+    public function getTanggalMulaiFormattedAttribute()
+    {
+        return date('d M Y', strtotime($this->tanggal_mulai));
+    }
+
+    public function getTanggalSelesaiFormattedAttribute()
+    {
+        return date('d M Y', strtotime($this->tanggal_selesai));
     }
 
     public function getDurasiAttribute()

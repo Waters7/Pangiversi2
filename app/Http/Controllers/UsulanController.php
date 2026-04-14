@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dokumen;
 use App\Models\Kegiatan;
 use App\Models\Usulan;
 use Illuminate\Http\Request;
@@ -56,20 +57,31 @@ class UsulanController extends Controller
 
     public function show(Usulan $usulan)
     {
-        $usulan->load('user', 'kegiatan');
+        $usulan->load('user', 'kegiatan', 'dokumen', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
 
         return view('usulan.detail-usulan', compact('usulan'));
     }
 
     public function edit(Usulan $usulan)
     {
+        if ($usulan->status !== 'draft') {
+            return redirect()->route('usulan.show', $usulan)
+                ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft.');
+        }
+
         $kegiatan = Kegiatan::orderBy('nama')->get();
+        $usulan->load('dokumen');
 
         return view('usulan.edit-usulan', compact('usulan', 'kegiatan'));
     }
 
     public function update(Request $request, Usulan $usulan)
     {
+        if ($usulan->status !== 'draft') {
+            return redirect()->route('usulan.show', $usulan)
+                ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft.');
+        }
+
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
@@ -113,9 +125,8 @@ class UsulanController extends Controller
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'uraian' => ['nullable', 'string'],
             'surat_tugas' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'lampiran_tor' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
-            'lampiran_lain' => ['nullable', 'array', 'max:3'],
-            'lampiran_lain.*' => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
+            'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ]);
 
         $year = now()->year;
@@ -124,7 +135,7 @@ class UsulanController extends Controller
 
         $isDraft = $request->input('action') === 'draft';
 
-        Usulan::create([
+        $usulan = Usulan::create([
             'no_usulan' => $noUsulan,
             'no_tugas' => $request->no_tugas,
             'status' => $isDraft ? 'draft' : 'diajukan',
@@ -137,6 +148,17 @@ class UsulanController extends Controller
             'id_user' => Auth::id(),
         ]);
 
+        Dokumen::create([
+            'id_usulan' => $usulan->id,
+            'surat_tugas_path' => $request->file('surat_tugas')->store('dokumen', 'public'),
+            'rundown_path' => $request->hasFile('rundown')
+                                            ? $request->file('rundown')->store('dokumen', 'public')
+                                            : null,
+            'dokumen_pendukung_path' => $request->hasFile('dokumen_pendukung')
+                                            ? $request->file('dokumen_pendukung')->store('dokumen', 'public')
+                                            : null,
+        ]);
+
         $message = $isDraft ? 'Draft usulan berhasil disimpan.' : 'Usulan berhasil diajukan.';
 
         return redirect()->route('usulan.list')->with('success', $message);
@@ -144,7 +166,7 @@ class UsulanController extends Controller
 
     public function destroy(Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'diajukan'])) {
+        if (! in_array($usulan->status, ['draft'])) {
             return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft atau diajukan.');
         }
 

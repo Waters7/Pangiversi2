@@ -28,6 +28,7 @@ class UserFactory extends Factory
             'nama' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'nip' => fake()->unique()->numerify('NIP-##########'),
+            'role' => 'pegawai',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -41,6 +42,26 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Set the user role to administrator.
+     */
+    public function administrator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'administrator',
+        ]);
+    }
+
+    /**
+     * Set the user role to PPK.
+     */
+    public function ppk(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'ppk',
         ]);
     }
 }

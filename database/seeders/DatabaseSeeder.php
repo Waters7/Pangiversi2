@@ -2,10 +2,6 @@
 
 namespace Database\Seeders;
 
-
-use Database\Seeders\KegiatanSeeder;
-use Database\Seeders\UserSeeder;
-use Database\Seeders\UsulanSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -22,6 +18,10 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             KegiatanSeeder::class,
             UsulanSeeder::class,
+            DokumenSeeder::class,
+            KeuanganSeeder::class,
+            RincianBiayaSeeder::class,
+            DokumenKeuanganSeeder::class,
         ]);
     }
 }

@@ -13,38 +13,49 @@
             </svg>
         </a>
         <div>
-            <h1 class="text-xl font-bold text-slate-800">Keuangan & LPJ</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Rincian biaya, pembayaran, verifikasi bukti, dan daftar nominatif</p>
+            <h1 class="text-xl font-bold text-slate-800">Persetujuan</h1>
+            <p class="text-xs text-slate-400 mt-0.5">Daftar usulan yang membutuhkan persetujuan Anda</p>
         </div>
     </div>
 
-    {{-- ── List Pejadin ── --}}
-    <form method="GET" action="{{ route('keuangan') }}">
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
-            <div class="flex flex-col sm:flex-row gap-3">
+    {{-- Filter --}}
+    <form method="GET" action="{{ route('persetujuan') }}">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
+        <div class="flex flex-col sm:flex-row gap-3">
 
-                <div class="relative flex-1">
-                    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                    </svg>
-                    <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Cari no. usulan, kegiatan, lokasi, instansi..."
-                            class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                </div>
-                <button type="submit"
-                        class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">
-                    Filter
-                </button>
-
-                @if(request('search') || request('status'))
-                    <a href="{{ route('persetujuan') }}"
-                        class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
-                        Reset
-                    </a>
-                @endif
-
+            <div class="relative flex-1">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" name="search" value="{{ request('search') }}"
+                       placeholder="Cari no. usulan, kegiatan, lokasi, instansi..."
+                       class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
             </div>
+
+            <select name="status" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition min-w-[160px]">
+                <option value="">Semua Status</option>
+                <option value="draft" @selected(request('status') === 'draft')>Draft</option>
+                <option value="diajukan" @selected(request('status') === 'diajukan')>Diajukan</option>
+                <option value="menunggu" @selected(request('status') === 'menunggu')>Menunggu</option>
+                <option value="disetujui" @selected(request('status') === 'disetujui')>Disetujui</option>
+                <option value="ditolak" @selected(request('status') === 'ditolak')>Ditolak</option>
+                <option value="selesai" @selected(request('status') === 'selesai')>Selesai</option>
+            </select>
+
+            <button type="submit"
+                    class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">
+                Filter
+            </button>
+
+            @if(request('search') || request('status'))
+                <a href="{{ route('persetujuan') }}"
+                   class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
+                    Reset
+                </a>
+            @endif
+
         </div>
+    </div>
     </form>
 
     {{-- Table --}}
@@ -77,7 +88,7 @@
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-6 py-4">
                                 <p class="font-bold text-slate-800 text-xs">{{ $item->no_usulan }}</p>
-                                <p class="text-xs text-slate-400">{{ $item->created_at->format('d M Y') }}</p>
+                                <p class="text-xs text-slate-400">12 Jan 2025</p>
                             </td>
 
                             <td class="px-4 py-4">
@@ -99,11 +110,14 @@
                             <td class="px-4 py-4">
                                 <div class="flex items-center justify-center">
                                     @php
-                                        $statusConfig = match($item->keuangan?->status) {
-                                            'bayar sebagian'  => ['label' => 'Bayar Sebagian',  'class' => 'bg-blue-50 text-blue-600'],
-                                            'belum bayar'  => ['label' => 'Belum Bayar',  'class' => 'bg-yellow-50 text-yellow-600'],
-                                            'lunas' => ['label' => 'Lunas', 'class' => 'bg-teal-50 text-teal-600'],
-                                            default     => ['label' => 'Belum Ada',  'class' => 'bg-slate-100 text-slate-600'],
+                                        $statusConfig = match($item->status) {
+                                            'draft'     => ['label' => 'Draft',     'class' => 'bg-slate-100 text-slate-600'],
+                                            'diajukan'  => ['label' => 'Diajukan',  'class' => 'bg-blue-50 text-blue-600'],
+                                            'menunggu'  => ['label' => 'Menunggu',  'class' => 'bg-yellow-50 text-yellow-600'],
+                                            'disetujui' => ['label' => 'Disetujui', 'class' => 'bg-teal-50 text-teal-600'],
+                                            'ditolak'   => ['label' => 'Ditolak',   'class' => 'bg-red-50 text-red-600'],
+                                            'selesai'   => ['label' => 'Selesai',   'class' => 'bg-green-50 text-green-600'],
+                                            default     => ['label' => ucfirst($item->status), 'class' => 'bg-slate-100 text-slate-600'],
                                         };
                                     @endphp
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $statusConfig['class'] }}">
@@ -114,13 +128,13 @@
 
                             <td class="px-4 py-4">
                                 <div class="flex items-center justify-center">
-                                    <a href="{{ route('keuangan.detail', $item->no_usulan) }}"
+                                    <a href="{{ route('persetujuan.detail', $item->no_usulan) }}"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-700 text-xs font-semibold transition border border-slate-200 hover:border-teal-200">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
-                                        Detail
+                                        Lihat
                                     </a>
                                 </div>
                             </td>
@@ -129,6 +143,7 @@
                 </tbody>
             </table>
         </div>
+
     </div>
 
 </div>

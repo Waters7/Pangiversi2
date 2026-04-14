@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('usulan', function (Blueprint $table) {
             $table->id();
-            $table->string('no_usulan')->nullable(false);
+            $table->string('no_usulan')->unique()->nullable(false);
             $table->string('no_tugas')->nullable(false);
             $table->enum('status', ['draft', 'diajukan', 'menunggu', 'disetujui', 'ditolak', 'selesai'])->default('draft');
             $table->string('lokasi')->nullable(false);
@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('tanggal_mulai')->nullable(false);
             $table->string('tanggal_selesai')->nullable(false);
             $table->longText('uraian')->nullable(true);
+            $table->longText('catatan')->nullable(true);
             $table->foreignId('id_user')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('id_kegiatan')->nullable()->constrained('kegiatan')->nullOnDelete();
             $table->timestamps();

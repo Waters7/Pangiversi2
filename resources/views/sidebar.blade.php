@@ -77,13 +77,26 @@
           </div>
       </div>
 
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSftgSW_UI-x2QaRFR3HzojEWkpK1bwWnU3Z3JR3_ELiyla0aQ/viewform"
+        class="nav-item {{ request()->routeIs('spd.create') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+         <polyline points="14 2 14 8 20 8"/>
+         <line x1="12" y1="13" x2="12" y2="19"/>
+         <line x1="9" y1="16" x2="15" y2="16"/>
+        </svg>
+        Buat SPD
+      </a>
+
+      @if (auth()->user()->role !== 'pegawai')
       <a href="{{ route('persetujuan') }}" class="nav-item {{ request()->routeIs('persetujuan*') ? 'nav-active text-white' : 'text-slate-400' }}  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         Persetujuan
-        <span class="ml-auto text-xs font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">5</span>
+        
       </a>
+      @endif
 
       <a href="{{ route('dokumen') }}" class="nav-item {{ request()->routeIs('dokumen*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -95,7 +108,8 @@
         Dokumen
       </a>
 
-      <a href="{{ route('keuangan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('keuangan') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
+      @if (auth()->user()->role !== 'pegawai')
+      <a href="{{ route('keuangan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('keuangan*') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="1" y="4" width="22" height="16" rx="2"/>
           <line x1="1" y1="10" x2="23" y2="10"/>
@@ -109,7 +123,9 @@
         </svg>
         Laporan
       </a>
+      @endif
 
+      @if (auth()->user()->role !== 'pegawai')
       <div class="border-t border-white/10 my-3"></div>
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pb-2">Administrasi</p>
 
@@ -121,7 +137,9 @@
         </svg>
         Master Data
       </a>
+      @endif
 
+      @if (auth()->user()->isAdmin())
       <a href="{{ route('administrasi') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('administrasi') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
@@ -129,18 +147,24 @@
         </svg>
         Administrasi Sistem
       </a>
+      @endif
     </nav>
 
     <!-- User -->
     <div class="px-3 py-4 border-t border-white/10">
       <div class="flex items-center gap-3 rounded-xl px-3 py-2.5" style="background:rgba(255,255,255,.05)">
-        <img src="https://ui-avatars.com/api/?name=Admin+PANGI&background=14b8a6&color=fff&size=64"
+        <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->nama) }}&background=14b8a6&color=fff&size=64"
            class="w-8 h-8 rounded-full shrink-0" alt="avatar"/>
         <div class="flex-1 min-w-0">
-          <p class="text-white text-xs font-semibold truncate">Admin PANGI</p>
-          <p class="text-slate-500 text-xs truncate">admin@poltekkes.ac.id</p>
+          <p class="text-white text-xs font-semibold truncate">{{ auth()->user()->nama }}</p>
+          <p class="text-slate-500 text-xs truncate">{{ auth()->user()->role_label }}</p>
         </div>
-        <div class="w-2 h-2 bg-teal-400 rounded-full shrink-0"></div>
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" class="text-slate-500 hover:text-red-400 transition" title="Logout">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </form>
       </div>
     </div>
   </aside>

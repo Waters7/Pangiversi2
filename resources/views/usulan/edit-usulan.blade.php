@@ -174,12 +174,25 @@
 
                     <div class="p-6 space-y-5">
 
+                        @php $dokumen = $usulan->dokumen->first(); @endphp
+
                         {{-- Surat Tugas --}}
                         <div>
                             <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Surat Tugas
                                 <span class="text-xs font-normal text-slate-400 ml-1">(kosongkan jika tidak diganti)</span>
                             </label>
+                            @if($dokumen?->surat_tugas_path)
+                                <div class="flex items-center justify-between px-3 py-2 mb-2 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <div class="flex items-center gap-2 text-xs text-slate-600">
+                                        <svg class="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span class="font-semibold text-slate-700">File saat ini:</span>
+                                        <span class="text-slate-500 truncate max-w-[160px]">{{ basename($dokumen->surat_tugas_path) }}</span>
+                                    </div>
+                                    <a href="{{ asset('storage/' . $dokumen->surat_tugas_path) }}" target="_blank"
+                                       class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
+                                </div>
+                            @endif
                             <input type="file" name="surat_tugas" id="surat_tugas"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    data-max-mb="5"
@@ -198,6 +211,17 @@
                                 Rundown Kegiatan
                                 <span class="text-xs font-normal text-slate-400 ml-1">(opsional)</span>
                             </label>
+                            @if($dokumen?->rundown_path)
+                                <div class="flex items-center justify-between px-3 py-2 mb-2 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <div class="flex items-center gap-2 text-xs text-slate-600">
+                                        <svg class="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span class="font-semibold text-slate-700">File saat ini:</span>
+                                        <span class="text-slate-500 truncate max-w-[160px]">{{ basename($dokumen->rundown_path) }}</span>
+                                    </div>
+                                    <a href="{{ asset('storage/' . $dokumen->rundown_path) }}" target="_blank"
+                                       class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
+                                </div>
+                            @endif
                             <input type="file" name="lampiran_tor" id="lampiran_tor"
                                    accept=".pdf,.doc,.docx"
                                    data-max-mb="5"
@@ -214,16 +238,25 @@
                         <div>
                             <label for="lampiran_lain" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Dokumen Lainnya
-                                <span class="text-xs font-normal text-slate-400 ml-1">(opsional, maks. 3 file)</span>
+                                <span class="text-xs font-normal text-slate-400 ml-1">(opsional)</span>
                             </label>
-                            <input type="file" name="lampiran_lain[]" id="lampiran_lain"
+                            @if($dokumen?->dokumen_pendukung_path)
+                                <div class="flex items-center justify-between px-3 py-2 mb-2 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <div class="flex items-center gap-2 text-xs text-slate-600">
+                                        <svg class="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span class="font-semibold text-slate-700">File saat ini:</span>
+                                        <span class="text-slate-500 truncate max-w-[160px]">{{ basename($dokumen->dokumen_pendukung_path) }}</span>
+                                    </div>
+                                    <a href="{{ asset('storage/' . $dokumen->dokumen_pendukung_path) }}" target="_blank"
+                                       class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
+                                </div>
+                            @endif
+                            <input type="file" name="dokumen_pendukung" id="lampiran_lain"
                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                    data-max-mb="5"
                                    data-allowed="pdf,jpg,jpeg,png,doc,docx"
-                                   data-max-files="3"
-                                   multiple
                                    class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                            <p class="text-xs text-slate-400 mt-1">Format: PDF, DOC, JPG, PNG — maks. 5 MB per file</p>
+                            <p class="text-xs text-slate-400 mt-1">Format: PDF, DOC, JPG, PNG — maks. 5 MB</p>
                             <p class="file-error hidden text-red-500 text-xs mt-1"></p>
                             @error('lampiran_lain')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>

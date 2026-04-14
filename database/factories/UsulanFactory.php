@@ -22,13 +22,21 @@ class UsulanFactory extends Factory
         return [
             'no_usulan' => $this->faker->unique()->numerify('USL-2025-###'),
             'no_tugas' => $this->faker->unique()->numerify('TGS-2025-###'),
-            'status' => $this->faker->randomElement(['draft', 'diajukan', 'menunggu', 'disetujui', 'ditolak', 'selesai']),
+            'status' => $this->faker->numberBetween(1, 100) <= 40
+                            ? 'disetujui'
+                            : $this->faker->randomElement([
+                                'draft',
+                                'diajukan',
+                                'menunggu',
+                                'ditolak',
+                                'selesai',
+                            ]),
             'lokasi' => $this->faker->city(),
             'instansi' => $this->faker->company(),
             'tanggal_mulai' => $this->faker->date(),
             'tanggal_selesai' => $this->faker->date(),
             'uraian' => $this->faker->paragraph(),
-            'id_user' => User::factory(),
+            'id_user' => User::get()->random()->id,
             'id_kegiatan' => Kegiatan::factory(),
         ];
     }

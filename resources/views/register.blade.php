@@ -39,15 +39,25 @@
             </div>
 
             {{-- Form --}}
-            <form action="#" method="POST" class="space-y-4">
+            <form action="{{ route('register') }}" method="POST" class="space-y-4">
                 @csrf
+
+                @if ($errors->any())
+                <div class="p-3 rounded-lg bg-red-50 border border-red-100 mb-2">
+                    <ul class="text-sm text-red-700 space-y-1">
+                        @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
 
                 {{-- Nama Lengkap --}}
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">
                         Nama Lengkap <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" name="name" placeholder="Masukkan nama lengkap"
+                    <input type="text" name="nama" value="{{ old('nama') }}" placeholder="Masukkan nama lengkap"
                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
                 </div>
 
@@ -57,41 +67,15 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">
                             NIP <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" name="nip" placeholder="Nomor Induk Pegawai"
+                        <input type="text" name="nip" value="{{ old('nip') }}" placeholder="Nomor Induk Pegawai"
                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">
                             Email <span class="text-red-500">*</span>
                         </label>
-                        <input type="email" name="email" placeholder="nama@mail.com"
+                        <input type="email" name="email" value="{{ old('email') }}" placeholder="nama@mail.com"
                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                    </div>
-                </div>
-
-                {{-- Jabatan + Unit Kerja --}}
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">
-                            Jabatan <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="jabatan" placeholder="cth: Staff Program"
-                               class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">
-                            Unit Kerja <span class="text-red-500">*</span>
-                        </label>
-                        <select name="unit_kerja"
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                            <option value="">-- Pilih --</option>
-                            <option value="akademik">Bag. Akademik</option>
-                            <option value="keuangan">Bag. Keuangan</option>
-                            <option value="kepegawaian">Bag. Kepegawaian</option>
-                            <option value="umum">Bag. Umum</option>
-                            <option value="kemahasiswaan">Kemahasiswaan</option>
-                            <option value="penelitian">Pusat Penelitian</option>
-                        </select>
                     </div>
                 </div>
 

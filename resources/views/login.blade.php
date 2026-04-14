@@ -39,15 +39,21 @@
             </div>
 
             {{-- Form --}}
-            <form action="#" method="POST" class="space-y-4">
+            <form action="{{ route('login') }}" method="POST" class="space-y-4">
                 @csrf
+
+                @if ($errors->any())
+                <div class="p-3 rounded-lg bg-red-50 border border-red-100">
+                    <p class="text-sm text-red-700 font-medium">{{ $errors->first() }}</p>
+                </div>
+                @endif
 
                 {{-- NIP --}}
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">
                         NIP <span class="text-red-500">*</span>
                     </label>
-                    <input type="NIP" name="NIP" placeholder="11223387456"
+                    <input type="text" name="nip" value="{{ old('nip') }}" placeholder="Masukkan NIP Anda"
                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
                 </div>
 

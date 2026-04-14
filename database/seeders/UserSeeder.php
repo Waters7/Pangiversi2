@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
@@ -13,6 +12,17 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->count(10)->create();
+        // Create 1 administrator
+        User::factory()->administrator()->create([
+            'nama' => 'Admin PANGI',
+            'email' => 'admin@poltekkes.ac.id',
+            'nip' => 'NIP-0000000001',
+        ]);
+
+        // Create 2 PPK users
+        User::factory()->ppk()->count(2)->create();
+
+        // Create 7 regular pegawai
+        User::factory()->count(7)->create();
     }
 }
