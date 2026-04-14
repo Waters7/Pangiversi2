@@ -107,14 +107,14 @@
             </div>
 
             {{-- Penolakan (jika ditolak) --}}
-            @if($usulan->status === 'ditolak' && $usulan->alasan_ditolak)
+            @if($usulan->status === 'ditolak' && $usulan->catatan)
             <div class="bg-red-50 rounded-2xl border border-red-100 p-5 flex gap-3">
                 <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <div>
-                    <p class="text-sm font-bold text-red-700 mb-1">Alasan Penolakan</p>
-                    <p class="text-sm text-red-600 leading-relaxed">{{ $usulan->alasan_ditolak }}</p>
+                    <p class="text-sm font-bold text-red-700 mb-1">Catatan Penolakan dari PPK</p>
+                    <p class="text-sm text-red-600 leading-relaxed">{{ $usulan->catatan }}</p>
                 </div>
             </div>
             @endif
@@ -137,9 +137,9 @@
                 <div class="p-6 space-y-1">
                     @php
                         $files = [
-                            'Surat Tugas'       => $dokumen->surat_tugas_path,
-                            'Rundown Kegiatan'  => $dokumen->rundown_path,
-                            'Dokumen Pendukung' => $dokumen->dokumen_pendukung_path,
+                            'Surat Tugas'       => $dokumen->surat_tugas,
+                            'Rundown Kegiatan'  => $dokumen->rundown,
+                            'Dokumen Pendukung' => $dokumen->dokumen_pendukung,
                         ];
                     @endphp
                     @foreach($files as $label => $path)

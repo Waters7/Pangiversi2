@@ -42,11 +42,13 @@ class DokService
 
         if ($existing) {
             $existing->update($data);
+            $usulan->checkCompletion();
 
             return $existing->wasChanged();
         }
 
         Dokumen::create(['id_usulan' => $usulan->id, ...$data]);
+        $usulan->checkCompletion();
 
         return true;
     }

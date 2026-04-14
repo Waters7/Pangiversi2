@@ -150,9 +150,6 @@
         </div>
     </div>
 
-                
-
-    </div>
 
     {{-- Table --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -211,9 +208,9 @@
                                 <span class="inline-block text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap {{ $item->status_badge }}">
                                     {{ $item->status_text }}
                                 </span>
-                                @if($item->status === 'ditolak' && $item->alasan_ditolak)
-                                    <p class="text-xs text-red-400 mt-1 max-w-[80px] mx-auto line-clamp-1" title="{{ $item->alasan_ditolak }}">
-                                        {{ $item->alasan_ditolak }}
+                                @if($item->status === 'ditolak' && $item->catatan)
+                                    <p class="text-xs text-red-400 mt-1 max-w-[120px] mx-auto line-clamp-2" title="{{ $item->catatan }}">
+                                        {{ $item->catatan }}
                                     </p>
                                 @endif
                             </td>
@@ -222,14 +219,14 @@
                                     <a href="{{ route('usulan.show', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 flex items-center justify-center transition" title="Lihat Detail">
                                         <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                     </a>
-                                    @if($item->status === 'draft')
+                                    @if(in_array($item->status, ['draft', 'ditolak']))
                                         <a href="{{ route('usulan.edit', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 flex items-center justify-center transition" title="Edit">
                                             <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                         </a>
                                     @else
                                         <span class="w-7 h-7 sm:w-8 sm:h-8"></span>
                                     @endif
-                                    @if(in_array($item->status, ['draft']))
+                                    @if(in_array($item->status, ['draft', 'ditolak']))
                                         <form method="POST" action="{{ route('usulan.destroy', $item) }}"
                                               x-data
                                               @submit.prevent="if(confirm('Hapus usulan {{ $item->no_usulan }}?\nTindakan ini tidak dapat dibatalkan.')) $el.submit()">

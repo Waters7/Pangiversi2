@@ -4,6 +4,7 @@ use App\Http\Controllers\AdministrasiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DokumenController;
+use App\Http\Controllers\KegiatanController;
 use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\MasterDataController;
@@ -45,8 +46,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:ppk,administrator')->group(function () {
         Route::prefix('persetujuan')->group(function () {
             Route::get('/', [PersetujuanController::class, 'index'])->name('persetujuan');
-            Route::get('/dokumen/{path}', [PersetujuanController::class, 'dokumen'])->name('persetujuan.dokumen');
+            Route::get('/dokumen/{path}', [PersetujuanController::class, 'dokumen'])->name('persetujuan.dokumen')->where('path', '.*');
             Route::get('/{usulan:no_usulan}', [PersetujuanController::class, 'show'])->name('persetujuan.detail');
+            Route::get('/{usulan:no_usulan}/export', [PersetujuanController::class, 'export'])->name('persetujuan.export');
             Route::put('/{usulan:no_usulan}/approve', [PersetujuanController::class, 'setuju'])->name('persetujuan.approve');
             Route::put('/{usulan:no_usulan}/revoke', [PersetujuanController::class, 'batalkan'])->name('persetujuan.revoke');
             Route::put('/{usulan:no_usulan}/reject', [PersetujuanController::class, 'tolak'])->name('persetujuan.reject');
@@ -79,5 +81,12 @@ Route::middleware('auth')->group(function () {
         Route::put('/{user}', [AdministrasiController::class, 'update'])->name('administrasi.update');
         Route::put('/{user}/password', [AdministrasiController::class, 'updatePassword'])->name('administrasi.password');
         Route::delete('/{user}', [AdministrasiController::class, 'destroy'])->name('administrasi.destroy');
+    });
+
+    Route::middleware('role:administrator')->prefix('kegiatan')->group(function () {
+        Route::get('/', [KegiatanController::class, 'index'])->name('kegiatan.index');
+        Route::post('/', [KegiatanController::class, 'store'])->name('kegiatan.store');
+        Route::put('/{kegiatan}', [KegiatanController::class, 'update'])->name('kegiatan.update');
+        Route::delete('/{kegiatan}', [KegiatanController::class, 'destroy'])->name('kegiatan.destroy');
     });
 });

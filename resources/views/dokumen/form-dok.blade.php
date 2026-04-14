@@ -7,6 +7,14 @@
 
 <div class="flex-1 px-4 md:px-8 py-7">
 
+    {{-- Banner Selesai --}}
+    @if($usulan->status === 'selesai')
+        <div class="mb-5 flex items-center gap-3 px-5 py-3 bg-purple-50 border border-purple-200 rounded-xl">
+            <svg class="w-5 h-5 text-purple-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-sm text-purple-700 font-semibold">Usulan ini telah <strong>Selesai</strong>. Dokumen tidak dapat diubah lagi.</p>
+        </div>
+    @endif
+
     {{-- Page Header --}}
     <div class="mb-6 flex items-center gap-3">
         <a href="{{ route('dokumen') }}"
@@ -44,6 +52,7 @@
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="penugasan">
+                <fieldset @disabled($usulan->status === 'selesai')>
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     {{-- Header --}}
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -131,13 +140,14 @@
                         </button>
                     </div>
                 </div>
+                </fieldset>
             </form>
 
             {{-- ========== 2. DOKUMEN TRANSPORTASI ========== --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="transportasi">
-
+                <fieldset @disabled($usulan->status === 'selesai')>
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -221,13 +231,14 @@
                         </button>
                     </div>
                 </div>
+                </fieldset>
             </form>
 
             {{-- ========== 3. DOKUMEN AKOMODASI & BIAYA ========== --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="akomodasi">
-
+                <fieldset @disabled($usulan->status === 'selesai')>
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -309,13 +320,14 @@
                         </button>
                     </div>
                 </div>
+                </fieldset>
             </form>
 
             {{-- ========== 4. LAPORAN PERJALANAN ========== --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="laporan">
-
+                <fieldset @disabled($usulan->status === 'selesai')>
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -373,6 +385,7 @@
                         </button>
                     </div>
                 </div>
+                </fieldset>
             </form>
 
         </div>

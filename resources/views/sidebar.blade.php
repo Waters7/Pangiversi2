@@ -140,7 +140,7 @@
       @endif
 
       @if (auth()->user()->isAdmin())
-      <a href="{{ route('administrasi') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('administrasi') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
+      <a href="{{ route('administrasi') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('administrasi', 'kegiatan.*') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>

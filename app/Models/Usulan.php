@@ -99,4 +99,38 @@ class Usulan extends Model
 
         return floor($diff / (60 * 60 * 24)) + 1; // Durasi dalam hari
     }
+
+    /**
+     * Cek apakah pembayaran sudah lunas dan semua dokumen pertanggungjawaban telah diunggah.
+     * Jika ya, ubah status menjadi 'selesai'.
+     */
+    public function checkCompletion(): bool
+    {
+        if ($this->status !== 'disetujui') {
+            return false;
+        }
+
+        // Cek keuangan sudah lunas
+        $keuangan = $this->keuangan;
+        if (! $keuangan || $keuangan->status !== 'lunas') {
+            return false;
+        }
+
+        // Cek semua dokumen pertanggungjawaban sudah diunggah
+        $dokumen = $this->dokumen()->latest('id')->first();
+        if (! $dokumen) {
+            return false;
+        }
+
+        $requiredFields = ['sppd', 'boarding_pass', 'faktur', 'kwintasi', 'bill_hotel', 'laporan_hasil'];
+        foreach ($requiredFields as $field) {
+            if (empty($dokumen->$field)) {
+                return false;
+            }
+        }
+
+        $this->update(['status' => 'selesai']);
+
+        return true;
+    }
 }

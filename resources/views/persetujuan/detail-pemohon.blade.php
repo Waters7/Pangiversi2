@@ -23,6 +23,44 @@
         {{-- LEFT --}}
         <div class="xl:col-span-2 space-y-5">
 
+            {{-- DATA PEMOHON --}}
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Data Pemohon</h3>
+                        <p class="text-xs text-slate-400">Informasi pegawai yang mengajukan</p>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-4 text-sm">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-slate-500">Nama Pegawai</p>
+                            <p class="font-semibold">{{ $usulan->user->nama }}</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500">NIP</p>
+                            <p class="font-semibold">{{ $usulan->user->nip }}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-slate-500">Email</p>
+                            <p class="font-semibold">{{ $usulan->user->email }}</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500">No. Usulan</p>
+                            <p class="font-semibold">{{ $usulan->no_usulan }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- DATA DASAR --}}
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
@@ -233,7 +271,7 @@
             <div class="pt-4 border-t border-slate-100 flex flex-col gap-2">
 
                 {{-- Unduh --}}
-                <a href="#"
+                <a href="{{ route('persetujuan.export', $usulan->no_usulan) }}"
                 class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold
                     bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

@@ -19,7 +19,7 @@ class LaporanController extends Controller
         $bulan = $request->input('bulan');
 
         $query = Usulan::with('user', 'kegiatan', 'keuangan.rincianBiaya')
-            ->where('status', 'disetujui');
+            ->whereIn('status', ['disetujui', 'selesai']);
 
         // Search
         $query->when($search, function ($q) use ($search) {
@@ -45,7 +45,7 @@ class LaporanController extends Controller
         $usulan = $query->latest()->paginate(10)->withQueryString();
 
         // Statistik keseluruhan
-        $allApproved = Usulan::where('status', 'disetujui')->pluck('id');
+        $allApproved = Usulan::whereIn('status', ['disetujui', 'selesai'])->pluck('id');
 
         $stats = [
             'total_pejadin' => $allApproved->count(),
@@ -82,7 +82,7 @@ class LaporanController extends Controller
         $bulan = $request->input('bulan');
 
         $query = Usulan::with('user', 'kegiatan', 'keuangan')
-            ->where('status', 'disetujui');
+            ->whereIn('status', ['disetujui', 'selesai']);
 
         $query->when($search, function ($q) use ($search) {
             $q->where(function ($q) use ($search) {

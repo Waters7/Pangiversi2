@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Usulan;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class PersetujuanController extends Controller
@@ -39,10 +40,18 @@ class PersetujuanController extends Controller
         return view('persetujuan.detail-pemohon', compact('usulan'));
     }
 
+    public function export(Usulan $usulan)
+    {
+        $usulan->load('user', 'kegiatan', 'dokumen');
+
+        $pdf = Pdf::loadView('persetujuan.export-usulan', compact('usulan'));
+
+        return $pdf->download("Usulan_{$usulan->no_usulan}.pdf");
+    }
+
     public function dokumen($path)
     {
-
-        $filePath = storage_path('app/public/dokumen/'.$path);
+        $filePath = storage_path('app/public/'.$path);
 
         if (! file_exists($filePath)) {
             abort(404);
@@ -53,6 +62,7 @@ class PersetujuanController extends Controller
 
     public function setuju(Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
 
         $usulan->update(['status' => 'disetujui']);
 
@@ -61,6 +71,8 @@ class PersetujuanController extends Controller
 
     public function batalkan(Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $previousStatus = $usulan->status;
         $usulan->update(['status' => 'diajukan']);
         $message = $previousStatus === 'disetujui' ? 'Usulan berhasil dibatalkan.' : 'Usulan berhasil diajukan kembali.';
@@ -70,6 +82,8 @@ class PersetujuanController extends Controller
 
     public function tolak(Request $request, Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $request->validate([
             'catatan' => 'nullable|string|max:255',
         ]);

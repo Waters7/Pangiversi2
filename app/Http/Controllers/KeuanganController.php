@@ -14,7 +14,7 @@ class KeuanganController extends Controller
         $search = $request->input('search');
 
         $usulan = Usulan::with('user', 'kegiatan', 'keuangan')
-            ->where('status', 'disetujui')
+            ->whereIn('status', ['disetujui', 'selesai'])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('no_usulan', 'like', "%{$search}%")
@@ -62,6 +62,8 @@ class KeuanganController extends Controller
      */
     public function storeRincian(Request $request, Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $request->validate([
             'komponen' => ['required', 'string', 'max:255'],
             'volume' => ['required', 'integer', 'min:1'],
@@ -90,6 +92,8 @@ class KeuanganController extends Controller
      */
     public function updateRincian(Request $request, Usulan $usulan, RincianBiaya $rincian)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $request->validate([
             'komponen' => ['required', 'string', 'max:255'],
             'volume' => ['required', 'integer', 'min:1'],
@@ -116,6 +120,8 @@ class KeuanganController extends Controller
      */
     public function destroyRincian(Usulan $usulan, RincianBiaya $rincian)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $rincian->delete();
         $usulan->keuangan->hitungTotal();
 
@@ -128,6 +134,8 @@ class KeuanganController extends Controller
      */
     public function bayarUangMuka(Request $request, Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $request->validate([
             'tanggal_transfer' => ['required', 'date'],
             'bukti_transfer' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
@@ -163,6 +171,8 @@ class KeuanganController extends Controller
      */
     public function bayarSisa(Request $request, Usulan $usulan)
     {
+        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+
         $request->validate([
             'tanggal_pelunasan' => ['required', 'date'],
             'bukti_pelunasan' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
@@ -182,6 +192,12 @@ class KeuanganController extends Controller
                 Storage::disk('public')->delete($dokKeuangan->transfer_sisa);
             }
             $dokKeuangan->update(['transfer_sisa' => $path]);
+        }
+
+        // Cek apakah semua dokumen sudah lengkap → selesai
+        if ($usulan->checkCompletion()) {
+            return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                ->with('success', 'Pembayaran lunas & dokumen lengkap. Usulan telah selesai.');
         }
 
         return redirect()->route('keuangan.detail', $usulan->no_usulan)
