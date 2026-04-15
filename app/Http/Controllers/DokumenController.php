@@ -31,7 +31,7 @@ class DokumenController extends Controller
 
     public function store(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai, dokumen tidak dapat diubah.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai, dokumen tidak dapat diubah.');
 
         $type = $request->input('section', '');
 

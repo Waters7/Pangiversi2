@@ -62,7 +62,7 @@ class PersetujuanController extends Controller
 
     public function setuju(Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! request()->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $usulan->update(['status' => 'disetujui']);
 
@@ -71,7 +71,7 @@ class PersetujuanController extends Controller
 
     public function batalkan(Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! request()->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $previousStatus = $usulan->status;
         $usulan->update(['status' => 'diajukan']);
@@ -82,7 +82,7 @@ class PersetujuanController extends Controller
 
     public function tolak(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $request->validate([
             'catatan' => 'nullable|string|max:255',

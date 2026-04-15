@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'destroyRincian'])->name('keuangan.rincian.destroy');
             Route::post('/{usulan:no_usulan}/bayar-uang-muka', [KeuanganController::class, 'bayarUangMuka'])->name('keuangan.bayar-uang-muka');
             Route::post('/{usulan:no_usulan}/bayar-sisa', [KeuanganController::class, 'bayarSisa'])->name('keuangan.bayar-sisa');
+            Route::put('/{usulan:no_usulan}/koreksi-status', [KeuanganController::class, 'koreksiStatus'])->name('keuangan.koreksi-status');
         });
 
         Route::prefix('laporan')->group(function () {

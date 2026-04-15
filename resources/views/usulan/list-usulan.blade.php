@@ -22,7 +22,13 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-slate-800">Usulan Perjalanan Dinas</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Kelola dan pantau seluruh usulan perjalanan dinas Anda</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+                @if(auth()->user()->isAdmin())
+                    Kelola seluruh usulan perjalanan dinas semua pegawai
+                @else
+                    Kelola dan pantau seluruh usulan perjalanan dinas Anda
+                @endif
+            </p>
         </div>
         <a href="{{ route('usulan.create') }}"
            class="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200 whitespace-nowrap">
@@ -174,6 +180,9 @@
                     <tr class="bg-slate-50 border-b border-slate-100">
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No. / Tanggal</th>
+                        @if(auth()->user()->isAdmin())
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Pemohon</th>
+                        @endif
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Kegiatan & Tujuan</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5 hidden sm:table-cell">Periode</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
@@ -189,6 +198,12 @@
                                 <p class="font-bold text-slate-800 text-xs whitespace-nowrap">{{ $item->no_usulan }}</p>
                                 <p class="text-xs text-slate-400 mt-0.5 whitespace-nowrap">12 Jan 2025</p>
                             </td>
+                            @if(auth()->user()->isAdmin())
+                                <td class="px-4 py-4">
+                                    <p class="font-semibold text-slate-800 text-xs whitespace-nowrap">{{ $item->user->name }}</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">{{ $item->user->nip ?? '-' }}</p>
+                                </td>
+                            @endif
                             <td class="px-4 py-4 max-w-[160px] sm:max-w-xs">
                                 <p class="font-semibold text-slate-800 text-xs sm:text-sm leading-snug line-clamp-2">{{ $item->kegiatan->nama }}</p>
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">{{ $item->no_tugas }}</p>
@@ -219,14 +234,14 @@
                                     <a href="{{ route('usulan.show', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 flex items-center justify-center transition" title="Lihat Detail">
                                         <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                     </a>
-                                    @if(in_array($item->status, ['draft', 'ditolak']))
+                                    @if(in_array($item->status, ['draft', 'ditolak']) || auth()->user()->isAdmin())
                                         <a href="{{ route('usulan.edit', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 flex items-center justify-center transition" title="Edit">
                                             <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                         </a>
                                     @else
                                         <span class="w-7 h-7 sm:w-8 sm:h-8"></span>
                                     @endif
-                                    @if(in_array($item->status, ['draft', 'ditolak']))
+                                    @if(in_array($item->status, ['draft', 'ditolak']) || auth()->user()->isAdmin())
                                         <form method="POST" action="{{ route('usulan.destroy', $item) }}"
                                               x-data
                                               @submit.prevent="if(confirm('Hapus usulan {{ $item->no_usulan }}?\nTindakan ini tidak dapat dibatalkan.')) $el.submit()">

@@ -304,12 +304,24 @@
                         Tolak / Revisi
                     </button>
                 @elseif ($usulan->status == 'selesai')
-                    <div class="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700 border border-green-100 cursor-default">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Selesai
-                    </div>
+                    @if(auth()->user()->isAdmin())
+                        <button type="button" id="btnBatalkan"
+                                data-label="Persetujuan"
+                                class="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold
+                                    bg-orange-50 text-orange-700 border border-orange-100 hover:bg-orange-100 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                            </svg>
+                            Batalkan Persetujuan
+                        </button>
+                    @else
+                        <div class="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700 border border-green-100 cursor-default">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Selesai
+                        </div>
+                    @endif
                 @else
                     <button type="button" id="btnBatalkan"
                             data-label="{{ $usulan->status == 'ditolak' ? 'Tolak' : 'Persetujuan' }}"

@@ -14,11 +14,12 @@ class UsulanController extends Controller
     {
         $search = $request->input('search');
         $status = $request->input('status');
+        $isAdmin = $request->user()->isAdmin();
 
-        $myUsulan = Usulan::where('id_user', Auth::id());
+        $myUsulan = Usulan::when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()));
 
         $usulan = Usulan::with('user', 'kegiatan')
-            ->where('id_user', Auth::id())
+            ->when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()))
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('no_usulan', 'like', "%{$search}%")
@@ -67,7 +68,7 @@ class UsulanController extends Controller
 
     public function edit(Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak'])) {
+        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! request()->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
                 ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft atau ditolak.');
         }
@@ -80,7 +81,7 @@ class UsulanController extends Controller
 
     public function update(Request $request, Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak'])) {
+        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! $request->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
                 ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft atau ditolak.');
         }
@@ -191,7 +192,7 @@ class UsulanController extends Controller
 
     public function destroy(Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak'])) {
+        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! request()->user()->isAdmin()) {
             return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft atau ditolak.');
         }
 

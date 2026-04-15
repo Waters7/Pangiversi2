@@ -3,6 +3,8 @@
     $rincian = $keuangan->rincianBiaya ?? collect();
     $dokKeuangan = $keuangan->dokumenKeuangan;
     $dokumen = $usulan->dokumen->last();
+    $isAdmin = auth()->user()->isAdmin();
+    $canEditRincian = $keuangan->status === 'belum bayar' || $isAdmin;
 @endphp
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
@@ -26,7 +28,7 @@
                         <p class="text-xs text-slate-400">Komponen biaya sesuai ketentuan SBM / at cost</p>
                     </div>
                 </div>
-                @if($keuangan->status === 'belum bayar')
+                @if($canEditRincian)
                     <button type="button" onclick="document.getElementById('tambah-rincian').classList.toggle('hidden')"
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl transition">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -38,7 +40,7 @@
             </div>
 
             {{-- Form Tambah Komponen --}}
-            @if($keuangan->status === 'belum bayar')
+            @if($canEditRincian)
                 <div id="tambah-rincian" class="hidden border-b border-slate-100 bg-teal-50/30 px-6 py-4">
                     <form action="{{ route('keuangan.rincian.store', $usulan->no_usulan) }}" method="POST">
                         @csrf
@@ -99,7 +101,7 @@
                             <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-20">Satuan</th>
                             <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Harga Satuan</th>
                             <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Jumlah</th>
-                            @if($keuangan->status === 'belum bayar')
+                            @if($canEditRincian)
                                 <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-24">Aksi</th>
                             @endif
                         </tr>
@@ -113,7 +115,7 @@
                                 <td class="px-4 py-3 text-center text-slate-600 display-cell">{{ $item->satuan }}</td>
                                 <td class="px-4 py-3 text-right text-slate-600 display-cell">Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right font-semibold text-slate-800 display-cell">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
-                                @if($keuangan->status === 'belum bayar')
+                                @if($canEditRincian)
                                     <td class="px-4 py-3 display-cell">
                                         <div class="flex items-center justify-center gap-1">
                                             <button type="button" onclick="toggleEdit({{ $item->id }})"
@@ -137,7 +139,7 @@
                             </tr>
 
                             {{-- Inline Edit Row --}}
-                            @if($keuangan->status === 'belum bayar')
+                            @if($canEditRincian)
                                 <tr id="edit-{{ $item->id }}" class="hidden bg-blue-50/40">
                                     <td colspan="7" class="px-6 py-3">
                                         <form action="{{ route('keuangan.rincian.update', [$usulan->no_usulan, $item->id]) }}" method="POST">
@@ -174,7 +176,7 @@
                             @endif
                         @empty
                             <tr>
-                                <td colspan="{{ $keuangan->status === 'belum bayar' ? 7 : 6 }}" class="px-6 py-8 text-center text-slate-400 text-sm">
+                                <td colspan="{{ $canEditRincian ? 7 : 6 }}" class="px-6 py-8 text-center text-slate-400 text-sm">
                                     <svg class="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                         <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                     </svg>
@@ -187,19 +189,19 @@
                     @if($rincian->isNotEmpty())
                         <tfoot class="border-t-2 border-slate-200 bg-slate-50">
                             <tr>
-                                <td colspan="{{ $keuangan->status === 'belum bayar' ? 5 : 4 }}" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Total Estimasi</td>
+                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Total Estimasi</td>
                                 <td class="px-4 py-3 text-right text-sm font-bold text-slate-800">Rp {{ number_format($keuangan->total, 0, ',', '.') }}</td>
-                                @if($keuangan->status === 'belum bayar') <td></td> @endif
+                                @if($canEditRincian) <td></td> @endif
                             </tr>
                             <tr>
-                                <td colspan="{{ $keuangan->status === 'belum bayar' ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka (80%)</td>
+                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka (80%)</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-teal-700">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</td>
-                                @if($keuangan->status === 'belum bayar') <td></td> @endif
+                                @if($canEditRincian) <td></td> @endif
                             </tr>
                             <tr>
-                                <td colspan="{{ $keuangan->status === 'belum bayar' ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar (20%)</td>
+                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar (20%)</td>
                                 <td class="px-4 py-2 text-right text-sm font-semibold text-slate-500">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</td>
-                                @if($keuangan->status === 'belum bayar') <td></td> @endif
+                                @if($canEditRincian) <td></td> @endif
                             </tr>
                         </tfoot>
                     @endif
@@ -392,6 +394,40 @@
                 </div>
             </div>
         </div>
+
+        {{-- [Admin] Koreksi Status Keuangan --}}
+        @if($isAdmin)
+        <div class="bg-white rounded-2xl border border-orange-200 shadow-sm p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <h3 class="font-bold text-slate-800 text-sm">Koreksi Status</h3>
+                <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">Admin</span>
+            </div>
+            <form action="{{ route('keuangan.koreksi-status', $usulan->no_usulan) }}" method="POST"
+                  onsubmit="return confirm('Yakin ingin mengubah status keuangan?')">
+                @csrf
+                @method('PUT')
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Status Keuangan</label>
+                        <select name="status_keuangan" required
+                                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white">
+                            <option value="belum bayar" {{ $keuangan->status === 'belum bayar' ? 'selected' : '' }}>Belum Bayar</option>
+                            <option value="bayar sebagian" {{ $keuangan->status === 'bayar sebagian' ? 'selected' : '' }}>Bayar Sebagian</option>
+                            <option value="lunas" {{ $keuangan->status === 'lunas' ? 'selected' : '' }}>Lunas</option>
+                        </select>
+                    </div>
+                    <button type="submit"
+                            class="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition">
+                        Koreksi Status
+                    </button>
+                </div>
+            </form>
+        </div>
+        @endif
 
     </div>
 

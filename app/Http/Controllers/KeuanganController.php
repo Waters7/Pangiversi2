@@ -62,7 +62,7 @@ class KeuanganController extends Controller
      */
     public function storeRincian(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $request->validate([
             'komponen' => ['required', 'string', 'max:255'],
@@ -92,7 +92,7 @@ class KeuanganController extends Controller
      */
     public function updateRincian(Request $request, Usulan $usulan, RincianBiaya $rincian)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $request->validate([
             'komponen' => ['required', 'string', 'max:255'],
@@ -120,7 +120,7 @@ class KeuanganController extends Controller
      */
     public function destroyRincian(Usulan $usulan, RincianBiaya $rincian)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! request()->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $rincian->delete();
         $usulan->keuangan->hitungTotal();
@@ -134,7 +134,7 @@ class KeuanganController extends Controller
      */
     public function bayarUangMuka(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $request->validate([
             'tanggal_transfer' => ['required', 'date'],
@@ -171,7 +171,7 @@ class KeuanganController extends Controller
      */
     public function bayarSisa(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->status === 'selesai', 403, 'Usulan sudah selesai.');
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
 
         $request->validate([
             'tanggal_pelunasan' => ['required', 'date'],
@@ -202,5 +202,41 @@ class KeuanganController extends Controller
 
         return redirect()->route('keuangan.detail', $usulan->no_usulan)
             ->with('success', 'Pembayaran sisa berhasil dikonfirmasi. Status: Lunas.');
+    }
+
+    /**
+     * [Admin] Koreksi / reset status keuangan.
+     */
+    public function koreksiStatus(Request $request, Usulan $usulan)
+    {
+        abort_if(! $request->user()->isAdmin(), 403);
+
+        $request->validate([
+            'status_keuangan' => ['required', 'in:belum bayar,bayar sebagian,lunas'],
+        ]);
+
+        $keuangan = $usulan->keuangan;
+        abort_unless($keuangan, 404, 'Data keuangan belum tersedia.');
+
+        $newStatus = $request->input('status_keuangan');
+        $updateData = ['status' => $newStatus];
+
+        // Reset tanggal jika di-downgrade
+        if ($newStatus === 'belum bayar') {
+            $updateData['tanggal_transfer'] = null;
+            $updateData['tanggal_pelunasan'] = null;
+        } elseif ($newStatus === 'bayar sebagian') {
+            $updateData['tanggal_pelunasan'] = null;
+        }
+
+        $keuangan->update($updateData);
+
+        // Jika status usulan selesai tapi keuangan bukan lunas lagi, kembalikan ke disetujui
+        if ($usulan->status === 'selesai' && $newStatus !== 'lunas') {
+            $usulan->update(['status' => 'disetujui']);
+        }
+
+        return redirect()->route('keuangan.detail', $usulan->no_usulan)
+            ->with('success', 'Status keuangan berhasil dikoreksi.');
     }
 }

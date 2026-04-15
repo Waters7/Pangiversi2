@@ -78,7 +78,7 @@
       </div>
 
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSftgSW_UI-x2QaRFR3HzojEWkpK1bwWnU3Z3JR3_ELiyla0aQ/viewform"
-        class="nav-item {{ request()->routeIs('spd.create') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+        target="_blank" class="nav-item {{ request()->routeIs('spd.create') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
          <polyline points="14 2 14 8 20 8"/>
