@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('kwintasi')->nullable(true);
             $table->string('bill_hotel')->nullable(true);
             $table->string('laporan_hasil')->nullable(true);
-            $table->foreignId('id_usulan')->constrained('usulan')->nullOnDelete();
+            $table->foreignId('id_usulan')->constrained('usulan')->cascadeOnDelete();
             $table->timestamps();
         });
     }

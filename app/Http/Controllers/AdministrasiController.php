@@ -58,7 +58,7 @@ class AdministrasiController extends Controller
     {
         $validated = $request->validate([
             'nama' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'nip' => ['required', 'string', 'max:50', 'unique:users,nip'],
             'role' => ['required', Rule::in(array_keys(User::roleOptions()))],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -66,7 +66,7 @@ class AdministrasiController extends Controller
 
         User::create([
             'nama' => $validated['nama'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
             'nip' => $validated['nip'],
             'role' => $validated['role'],
             'password' => Hash::make($validated['password']),
@@ -83,7 +83,7 @@ class AdministrasiController extends Controller
     {
         $validated = $request->validate([
             'nama' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'nip' => ['required', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($user->id)],
             'role' => ['required', Rule::in(array_keys(User::roleOptions()))],
         ]);

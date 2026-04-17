@@ -88,7 +88,7 @@
         Buat SPD
       </a>
 
-      @if (auth()->user()->role !== 'pegawai')
+      @if (! auth()->user()->isPegawai())
       <a href="{{ route('persetujuan') }}" class="nav-item {{ request()->routeIs('persetujuan*') ? 'nav-active text-white' : 'text-slate-400' }}  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -108,7 +108,7 @@
         Dokumen
       </a>
 
-      @if (auth()->user()->role !== 'pegawai')
+      @if (! auth()->user()->isPegawai())
       <a href="{{ route('keuangan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('keuangan*') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="1" y="4" width="22" height="16" rx="2"/>
@@ -125,7 +125,7 @@
       </a>
       @endif
 
-      @if (auth()->user()->role !== 'pegawai')
+      @if (! auth()->user()->isPegawai())
       <div class="border-t border-white/10 my-3"></div>
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pb-2">Administrasi</p>
 

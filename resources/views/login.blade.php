@@ -64,7 +64,6 @@
                         <label class="block text-sm font-medium text-slate-700">
                             Kata Sandi <span class="text-red-500">*</span>
                         </label>
-                        <a href="#" class="text-xs text-teal-600 hover:underline">Lupa kata sandi?</a>
                     </div>
                     <div class="relative" x-data="{ show: false }">
                         <input :type="show ? 'text' : 'password'" name="password" placeholder="Masukkan kata sandi"
@@ -98,10 +97,6 @@
             </form>
 
             {{-- Link Register --}}
-            <p class="text-center text-sm text-slate-500 mt-6">
-                Belum punya akun?
-                <a href="{{ route('register') }}" class="text-teal-600 font-semibold hover:underline">Daftar</a>
-            </p>
 
         </div>
 

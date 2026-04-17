@@ -106,9 +106,9 @@
                 </div>
                 <select name="role" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition min-w-[160px]">
                     <option value="">Semua Role</option>
-                    <option value="administrator" {{ $roleFilter === 'administrator' ? 'selected' : '' }}>Administrator</option>
-                    <option value="ppk" {{ $roleFilter === 'ppk' ? 'selected' : '' }}>PPK</option>
-                    <option value="pegawai" {{ $roleFilter === 'pegawai' ? 'selected' : '' }}>Pegawai</option>
+                    @foreach (App\Models\User::roleOptions() as $value => $label)
+                        <option value="{{ $value }}" {{ $roleFilter === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
                 </select>
                 <button type="submit" class="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
@@ -151,28 +151,28 @@
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                                    {{ $user->role === 'administrator' ? 'bg-red-100 text-red-700' : ($user->role === 'ppk' ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700') }}">
+                                    {{ $user->isAdmin() ? 'bg-red-100 text-red-700' : ($user->isPPK() ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700') }}">
                                     {{ strtoupper(substr($user->nama, 0, 1)) }}
                                 </div>
                                 <span class="font-semibold text-slate-800">{{ $user->nama }}</span>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ $user->email ?? '-' }}</td>
                         <td class="px-4 py-3">
-                            @if ($user->role === 'administrator')
+                            @if ($user->isAdmin())
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-700 border border-red-100 text-xs font-semibold rounded-full">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                Administrator
+                                {{ $user->role_label }}
                             </span>
-                            @elseif ($user->role === 'ppk')
+                            @elseif ($user->isPPK())
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-full">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"/></svg>
-                                PPK
+                                {{ $user->role_label }}
                             </span>
                             @else
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-100 text-xs font-semibold rounded-full">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                Pegawai
+                                {{ $user->role_label }}
                             </span>
                             @endif
                         </td>
@@ -245,16 +245,16 @@
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email <span class="text-red-500">*</span></label>
-                    <input type="email" name="email" required placeholder="email@poltekkes.ac.id"
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                    <input type="email" name="email" placeholder="email@poltekkes.ac.id (opsional)"
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Role <span class="text-red-500">*</span></label>
                     <select name="role" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                        <option value="pegawai">Pegawai</option>
-                        <option value="ppk">PPK</option>
-                        <option value="administrator">Administrator</option>
+                        @foreach (App\Models\User::roleOptions() as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>
@@ -308,16 +308,16 @@
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email <span class="text-red-500">*</span></label>
-                    <input type="email" name="email" required x-model="editUser.email"
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                    <input type="email" name="email" x-model="editUser.email"
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Role <span class="text-red-500">*</span></label>
                     <select name="role" required x-model="editUser.role" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                        <option value="pegawai">Pegawai</option>
-                        <option value="ppk">PPK</option>
-                        <option value="administrator">Administrator</option>
+                        @foreach (App\Models\User::roleOptions() as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
