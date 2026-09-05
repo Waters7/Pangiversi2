@@ -2,44 +2,119 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusUsulan;
+use App\Models\AuditLog;
 use App\Models\Dokumen;
+use App\Models\KategoriPerjadin;
 use App\Models\Kegiatan;
+use App\Models\LokasiTujuan;
+use App\Models\Notifikasi;
+use App\Models\SuratPerjalananDinas;
+use App\Models\TahunAnggaran;
+use App\Models\User;
 use App\Models\Usulan;
+use App\Services\AuditService;
+use App\Services\EkspresiTanggal;
+use App\Services\NotifikasiService;
+use App\Services\PelacakUsulan;
+use App\Services\PenomoranPerjadin;
+use App\Services\WorkflowUsulan;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UsulanController extends Controller
 {
+    public function __construct(
+        private AuditService $audit,
+        private WorkflowUsulan $workflow,
+        private NotifikasiService $notifikasi,
+        private PenomoranPerjadin $penomoran,
+        private EkspresiTanggal $tanggal,
+        private PelacakUsulan $pelacak,
+    ) {}
+
     public function index(Request $request)
     {
         $search = $request->input('search');
         $status = $request->input('status');
+        $tahun = $request->input('tahun');
+        $bulan = $request->input('bulan');
         $isAdmin = $request->user()->isAdmin();
 
-        $myUsulan = Usulan::when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()));
+        // Usulan milik sendiri maupun usulan kelompok yang mendaftarkan pengguna
+        // ini sebagai peserta — keduanya masuk ke akun yang bersangkutan.
+        // Dikurung sendiri: tanpa kurung, OR di dalamnya membatalkan filter
+        // pencarian dan status yang di-AND-kan sesudahnya.
+        $terkaitSaya = function ($query) {
+            $query->where(function ($query) {
+                $query->where('id_user', Auth::id())
+                    ->orWhereHas('peserta', fn ($q) => $q->where('id_user', Auth::id()));
+            });
+        };
 
-        $usulan = Usulan::with('user', 'kegiatan')
-            ->when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()))
+        $myUsulan = Usulan::when(! $isAdmin, $terkaitSaya);
+
+        $usulan = Usulan::with('user', 'kegiatan', 'kategoriPerjadin', 'peserta', 'pembuat')
+            ->when(! $isAdmin, $terkaitSaya)
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('no_usulan', 'like', "%{$search}%")
                         ->orWhere('no_tugas', 'like', "%{$search}%")
                         ->orWhere('lokasi', 'like', "%{$search}%")
                         ->orWhere('instansi', 'like', "%{$search}%")
+                        ->orWhereHas('kategoriPerjadin', fn ($q) => $q->where('nama', 'like', "%{$search}%"))
                         ->orWhereHas('kegiatan', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
                 });
             })
             ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($tahun, fn ($query) => $query->whereYear('tanggal_mulai', $tahun))
+            ->when($bulan, fn ($query) => $query->whereMonth('tanggal_mulai', $bulan))
+            ->orderByDesc('tanggal_mulai')
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
+        // Langkah berikutnya dilekatkan di sini, bukan dihitung Blade per baris:
+        // pelacaknya disiapkan sekali untuk seluruh halaman supaya tidak ada
+        // kueri tambahan per usulan.
+        $this->pelacak->siapkan($usulan->getCollection());
+
+        $usulan->getCollection()->each(function (Usulan $item): void {
+            $item->langkah_berikutnya = $this->pelacak->langkahBerikutnya($item);
+        });
+
         $totalUsulan = (clone $myUsulan)->count();
-        $menunggu = (clone $myUsulan)->whereIn('status', ['menunggu', 'diajukan'])->count();
-        $disetujui = (clone $myUsulan)->where('status', 'disetujui')->count();
-        $ditolak = (clone $myUsulan)->where('status', 'ditolak')->count();
-        $selesai = (clone $myUsulan)->where('status', 'selesai')->count();
-        $draft = (clone $myUsulan)->where('status', 'draft')->count();
+        $menunggu = (clone $myUsulan)->menungguKeputusan()->count();
+        $disetujui = (clone $myUsulan)->where('status', StatusUsulan::Disetujui->value)->count();
+        $ditolak = (clone $myUsulan)->where('status', StatusUsulan::Ditolak->value)->count();
+        $selesai = (clone $myUsulan)->where('status', StatusUsulan::Selesai->value)->count();
+        $draft = (clone $myUsulan)->where('status', StatusUsulan::Draft->value)->count();
+        $perluRevisi = (clone $myUsulan)->where('status', StatusUsulan::PerluRevisi->value)->count();
+        $statusOptions = StatusUsulan::options();
+
+        $tahunTersedia = (clone $myUsulan)
+            ->whereNotNull('tanggal_mulai')
+            ->selectRaw($this->tanggal->tahun('tanggal_mulai').' as tahun')
+            ->distinct()
+            ->pluck('tahun')
+            ->filter()
+            ->map(fn ($nilai) => (int) $nilai)
+            ->sortDesc()
+            ->values();
+
+        $jumlahBulan = (clone $myUsulan)
+            ->whereNotNull('tanggal_mulai')
+            ->when($tahun, fn ($q) => $q->whereYear('tanggal_mulai', $tahun))
+            ->selectRaw($this->tanggal->bulan('tanggal_mulai').' as bulan, count(*) as jumlah')
+            ->groupBy('bulan')
+            ->pluck('jumlah', 'bulan')
+            ->mapWithKeys(fn ($jumlah, $kunci) => [(int) $kunci => (int) $jumlah]);
 
         return view('usulan.list-usulan', compact(
             'usulan',
@@ -48,46 +123,201 @@ class UsulanController extends Controller
             'menunggu',
             'disetujui',
             'ditolak',
-            'selesai'
+            'selesai',
+            'perluRevisi',
+            'statusOptions',
+            'tahun',
+            'bulan',
+            'tahunTersedia',
+            'jumlahBulan',
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $kegiatan = Kegiatan::orderBy('nama')->get();
+        if ($belumPunyaSpd = $this->cegahTanpaSpd($request)) {
+            return $belumPunyaSpd;
+        }
 
-        return view('usulan.add-usulan', compact('kegiatan'));
+        $lokasiTujuan = LokasiTujuan::aktif()->orderBy('nama')->get();
+
+        // Kandidat peserta kelompok: seluruh pegawai selain pengusul sendiri.
+        $calonPeserta = User::whereKeyNot($request->user()->id)
+            ->orderBy('nama')
+            ->get(['id', 'nama', 'nip', 'jabatan']);
+
+        return view('usulan.add-usulan', compact('lokasiTujuan', 'calonPeserta') + [
+            'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
+            'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
+            'spdTerkait' => $this->bekalSpd($request->user()),
+            'salinan' => $this->salinan($request),
+        ]);
+    }
+
+    /**
+     * Isi awal formulir yang disalin dari usulan sebelumnya.
+     *
+     * Perjalanan dinas banyak berulang: tujuan, kegiatan, dan rombongan yang
+     * itu-itu juga. Yang tidak ikut disalin adalah yang harus baru — tanggal,
+     * dan SPD yang mendasarinya.
+     *
+     * @return array<string, mixed>
+     */
+    private function salinan(Request $request): array
+    {
+        $nomor = $request->input('salin');
+
+        if (blank($nomor)) {
+            return [];
+        }
+
+        $asal = Usulan::with('peserta')
+            ->where('no_usulan', $nomor)
+            ->where(fn ($query) => $query
+                ->where('id_user', $request->user()->id)
+                ->orWhereHas('peserta', fn ($q) => $q->where('id_user', $request->user()->id)))
+            ->first();
+
+        if (! $asal) {
+            return [];
+        }
+
+        $anggota = $asal->peserta
+            ->pluck('id_user')
+            ->filter()
+            ->reject(fn ($id) => (int) $id === $request->user()->id)
+            ->values();
+
+        return [
+            'dari' => $asal->no_usulan,
+            'id_kegiatan' => $asal->id_kegiatan,
+            'id_kategori_perjadin' => $asal->id_kategori_perjadin,
+            'lokasi' => $asal->lokasi,
+            'instansi' => $asal->instansi,
+            'uraian' => $asal->uraian,
+            'jenis_pengajuan' => $anggota->isNotEmpty() ? 'kelompok' : 'personal',
+            'anggota' => $anggota->all(),
+        ];
+    }
+
+    /**
+     * Surat Perjalanan Dinas yang berkaitan dengan pengguna ini, entah
+     * dibuatnya sendiri atau mencantumkan namanya sebagai pelaksana.
+     *
+     * @return Builder<SuratPerjalananDinas>
+     */
+    private function spdMilik(User $pengguna)
+    {
+        return SuratPerjalananDinas::where(function ($query) use ($pengguna) {
+            $query->where('id_pembuat', $pengguna->id)
+                ->orWhereHas('pelaksana', fn ($q) => $q->where('id_user', $pengguna->id));
+        });
+    }
+
+    /**
+     * Isi SPD yang dipakai formulir usulan untuk mengisi sendiri kolom
+     * yang sudah ditulis saat pembuatan SPD.
+     *
+     * Disiapkan di sini, bukan di Blade, supaya tampilan tidak perlu
+     * menyusun ulang bentuk datanya setiap kali formulir dibuka.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function bekalSpd(User $pengguna): array
+    {
+        return $this->spdMilik($pengguna)
+            ->with('pelaksana')
+            ->latest()
+            ->get()
+            ->map(fn (SuratPerjalananDinas $spd) => [
+                'id' => $spd->id,
+                'nomor' => $spd->pelaksana_utama?->nomor_surat ?? 'Tanpa nomor',
+                'tempat_berangkat' => $spd->tempat_berangkat,
+                'tempat_tujuan' => $spd->tempat_tujuan,
+                'tanggal_berangkat' => $spd->tanggal_berangkat?->toDateString(),
+                'tanggal_kembali' => $spd->tanggal_kembali?->toDateString(),
+                'lama_hari' => $spd->lama_hari,
+                'maksud' => $spd->maksud,
+                'alat_angkut' => $spd->alat_angkut,
+                'instansi_pembebanan' => $spd->instansi_pembebanan,
+                // Rekan sepelaksana, untuk menawarkan pengajuan kelompok.
+                'rekan' => $spd->pelaksana
+                    ->filter(fn ($orang) => $orang->id_user && $orang->id_user !== $pengguna->id)
+                    ->map(fn ($orang) => ['id' => $orang->id_user, 'nama' => $orang->nama])
+                    ->values()
+                    ->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Usulan perjadin baru boleh diajukan setelah Surat Perjalanan Dinas
+     * terbit, karena SPD itulah dasar penugasannya.
+     */
+    private function cegahTanpaSpd(Request $request): ?RedirectResponse
+    {
+        if ($this->spdMilik($request->user())->exists()) {
+            return null;
+        }
+
+        return redirect()
+            ->route('spd.create')
+            ->with('error', 'Buat Surat Perjalanan Dinas lebih dulu. Usulan perjalanan dinas '
+                .'diajukan setelah SPD terbit, karena SPD menjadi dasar penugasannya.');
     }
 
     public function show(Usulan $usulan)
     {
-        $usulan->load('user', 'kegiatan', 'dokumen', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
+        $usulan->load(
+            'user.unit',
+            'kegiatan',
+            'kategoriPerjadin',
+            'dokumen',
+            'keuangan.rincianBiaya',
+            'keuangan.dokumenKeuangan',
+            'peserta.user',
+            'pembuat',
+            'serombongan.user',
+            'tahunAnggaran',
+            'lokasiTujuan',
+            'riwayat.pelaku',
+        );
 
-        return view('usulan.detail-usulan', compact('usulan'));
+        // Kandidat peserta: pegawai yang belum terdaftar pada usulan ini.
+        $calonPeserta = User::whereNotIn('id', $usulan->peserta->pluck('id_user')->filter())
+            ->orderBy('nama')
+            ->get(['id', 'nama', 'nip', 'jabatan']);
+
+        return view('usulan.detail-usulan', compact('usulan', 'calonPeserta'));
     }
 
     public function edit(Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! request()->user()->isAdmin()) {
+        if (! $usulan->bolehDisunting() && ! request()->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
-                ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft atau ditolak.');
+                ->with('error', 'Usulan hanya dapat diedit selama berstatus draft, ditolak, atau perlu revisi.');
         }
 
-        $kegiatan = Kegiatan::orderBy('nama')->get();
+        $lokasiTujuan = LokasiTujuan::aktif()->orderBy('nama')->get();
         $usulan->load('dokumen');
 
-        return view('usulan.edit-usulan', compact('usulan', 'kegiatan'));
+        return view('usulan.edit-usulan', compact('usulan', 'lokasiTujuan') + [
+            'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
+            'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
+        ]);
     }
 
     public function update(Request $request, Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! $request->user()->isAdmin()) {
+        if (! $usulan->bolehDisunting() && ! $request->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
-                ->with('error', 'Usulan hanya dapat diedit selama masih berstatus draft atau ditolak.');
+                ->with('error', 'Usulan hanya dapat diedit selama berstatus draft, ditolak, atau perlu revisi.');
         }
 
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
+            'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
@@ -100,16 +330,19 @@ class UsulanController extends Controller
         ]);
 
         $isDraft = $request->input('action') === 'draft';
+        $statusLama = $usulan->status;
 
         $usulan->update([
             'no_tugas' => $request->no_tugas,
-            'status' => $isDraft ? 'draft' : 'diajukan',
+            'status' => StatusUsulan::Draft->value,
             'lokasi' => $request->lokasi,
+            'id_lokasi' => $this->resolveLokasi($request->lokasi),
             'instansi' => $request->instansi,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'uraian' => $request->uraian,
             'id_kegiatan' => $request->id_kegiatan,
+            'id_kategori_perjadin' => $request->id_kategori_perjadin,
             'catatan' => null,
         ]);
 
@@ -135,6 +368,17 @@ class UsulanController extends Controller
             }
         }
 
+        $this->audit->catatPerubahanStatus(
+            $usulan,
+            AuditLog::AKSI_DIPERBARUI,
+            "Usulan {$usulan->no_usulan} diperbarui.",
+            $statusLama,
+        );
+
+        if (! $isDraft) {
+            $this->workflow->ajukan($usulan);
+        }
+
         $message = $isDraft ? 'Draft usulan berhasil diperbarui.' : 'Usulan berhasil diperbarui dan diajukan.';
 
         return redirect()->route('usulan.show', $usulan)->with('success', $message);
@@ -142,8 +386,16 @@ class UsulanController extends Controller
 
     public function store(Request $request)
     {
+        // Dijaga juga di sini, bukan hanya pada formulir: tanpa ini usulan
+        // masih bisa dikirim langsung ke alamat penyimpanan.
+        if ($belumPunyaSpd = $this->cegahTanpaSpd($request)) {
+            return $belumPunyaSpd;
+        }
+
         $request->validate([
+            'id_spd' => ['required', Rule::in($this->spdMilik($request->user())->pluck('id'))],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
+            'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
@@ -153,52 +405,312 @@ class UsulanController extends Controller
             'surat_tugas' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
+            'jenis_pengajuan' => ['required', Rule::in([Usulan::PENGAJUAN_PERSONAL, Usulan::PENGAJUAN_KELOMPOK])],
+            'anggota' => ['array'],
+            'anggota.*' => ['distinct', 'exists:users,id', 'different:pengusul'],
+        ], [
+            'anggota.*.distinct' => 'Ada pegawai yang dipilih lebih dari sekali.',
+            'id_spd.required' => 'Pilih Surat Perjalanan Dinas yang menjadi dasar usulan ini.',
+            'id_spd.in' => 'Surat Perjalanan Dinas itu bukan milik Anda.',
+            'id_kegiatan.required' => 'Pilih jenis kegiatan perjalanan dinas ini.',
         ]);
 
-        $year = now()->year;
-        $count = Usulan::whereYear('created_at', $year)->count() + 1;
-        $noUsulan = sprintf('USL-%d-%03d', $year, $count);
+        // Pengajuan kelompok wajib menyertakan minimal satu rekan seperjalanan.
+        if ($request->input('jenis_pengajuan') === Usulan::PENGAJUAN_KELOMPOK
+            && count(array_filter((array) $request->input('anggota', []))) === 0) {
+            return back()->withInput()->withErrors([
+                'anggota' => 'Pilih minimal satu pegawai yang ikut dalam perjalanan kelompok.',
+            ]);
+        }
 
         $isDraft = $request->input('action') === 'draft';
+        $kelompok = $request->input('jenis_pengajuan') === Usulan::PENGAJUAN_KELOMPOK;
+        $pengusul = $request->user();
+
+        // Pertanggungjawaban bersifat perorangan, jadi setiap peserta menerima
+        // usulan bernomor sendiri. Pengajuan kelompok hanya alat bantu input.
+        $pemilik = collect([$pengusul]);
+        $kodeRombongan = null;
+
+        if ($kelompok) {
+            $rekan = User::whereIn('id', array_filter((array) $request->input('anggota', [])))
+                ->whereKeyNot($pengusul->id)
+                ->get();
+
+            $pemilik = $pemilik->concat($rekan);
+            $kodeRombongan = 'RBG-'.mb_strtoupper(Str::random(8));
+        }
+
+        $berkas = $this->simpanBerkasPengajuan($request);
+
+        $dibuat = DB::transaction(
+            fn () => $pemilik->map(fn (User $orang) => $this->buatUsulanUntuk(
+                $request,
+                $orang,
+                $pengusul,
+                $kodeRombongan,
+                $berkas,
+            ))
+        );
+
+        // Usulan yang dibuatkan orang lain menunggu konfirmasi pemiliknya
+        // lebih dulu; hanya usulan milik sendiri yang langsung ke PPK.
+        if (! $isDraft) {
+            $dibuat
+                ->reject(fn (Usulan $usulan) => $usulan->dibuatkanOrangLain())
+                ->each(fn (Usulan $usulan) => $this->workflow->ajukan($usulan));
+        }
+
+        if ($kelompok) {
+            $this->beritahuRekan($dibuat, $pengusul);
+        }
+
+        $message = match (true) {
+            $isDraft && $kelompok => "Draft untuk {$dibuat->count()} peserta berhasil disimpan.",
+            $isDraft => 'Draft usulan berhasil disimpan.',
+            $kelompok => "Usulan untuk {$dibuat->count()} peserta berhasil diajukan, masing-masing dengan nomor sendiri.",
+            default => 'Usulan berhasil diajukan.',
+        };
+
+        return redirect()->route('usulan.list')->with('success', $message);
+    }
+
+    /**
+     * Simpan berkas pengajuan sekali, lalu dipakai ulang oleh tiap usulan.
+     *
+     * @return array<string, string|null>
+     */
+    private function simpanBerkasPengajuan(Request $request): array
+    {
+        return [
+            'surat_tugas' => $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public'),
+            'rundown' => $request->hasFile('rundown')
+                ? $request->file('rundown')->store('dokumen/rundown', 'public')
+                : null,
+            'dokumen_pendukung' => $request->hasFile('dokumen_pendukung')
+                ? $request->file('dokumen_pendukung')->store('dokumen/dokumen-pendukung', 'public')
+                : null,
+        ];
+    }
+
+    /**
+     * Buat satu usulan lengkap — nomor, peserta, dokumen, dan jejak audit —
+     * atas nama seorang pegawai.
+     *
+     * @param  array<string, string|null>  $berkas
+     */
+    private function buatUsulanUntuk(
+        Request $request,
+        User $pemilik,
+        User $pengusul,
+        ?string $kodeRombongan,
+        array $berkas,
+    ): Usulan {
+        $dibuatkan = $pemilik->id !== $pengusul->id;
 
         $usulan = Usulan::create([
-            'no_usulan' => $noUsulan,
+            'no_usulan' => $this->penomoran->nomorPerjadin($pemilik, $request->tanggal_mulai),
             'no_tugas' => $request->no_tugas,
-            'status' => $isDraft ? 'draft' : 'diajukan',
+            'status' => StatusUsulan::Draft->value,
+            'jenis_pengajuan' => $kodeRombongan ? Usulan::PENGAJUAN_KELOMPOK : Usulan::PENGAJUAN_PERSONAL,
+            'kode_rombongan' => $kodeRombongan,
             'lokasi' => $request->lokasi,
+            'id_lokasi' => $this->resolveLokasi($request->lokasi),
             'instansi' => $request->instansi,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'uraian' => $request->uraian,
             'id_kegiatan' => $request->id_kegiatan,
-            'id_user' => Auth::id(),
+            'id_kategori_perjadin' => $request->id_kategori_perjadin,
+            'id_spd' => $request->id_spd,
+            'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
+            'id_user' => $pemilik->id,
+            'id_pembuat' => $pengusul->id,
+            // Usulan yang dibuatkan orang lain menunggu kesediaan pemiliknya.
+            'konfirmasi' => $dibuatkan ? Usulan::KONFIRMASI_MENUNGGU : Usulan::KONFIRMASI_DIKONFIRMASI,
+            'dikonfirmasi_at' => $dibuatkan ? null : now(),
         ]);
 
-        Dokumen::create([
-            'id_usulan' => $usulan->id,
-            'surat_tugas' => $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public'),
-            'rundown' => $request->hasFile('rundown')
-                                            ? $request->file('rundown')->store('dokumen/rundown', 'public')
-                                            : null,
-            'dokumen_pendukung' => $request->hasFile('dokumen_pendukung')
-                                            ? $request->file('dokumen_pendukung')->store('dokumen/dokumen-pendukung', 'public')
-                                            : null,
+        $usulan->peserta()->create([
+            'id_user' => $pemilik->id,
+            'nama' => $pemilik->nama,
+            'nip' => $pemilik->nip,
+            'jabatan' => $pemilik->jabatan,
+            'peran' => 'ketua',
         ]);
 
-        $message = $isDraft ? 'Draft usulan berhasil disimpan.' : 'Usulan berhasil diajukan.';
+        Dokumen::create(['id_usulan' => $usulan->id] + $berkas);
 
-        return redirect()->route('usulan.list')->with('success', $message);
+        $this->audit->catat(
+            AuditLog::AKSI_DIBUAT,
+            $dibuatkan
+                ? "Draft usulan {$usulan->no_usulan} dibuatkan {$pengusul->nama} untuk {$pemilik->nama}."
+                : "Draft usulan {$usulan->no_usulan} dibuat.",
+            ['usulan' => $usulan, 'status_baru' => $usulan->status],
+        );
+
+        return $usulan;
+    }
+
+    /**
+     * Beri tahu rekan bahwa sebuah usulan dibuatkan atas nama mereka.
+     *
+     * @param  Collection<int, Usulan>  $dibuat
+     */
+    private function beritahuRekan($dibuat, User $pengusul): void
+    {
+        $dibuat
+            ->filter(fn (Usulan $usulan) => $usulan->dibuatkanOrangLain())
+            ->each(function (Usulan $usulan) use ($pengusul): void {
+                if (! $usulan->user) {
+                    return;
+                }
+
+                $this->notifikasi->kirim(
+                    $usulan->user,
+                    'Usulan perjalanan dinas dibuatkan untuk Anda',
+                    "{$pengusul->nama} membuatkan usulan {$usulan->no_usulan} ke {$usulan->lokasi} atas nama Anda. Konfirmasi kesediaan agar usulannya berlaku.",
+                    ['usulan' => $usulan, 'tipe' => Notifikasi::TIPE_PERINGATAN],
+                );
+            });
+    }
+
+    /**
+     * Pemilik usulan menyatakan bersedia berangkat.
+     */
+    public function konfirmasi(Request $request, Usulan $usulan): RedirectResponse
+    {
+        $this->pastikanPemilikBolehKonfirmasi($request, $usulan);
+
+        $usulan->konfirmasiBerangkat();
+
+        $this->audit->catat(
+            AuditLog::AKSI_PESERTA,
+            "{$request->user()->nama} menyatakan bersedia berangkat pada usulan {$usulan->no_usulan}.",
+            ['usulan' => $usulan],
+        );
+
+        // Baru setelah dikonfirmasi, usulan dicatat sebagai berlaku.
+        if ($usulan->status_enum->bolehDisunting()) {
+            $this->workflow->ajukan($usulan->fresh());
+        }
+
+        $this->beritahuPembuat($usulan, 'Usulan dikonfirmasi', "{$usulan->user?->nama} bersedia berangkat pada usulan {$usulan->no_usulan}.", Notifikasi::TIPE_SUKSES);
+
+        return back()->with('success', 'Kesediaan dikonfirmasi. Usulan perjalanan dinas Anda berlaku.');
+    }
+
+    /**
+     * Pemilik usulan mengundurkan diri sebelum usulannya berlaku.
+     */
+    public function batalKonfirmasi(Request $request, Usulan $usulan): RedirectResponse
+    {
+        $this->pastikanPemilikBolehKonfirmasi($request, $usulan);
+
+        $validated = $request->validate([
+            'alasan_batal' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $statusLama = $usulan->status;
+        $usulan->batalkanKeikutsertaan($validated['alasan_batal'] ?? null);
+
+        $this->audit->catatPerubahanStatus(
+            $usulan,
+            AuditLog::AKSI_DIBATALKAN,
+            "{$request->user()->nama} membatalkan keikutsertaannya pada usulan {$usulan->no_usulan}.",
+            $statusLama,
+            $validated['alasan_batal'] ?? null,
+        );
+
+        $this->beritahuPembuat($usulan, 'Peserta mengundurkan diri', "{$usulan->user?->nama} membatalkan usulan {$usulan->no_usulan}.", Notifikasi::TIPE_PERINGATAN);
+
+        return back()->with('success', 'Keikutsertaan Anda berhasil dibatalkan.');
+    }
+
+    /**
+     * Kirim usulan yang masih berstatus draf agar berlaku,
+     * tanpa harus membuka kembali formulir penyuntingan.
+     */
+    public function ajukan(Request $request, Usulan $usulan): RedirectResponse
+    {
+        abort_unless(
+            $usulan->id_user === $request->user()->id || $request->user()->isAdmin(),
+            403,
+            'Hanya pemilik usulan yang dapat mengirimkannya.'
+        );
+
+        abort_unless(
+            $usulan->status_enum->bolehDisunting(),
+            403,
+            'Usulan ini sudah tidak berada pada tahap pengajuan.'
+        );
+
+        if ($usulan->menungguKonfirmasi()) {
+            return back()->with('error', 'Konfirmasi kesediaan Anda lebih dulu sebelum usulan dikirim ke PPK.');
+        }
+
+        $this->workflow->ajukan($usulan);
+
+        return back()->with('success', 'Usulan dikirim untuk diverifikasi PPK.');
+    }
+
+    private function pastikanPemilikBolehKonfirmasi(Request $request, Usulan $usulan): void
+    {
+        abort_unless(
+            $usulan->id_user === $request->user()->id,
+            403,
+            'Hanya pemilik usulan yang dapat mengubah kesediaannya.'
+        );
+
+        abort_unless(
+            $usulan->konfirmasiMasihTerbuka(),
+            403,
+            'Kesediaan tidak dapat diubah lagi pada tahap ini.'
+        );
+    }
+
+    private function beritahuPembuat(Usulan $usulan, string $judul, string $pesan, string $tipe): void
+    {
+        if (! $usulan->pembuat || $usulan->id_pembuat === $usulan->id_user) {
+            return;
+        }
+
+        $this->notifikasi->kirim($usulan->pembuat, $judul, $pesan, [
+            'usulan' => $usulan,
+            'tipe' => $tipe,
+        ]);
     }
 
     public function destroy(Usulan $usulan)
     {
-        if (! in_array($usulan->status, ['draft', 'ditolak']) && ! request()->user()->isAdmin()) {
-            return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft atau ditolak.');
+        if (! $usulan->bolehDisunting() && ! request()->user()->isAdmin()) {
+            return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft, ditolak, atau perlu revisi.');
         }
 
         $noUsulan = $usulan->no_usulan;
+
+        // Dicatat sebelum penghapusan agar relasi audit tidak ikut hilang.
+        $this->audit->catat(
+            AuditLog::AKSI_DIHAPUS,
+            "Usulan {$noUsulan} dihapus.",
+            ['status_lama' => $usulan->status],
+        );
+
         $usulan->delete();
 
         return redirect()->route('usulan.list')->with('success', "Usulan {$noUsulan} berhasil dihapus.");
+    }
+
+    /**
+     * Cocokkan lokasi yang diketik pengusul dengan master lokasi tujuan.
+     * Mengembalikan null bila lokasi tidak terdaftar sebagai referensi.
+     */
+    private function resolveLokasi(?string $lokasi): ?int
+    {
+        if (! $lokasi) {
+            return null;
+        }
+
+        return LokasiTujuan::whereRaw('LOWER(nama) = ?', [mb_strtolower($lokasi)])->value('id');
     }
 }

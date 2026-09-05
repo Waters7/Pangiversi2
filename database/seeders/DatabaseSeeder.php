@@ -15,13 +15,24 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UserSeeder::class,
+            // Master data lebih dulu — dipakai sebagai referensi oleh data transaksi.
+            UnitKerjaSeeder::class,
+            LokasiTujuanSeeder::class,
+            KomponenBiayaSeeder::class,
+            TahunAnggaranSeeder::class,
+
+            // Pegawai nyata dari DUK Agustus 2026; UserSeeder lama hanya
+            // dipakai bila berkas DUK-nya tidak tersedia.
+            PegawaiPoltekkesSeeder::class,
             KegiatanSeeder::class,
+            KategoriPerjadinSeeder::class,
             UsulanSeeder::class,
+            PesertaUsulanSeeder::class,
             DokumenSeeder::class,
             KeuanganSeeder::class,
             RincianBiayaSeeder::class,
             DokumenKeuanganSeeder::class,
+            DaftarRiilSeeder::class,
         ]);
     }
 }

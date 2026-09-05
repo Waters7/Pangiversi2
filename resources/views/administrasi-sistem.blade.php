@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Administrasi Sistem')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7" x-data="administrasi()">
@@ -25,24 +27,163 @@
         </button>
     </div>
 
-    {{-- Sub Navigation --}}
-    <div class="flex gap-2 mb-5">
-        <a href="{{ route('administrasi') }}"
-           class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition
-                  {{ request()->routeIs('administrasi') ? 'bg-teal-500 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            Pengguna
-        </a>
-        <a href="{{ route('kegiatan.index') }}"
-           class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition
-                  {{ request()->routeIs('kegiatan.*') ? 'bg-teal-500 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-            Jenis Kegiatan
-        </a>
+    {{-- Ekspor / impor massal --}}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h3 class="font-bold text-slate-800 text-sm">Data Pengguna Massal</h3>
+                <p class="text-xs text-slate-400 mt-0.5">
+                    Unduh CSV untuk dipakai sebagai template, lalu unggah kembali. NIP menjadi kunci —
+                    baris dengan NIP yang sudah ada akan diperbarui, bukan diduplikasi.
+                </p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 shrink-0">
+                <a href="{{ route('administrasi.export') }}"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Ekspor CSV
+                </a>
+
+                <form method="POST" action="{{ route('administrasi.import') }}" enctype="multipart/form-data"
+                      x-data="{ namaBerkas: '' }" class="flex gap-2">
+                    @csrf
+                    <label class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition cursor-pointer whitespace-nowrap">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                        <span x-text="namaBerkas || 'Pilih Berkas CSV'"></span>
+                        <input type="file" name="berkas" accept=".csv,text/csv" required class="hidden"
+                               @change="namaBerkas = $event.target.files[0]?.name ?? ''">
+                    </label>
+                    <button type="submit" x-show="namaBerkas" x-cloak
+                            class="px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition whitespace-nowrap">
+                        Impor
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        @error('berkas') <p class="text-red-500 text-xs mt-3">{{ $message }}</p> @enderror
+
+        @if (session('impor_dilewati'))
+            <div class="mt-4 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
+                <p class="text-xs font-bold text-amber-800 mb-1.5">
+                    {{ count(session('impor_dilewati')) }} baris dilewati
+                </p>
+                <ul class="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+                    @foreach (array_slice(session('impor_dilewati'), 0, 10) as $pesan)
+                        <li>{{ $pesan }}</li>
+                    @endforeach
+                </ul>
+                @if (count(session('impor_dilewati')) > 10)
+                    <p class="text-xs text-amber-600 mt-1.5">…dan {{ count(session('impor_dilewati')) - 10 }} baris lainnya.</p>
+                @endif
+            </div>
+        @endif
+
+        <p class="text-xs text-slate-400 mt-4 pt-4 border-t border-slate-100 leading-relaxed">
+            Impor membaca kolom <span class="font-mono text-slate-500">nama, nip, email, no_hp, role, jabatan, unit_kode, atasan_nip, nama_bank, nomor_rekening, nama_rekening, password</span>.
+            Sumber data dipisahkan lewat kontrak <span class="font-mono text-slate-500">SumberDataPegawai</span>, sehingga integrasi dengan aplikasi kepegawaian nanti cukup menambah satu implementasi baru.
+        </p>
+    </div>
+
+    {{-- ── Pengingat kelengkapan berkas ── --}}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-slate-800 text-sm">Pengingat Kelengkapan Berkas</h3>
+                <p class="text-xs text-slate-400">
+                    Notifikasi otomatis untuk pegawai yang belum mengunggah berkas pertanggungjawaban
+                </p>
+            </div>
+            <span class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full {{ $kandidatPengingat > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' }}">
+                {{ $kandidatPengingat }} perjadin belum lengkap
+            </span>
+        </div>
+
+        <form method="POST" action="{{ route('administrasi.pengaturan') }}" class="p-6">
+            @csrf
+            @method('PUT')
+
+            <label class="flex items-start gap-3 mb-5 cursor-pointer">
+                <input type="checkbox" name="pengingat_aktif" value="1"
+                       @checked(old('pengingat_aktif', $pengaturan['pengingat_dokumen_aktif']) == '1')
+                       class="mt-0.5 w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-400">
+                <span>
+                    <span class="block text-sm font-semibold text-slate-700">Aktifkan pengingat otomatis</span>
+                    <span class="block text-xs text-slate-400 mt-0.5">
+                        Bila dimatikan, penjadwal harian tetap berjalan namun tidak mengirim notifikasi apa pun.
+                    </span>
+                </span>
+            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Kirim setelah <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="pengingat_hari" min="0" max="90" required
+                               value="{{ old('pengingat_hari', $pengaturan['pengingat_dokumen_hari']) }}"
+                               class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition {{ $errors->has('pengingat_hari') ? 'border-red-500' : 'border-slate-200' }}">
+                        <span class="text-sm text-slate-500 shrink-0">hari</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Dihitung sejak tanggal perjalanan berakhir.</p>
+                    @error('pengingat_hari') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Diulang tiap <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="pengingat_ulang" min="1" max="60" required
+                               value="{{ old('pengingat_ulang', $pengaturan['pengingat_dokumen_ulang']) }}"
+                               class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition {{ $errors->has('pengingat_ulang') ? 'border-red-500' : 'border-slate-200' }}">
+                        <span class="text-sm text-slate-500 shrink-0">hari</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Selama berkasnya masih belum lengkap.</p>
+                    @error('pengingat_ulang') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Paling banyak <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="pengingat_maksimal" min="0" max="20" required
+                               value="{{ old('pengingat_maksimal', $pengaturan['pengingat_dokumen_maksimal']) }}"
+                               class="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition {{ $errors->has('pengingat_maksimal') ? 'border-red-500' : 'border-slate-200' }}">
+                        <span class="text-sm text-slate-500 shrink-0">kali</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Isi 0 bila ingin diingatkan terus-menerus.</p>
+                    @error('pengingat_maksimal') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-2 mt-5 pt-5 border-t border-slate-100">
+                <button type="submit" form="jalankan-pengingat"
+                        class="px-5 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition">
+                    Jalankan Sekarang
+                </button>
+                <button type="submit"
+                        class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition shadow-sm shadow-teal-200">
+                    Simpan Pengaturan
+                </button>
+            </div>
+        </form>
+
+        <form method="POST" action="{{ route('administrasi.pengingat') }}" id="jalankan-pengingat" class="hidden">
+            @csrf
+        </form>
     </div>
 
     {{-- Flash Message --}}
@@ -66,6 +207,44 @@
             @endforeach
         </ul>
     </div>
+    @endif
+
+    {{-- Kehadiran dibaca dari tabel sesi: angkanya turun sendiri saat
+         sesi berakhir, tanpa bergantung pada tombol keluar ditekan. --}}
+    @if ($sesiTersedia)
+        <div class="mb-4 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <span class="relative flex h-3 w-3 shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <div>
+                    <p class="text-2xl font-bold text-slate-800 leading-none">{{ $jumlahAktif }}</p>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Sedang login — ada kegiatan dalam {{ $menitAktif }} menit terakhir
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('administrasi', ['kehadiran' => 'aktif']) }}"
+                   class="px-3.5 py-2 rounded-lg text-xs font-bold transition
+                          {{ ($kehadiran ?? null) === 'aktif' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}">
+                    Lihat yang aktif
+                </a>
+                <a href="{{ route('administrasi', ['kehadiran' => 'belum-pernah']) }}"
+                   class="px-3.5 py-2 rounded-lg text-xs font-bold transition
+                          {{ ($kehadiran ?? null) === 'belum-pernah' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100' }}">
+                    Belum pernah masuk ({{ $belumPernahMasuk }})
+                </a>
+                @if ($kehadiran ?? null)
+                    <a href="{{ route('administrasi') }}"
+                       class="px-3.5 py-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                        Semua
+                    </a>
+                @endif
+            </div>
+        </div>
     @endif
 
     {{-- ── Stat Cards ── --}}
@@ -97,6 +276,7 @@
         {{-- Filter Bar --}}
         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
             <form method="GET" action="{{ route('administrasi') }}" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="kehadiran" value="{{ $kehadiran }}">
                 <div class="relative flex-1">
                     <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -114,7 +294,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                     Filter
                 </button>
-                @if ($search || $roleFilter)
+                @if ($search || $roleFilter || $kehadiran)
                 <a href="{{ route('administrasi') }}" class="flex items-center gap-1.5 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-xl transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                     Reset
@@ -139,7 +319,7 @@
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Email</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Role</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Usulan</th>
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Terdaftar</th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Login Terakhir</th>
                         <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase">Aksi</th>
                     </tr>
                 </thead>
@@ -179,11 +359,33 @@
                         <td class="px-4 py-3">
                             <span class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full">{{ $user->usulan_count }}</span>
                         </td>
-                        <td class="px-4 py-3 text-slate-500 text-xs">{{ $user->created_at?->format('d M Y') ?? '—' }}</td>
+                        <td class="px-4 py-3 text-xs">
+                            @if ($idAktif->contains($user->id))
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-full">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Sedang login
+                                </span>
+                            @elseif ($user->login_terakhir_at)
+                                <p class="text-slate-600 font-medium">{{ $user->login_terakhir_at->translatedFormat('d M Y, H:i') }}</p>
+                                <p class="text-slate-400 mt-0.5">{{ $user->login_terakhir_at->diffForHumans() }}</p>
+                            @else
+                                <span class="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 font-bold rounded-full">
+                                    Belum pernah
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1">
                                 {{-- Edit --}}
-                                <button @click="openEdit({{ json_encode(['id' => $user->id, 'nama' => $user->nama, 'email' => $user->email, 'nip' => $user->nip, 'role' => $user->role]) }})"
+                                <button @click="openEdit({{ json_encode([
+                                        'id' => $user->id,
+                                        'nama' => $user->nama,
+                                        'email' => $user->email,
+                                        'nip' => $user->nip,
+                                        'role' => $user->role,
+                                        'jabatan' => $user->jabatan,
+                                        'id_unit' => (string) $user->id_unit,
+                                        'id_atasan' => (string) $user->id_atasan,
+                                    ]) }})"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-500 hover:text-teal-700 transition" title="Edit Pengguna">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
@@ -258,6 +460,30 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Jabatan</label>
+                    <input type="text" name="jabatan" placeholder="cth. Dosen, Ketua Jurusan"
+                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Unit Kerja</label>
+                    <select name="id_unit" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">— Belum ditentukan —</option>
+                        @foreach ($unitKerja as $unit)
+                            <option value="{{ $unit->id }}">{{ $unit->kode }} — {{ $unit->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Atasan Langsung</label>
+                    <select name="id_atasan" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">— Tidak ada —</option>
+                        @foreach ($calonAtasan as $calon)
+                            <option value="{{ $calon->id }}">{{ $calon->nama }}{{ $calon->jabatan ? ' — '.$calon->jabatan : '' }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-400 mt-1">Menjadi pemberi keputusan tahap pertama pada alur persetujuan.</p>
+                </div>
+                <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Password <span class="text-red-500">*</span></label>
                     <input type="password" name="password" required minlength="8" placeholder="Minimal 8 karakter"
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
@@ -319,6 +545,30 @@
                             <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Jabatan</label>
+                    <input type="text" name="jabatan" x-model="editUser.jabatan"
+                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Unit Kerja</label>
+                    <select name="id_unit" x-model="editUser.id_unit" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">— Belum ditentukan —</option>
+                        @foreach ($unitKerja as $unit)
+                            <option value="{{ $unit->id }}">{{ $unit->kode }} — {{ $unit->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Atasan Langsung</label>
+                    <select name="id_atasan" x-model="editUser.id_atasan" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">— Tidak ada —</option>
+                        @foreach ($calonAtasan as $calon)
+                            <option value="{{ $calon->id }}">{{ $calon->nama }}{{ $calon->jabatan ? ' — '.$calon->jabatan : '' }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-400 mt-1">Menjadi pemberi keputusan tahap pertama pada alur persetujuan.</p>
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button @click.prevent="showEditModal = false" type="button"

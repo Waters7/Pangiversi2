@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Edit Usulan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -65,35 +67,33 @@
                             <label for="id_kegiatan" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Jenis Kegiatan <span class="text-red-500">*</span>
                             </label>
-                            <select name="id_kegiatan" id="id_kegiatan"
-                                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('id_kegiatan') ? 'border-red-500' : 'border-slate-200' }}"
-                                    required>
-                                <option value="">-- Pilih Jenis Kegiatan --</option>
-                                @foreach($kegiatan as $k)
-                                    <option value="{{ $k->id }}"
-                                        {{ old('id_kegiatan', $usulan->id_kegiatan) == $k->id ? 'selected' : '' }}>
-                                        {{ $k->nama }}
-                                    </option>
+                            <select name="id_kegiatan" id="id_kegiatan" required
+                                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('id_kegiatan') ? 'border-red-500' : 'border-slate-200' }}">
+                                <option value="">— Pilih jenis kegiatan —</option>
+                                @foreach ($jenisKegiatan as $kegiatan)
+                                    <option value="{{ $kegiatan->id }}"
+                                            @selected(old('id_kegiatan', $usulan->id_kegiatan) == $kegiatan->id)>{{ $kegiatan->nama }}</option>
                                 @endforeach
                             </select>
                             @error('id_kegiatan')
-                                <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                    {{ $message }}
-                                </p>
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        {{-- Dasar Penugasan --}}
+                        {{-- Kategori Perjalanan Dinas --}}
+                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin"
+                                                   :terpilih="$usulan->id_kategori_perjadin" />
+
+                        {{-- Nomor Surat Tugas --}}
                         <div>
                             <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Dasar Penugasan <span class="text-red-500">*</span>
+                                Nomor Surat Tugas <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="no_tugas" id="no_tugas"
                                    class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
-                                   placeholder="cth: Undangan Rapat No. 123/..., SK Direktur No. ..."
+                                   placeholder="cth: KP.01.02/F.XXX/123/2026"
                                    value="{{ old('no_tugas', $usulan->no_tugas) }}" required>
-                            <p class="text-xs text-slate-400 mt-1">Nomor surat undangan, SK, atau surat tugas dasar</p>
+                            <p class="text-xs text-slate-400 mt-1">Nomor pada surat tugas yang diunggah</p>
                             @error('no_tugas')
                                 <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
@@ -108,10 +108,15 @@
                                 <label for="lokasi" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                     Lokasi / Kota Tujuan <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="lokasi" id="lokasi"
+                                <input type="text" name="lokasi" id="lokasi" list="daftar-lokasi"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('lokasi') ? 'border-red-500' : 'border-slate-200' }}"
                                        placeholder="cth: Jakarta, Surabaya, Bandung..."
                                        value="{{ old('lokasi', $usulan->lokasi) }}" required>
+                                <datalist id="daftar-lokasi">
+                                    @foreach ($lokasiTujuan as $l)
+                                        <option value="{{ $l->nama }}">{{ $l->nama_lengkap }}</option>
+                                    @endforeach
+                                </datalist>
                                 @error('lokasi')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
@@ -303,7 +308,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                             </svg>
-                            Simpan & Ajukan
+                            Simpan & Kirim Verifikasi PPK
                         </button>
 
                         <button type="submit" name="action" value="draft"

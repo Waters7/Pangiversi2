@@ -59,6 +59,17 @@
                 </svg>
                 <span>Pembayaran telah lunas. Uang muka <strong>Rp {{ number_format($usulan->keuangan->uang_muka, 0, ',', '.') }}</strong> dan sisa bayar <strong>Rp {{ number_format($usulan->keuangan->sisa, 0, ',', '.') }}</strong> telah berhasil ditransfer.</span>
             </div>
+
+            @can('mencatat-pembayaran')
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <x-batal-pembayaran
+                        :aksi="route('keuangan.batal-pelunasan', $usulan->no_usulan)"
+                        :nama="'batal-lunas-'.$usulan->id"
+                        judul="Batalkan pencatatan pelunasan?"
+                        :ringkas="$usulan->no_usulan.' · Rp '.number_format($usulan->keuangan->nilaiPelunasan(), 0, ',', '.')" />
+                    <p class="text-xs text-slate-400">Kode konfirmasi bendahara pada dokumen ikut dicabut.</p>
+                </div>
+            @endcan
         </div>
     </div>
 </div>

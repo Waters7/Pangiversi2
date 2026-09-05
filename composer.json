@@ -9,8 +9,10 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
+        "anthropic-ai/sdk": "^0.43.0",
         "barryvdh/laravel-dompdf": "^3.1",
+        "endroid/qr-code": "^6.1",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0"
     },

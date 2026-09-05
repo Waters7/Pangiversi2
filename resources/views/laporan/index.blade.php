@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Laporan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -18,11 +20,7 @@
                 <p class="text-xs text-slate-400 mt-0.5">Rekap seluruh laporan perjalanan dinas & anggaran</p>
             </div>
         </div>
-        <a href="{{ route('laporan.export', request()->query()) }}"
-           class="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition shadow-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Unduh CSV
-        </a>
+
     </div>
 
     {{-- ── Stat Cards ── --}}
@@ -103,13 +101,22 @@
                     <option value="bayar sebagian" {{ $status === 'bayar sebagian' ? 'selected' : '' }}>Bayar Sebagian</option>
                     <option value="lunas" {{ $status === 'lunas' ? 'selected' : '' }}>Lunas</option>
                 </select>
-                <input type="month" name="bulan" value="{{ $bulan }}" placeholder="Bulan"
-                       class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                <input type="hidden" name="tahun" value="{{ $tahun }}">
+                <input type="hidden" name="bulan" value="{{ $bulan }}">
+                <select name="pegawai"
+                        class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition min-w-48">
+                    <option value="">Semua Pegawai</option>
+                    @foreach ($daftarPegawai as $item)
+                        <option value="{{ $item->id }}" @selected((string) $pegawai === (string) $item->id)>
+                            {{ $item->nama }}
+                        </option>
+                    @endforeach
+                </select>
                 <button type="submit"
                         class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition">
                     Filter
                 </button>
-                @if($search || $status || $bulan)
+                @if($search || $status || $bulan || $tahun || $pegawai)
                     <a href="{{ route('laporan') }}"
                        class="px-4 py-2.5 border border-slate-200 bg-white text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
                         Reset
@@ -117,6 +124,34 @@
                 @endif
             </div>
         </form>
+    </div>
+
+    <x-saring-periode
+        :aksi="route('laporan')"
+        :tahun="$tahun"
+        :bulan="$bulan"
+        :tahun-tersedia="$tahunTersedia"
+        :jumlah-bulan="$jumlahBulan"
+        :ekstra="['search' => $search, 'status_keuangan' => $status, 'pegawai' => $pegawai]" />
+
+    {{-- Ekspor daftar nominatif untuk periode yang sedang dipilih. --}}
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+            <p class="text-sm font-bold text-slate-700">Ekspor Daftar Nominatif</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+                Format Excel sesuai KPPN untuk periode
+                <strong class="text-slate-600">{{ $labelPeriode }}</strong>{{ $pegawai ? ', pegawai terpilih saja' : '' }}.
+                Pilih tahun dan bulannya lewat saringan di atas.
+            </p>
+        </div>
+
+        <a href="{{ route('laporan.export-excel', request()->query()) }}"
+           class="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition shadow-sm shadow-teal-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Unduh Excel
+        </a>
     </div>
 
     {{-- ═══ TABEL LAPORAN PEJADIN ═══ --}}
@@ -133,12 +168,6 @@
                     <p class="text-xs text-slate-400">{{ $usulan->total() }} data ditemukan</p>
                 </div>
             </div>
-            {{-- Mobile download --}}
-            <a href="{{ route('laporan.export', request()->query()) }}"
-               class="sm:hidden flex items-center gap-1.5 px-3 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                CSV
-            </a>
         </div>
 
         <div class="overflow-x-auto">
@@ -153,11 +182,30 @@
                         <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Uang Muka</th>
                         <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Sisa</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3">Status</th>
-                        <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-24">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
+                    @php $bulanBerjalan = null; @endphp
+
                     @forelse($usulan as $i => $item)
+                        {{-- Judul bulan disisipkan tiap kali bulan keberangkatannya
+                             berganti, supaya rekapnya terbaca per periode. --}}
+                        @php
+                            $mulai = $item->tanggal_mulai ? \Carbon\Carbon::parse($item->tanggal_mulai) : null;
+                            $bulanBaris = $mulai?->format('Y-m');
+                        @endphp
+
+                        @if ($bulanBaris !== $bulanBerjalan)
+                            @php $bulanBerjalan = $bulanBaris; @endphp
+                            <tr class="bg-slate-100/70">
+                                <td colspan="8" class="px-6 py-2">
+                                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                        {{ $mulai?->translatedFormat('F Y') ?? 'Tanpa Tanggal' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endif
+
                         @php
                             $keu = $item->keuangan;
                             $statusConfig = match($keu?->status) {
@@ -171,8 +219,7 @@
                             <td class="px-6 py-4 text-slate-500 font-medium">{{ $usulan->firstItem() + $i }}</td>
                             <td class="px-4 py-4">
                                 <div class="flex items-center gap-2.5">
-                                    <img src="https://ui-avatars.com/api/?name={{ urlencode($item->user?->nama ?? 'U') }}&background=14b8a6&color=fff&size=32"
-                                         class="w-7 h-7 rounded-full shrink-0" alt="">
+                                    <x-avatar :nama="$item->user?->nama" :foto="$item->user?->url_foto" ukuran="sm" />
                                     <div>
                                         <p class="font-semibold text-slate-800 text-xs">{{ $item->user?->nama ?? '—' }}</p>
                                         <p class="text-xs text-slate-400 font-mono">{{ $item->no_usulan }}</p>
@@ -201,26 +248,10 @@
                                     {{ $statusConfig['label'] }}
                                 </span>
                             </td>
-                            <td class="px-4 py-4">
-                                <div class="flex items-center justify-center gap-1">
-                                    <a href="{{ route('laporan.show', $item->no_usulan) }}"
-                                       class="p-2 rounded-lg hover:bg-teal-50 text-slate-400 hover:text-teal-600 transition" title="Lihat Detail">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                        </svg>
-                                    </a>
-                                    <a href="{{ route('laporan.export-detail', $item->no_usulan) }}"
-                                       class="p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition" title="Unduh CSV">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                        </svg>
-                                    </a>
-                                </div>
-                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-12 text-center">
+                            <td colspan="8" class="px-6 py-12 text-center">
                                 <svg class="w-10 h-10 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                     <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>

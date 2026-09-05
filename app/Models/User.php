@@ -3,42 +3,45 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Kemampuan;
+use App\Enums\PeranPengguna;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['nama', 'email', 'nip', 'password', 'role'])]
+#[Fillable([
+    'nama', 'email', 'no_hp', 'foto', 'nip', 'password', 'role', 'jabatan', 'golongan', 'id_unit', 'id_atasan',
+    'nama_bank', 'nomor_rekening', 'nama_rekening',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    public const ROLE_PEGAWAI = 'pegawai';
+    public const ROLE_SUPER_ADMIN = 'super_administrator';
 
-    public const ROLE_DIREKTUR = 'direktur';
-
-    public const ROLE_OUTSOURCING = 'outsourcing';
+    public const ROLE_PIMPINAN = 'pimpinan';
 
     public const ROLE_PPK = 'ppk';
 
-    public const ROLE_KEUANGAN = 'keuangan';
+    public const ROLE_BENDAHARA = 'bendahara';
 
-    public const ROLE_ADMINISTRATOR = 'administrator';
+    public const ROLE_TIM_KEUANGAN = 'tim_keuangan';
 
-    /**
-     * Role groups: roles that share the same access level.
-     *
-     * @var array<string, list<string>>
-     */
-    public const GROUP_PEGAWAI = [self::ROLE_PEGAWAI, self::ROLE_DIREKTUR, self::ROLE_OUTSOURCING];
+    public const ROLE_TIM_SDM = 'tim_sdm';
 
-    public const GROUP_PPK = [self::ROLE_PPK, self::ROLE_KEUANGAN];
+    public const ROLE_DOSEN_TENDIK = 'dosen_tendik';
 
-    public const GROUP_ADMIN = [self::ROLE_ADMINISTRATOR];
+    public const ROLE_PEGAWAI_EKSTERNAL = 'pegawai_eksternal';
+
+    public const ROLE_OUTSOURCING = 'outsourcing';
 
     /**
      * Get the attributes that should be cast.
@@ -49,6 +52,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'login_terakhir_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -58,34 +62,180 @@ class User extends Authenticatable
         return $this->hasMany(Usulan::class, 'id_user');
     }
 
+    /**
+     * @return BelongsTo<UnitKerja, $this>
+     */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(UnitKerja::class, 'id_unit');
+    }
+
+    /**
+     * Atasan langsung yang menjadi approver level pertama bagi pengguna ini.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function atasan(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_atasan');
+    }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function bawahan(): HasMany
+    {
+        return $this->hasMany(User::class, 'id_atasan');
+    }
+
+    /**
+     * @return HasMany<PesertaUsulan, $this>
+     */
+    public function keikutsertaan(): HasMany
+    {
+        return $this->hasMany(PesertaUsulan::class, 'id_user');
+    }
+
+    /**
+     * Notifikasi in-app milik pengguna ini.
+     *
+     * @return HasMany<Notifikasi, $this>
+     */
+    public function notifikasi(): HasMany
+    {
+        return $this->hasMany(Notifikasi::class, 'id_user')->latest();
+    }
+
+    /**
+     * Jejak audit dari tindakan yang dilakukan pengguna ini.
+     *
+     * @return HasMany<AuditLog, $this>
+     */
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'id_user');
+    }
+
+    /**
+     * Peran pengguna sebagai enum — sumber tunggal untuk label dan hak akses.
+     */
+    public function getPeranAttribute(): PeranPengguna
+    {
+        return PeranPengguna::dari($this->role);
+    }
+
+    /**
+     * Apakah pengguna ini memiliki sebuah kemampuan.
+     */
+    public function punyaKemampuan(Kemampuan $kemampuan): bool
+    {
+        return $this->peran->punya($kemampuan);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->peran === PeranPengguna::SuperAdministrator;
+    }
+
+    /**
+     * Dipertahankan sebagai alias agar pemeriksaan "kewenangan penuh" yang
+     * tersebar di controller dan Blade tetap berjalan.
+     */
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMINISTRATOR;
+        return $this->isSuperAdmin();
     }
 
     public function isPPK(): bool
     {
-        return in_array($this->role, self::GROUP_PPK);
+        return $this->peran === PeranPengguna::Ppk;
     }
 
-    public function isPegawai(): bool
+    public function isPimpinan(): bool
     {
-        return in_array($this->role, self::GROUP_PEGAWAI);
+        return $this->peran === PeranPengguna::Pimpinan;
+    }
+
+    public function isBendahara(): bool
+    {
+        return $this->peran === PeranPengguna::Bendahara;
+    }
+
+    public function isTimKeuangan(): bool
+    {
+        return $this->peran === PeranPengguna::TimKeuangan;
+    }
+
+    public function isTimSDM(): bool
+    {
+        return $this->peran === PeranPengguna::TimSdm;
     }
 
     /**
-     * Resolve a role to all roles in its group.
-     *
-     * @return list<string>
+     * Pengusul tanpa kewenangan tambahan apa pun.
      */
-    public static function expandRole(string $role): array
+    public function isPegawai(): bool
     {
-        return match ($role) {
-            self::ROLE_PEGAWAI, self::ROLE_DIREKTUR, self::ROLE_OUTSOURCING => self::GROUP_PEGAWAI,
-            self::ROLE_PPK, self::ROLE_KEUANGAN => self::GROUP_PPK,
-            self::ROLE_ADMINISTRATOR => self::GROUP_ADMIN,
-            default => [$role],
-        };
+        return $this->peran->pengusulBiasa();
+    }
+
+    /**
+     * Berwenang memberi keputusan atas usulan perjalanan dinas.
+     */
+    public function bisaMenyetujui(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MemvalidasiUsulan);
+    }
+
+    /**
+     * Boleh membuka halaman validasi — termasuk pimpinan yang hanya memantau.
+     */
+    public function bisaMembukaPersetujuan(): bool
+    {
+        return $this->bisaMenyetujui() || $this->bisaMelihatSemuaUsulan();
+    }
+
+    /**
+     * Akses membuka modul keuangan (baca).
+     */
+    public function bisaAksesKeuangan(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MelihatKeuangan);
+    }
+
+    /**
+     * Akses menginput dan mengubah rincian biaya perjalanan.
+     */
+    public function bisaMengelolaBiaya(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MengelolaBiaya);
+    }
+
+    /**
+     * Menyatakan nominal biaya sudah diperiksa — tugas tim keuangan,
+     * bukan bendahara yang membayarnya.
+     */
+    public function bisaMemvalidasiBiaya(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MemvalidasiBiaya);
+    }
+
+    /**
+     * Akses mencatat pembayaran beserta bukti transfernya.
+     */
+    public function bisaMencatatPembayaran(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MencatatPembayaran);
+    }
+
+    public function bisaMelihatLaporan(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MelihatLaporan);
+    }
+
+    public function bisaMelihatSemuaUsulan(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MelihatSemuaUsulan);
     }
 
     /**
@@ -93,18 +243,83 @@ class User extends Authenticatable
      */
     public static function roleOptions(): array
     {
-        return [
-            self::ROLE_PEGAWAI => 'Pegawai',
-            self::ROLE_DIREKTUR => 'Direktur',
-            self::ROLE_OUTSOURCING => 'Outsourcing',
-            self::ROLE_PPK => 'PPK',
-            self::ROLE_KEUANGAN => 'Keuangan',
-            self::ROLE_ADMINISTRATOR => 'Administrator',
-        ];
+        return PeranPengguna::options();
     }
 
     public function getRoleLabelAttribute(): string
     {
-        return self::roleOptions()[$this->role] ?? 'Unknown';
+        return $this->peran->label();
+    }
+
+    /**
+     * Rekening bank sudah lengkap dan siap dipakai untuk transfer.
+     */
+    /**
+     * Akun yang belum pernah dipakai masuk sama sekali.
+     */
+    public function belumPernahMasuk(): bool
+    {
+        return $this->login_terakhir_at === null;
+    }
+
+    public function punyaRekening(): bool
+    {
+        return filled($this->nama_bank)
+            && filled($this->nomor_rekening)
+            && filled($this->nama_rekening);
+    }
+
+    public function getRekeningRingkasAttribute(): ?string
+    {
+        return $this->punyaRekening()
+            ? "{$this->nama_bank} · {$this->nomor_rekening} a.n. {$this->nama_rekening}"
+            : null;
+    }
+
+    /**
+     * Nomor WhatsApp dalam format internasional tanpa tanda baca,
+     * sebagaimana diminta tautan wa.me — misalnya 081234 menjadi 6281234.
+     */
+    public function getNomorWhatsappAttribute(): ?string
+    {
+        $angka = preg_replace('/\D/', '', (string) $this->no_hp);
+
+        if (blank($angka)) {
+            return null;
+        }
+
+        return match (true) {
+            str_starts_with($angka, '62') => $angka,
+            str_starts_with($angka, '0') => '62'.mb_substr($angka, 1),
+            default => '62'.$angka,
+        };
+    }
+
+    public function punyaWhatsapp(): bool
+    {
+        return $this->nomor_whatsapp !== null;
+    }
+
+    /**
+     * Alamat foto profil yang siap dipasang pada tag img.
+     *
+     * Mengembalikan null bila pengguna belum mengunggah foto atau berkasnya
+     * sudah tidak ada, sehingga tampilan jatuh ke avatar inisial.
+     */
+    public function getUrlFotoAttribute(): ?string
+    {
+        if (blank($this->foto) || ! Storage::disk('public')->exists($this->foto)) {
+            return null;
+        }
+
+        // asset() mengikuti host yang sedang dipakai, sedangkan Storage::url()
+        // terkunci pada APP_URL — foto akan gagal dimuat bila aplikasi dibuka
+        // lewat localhost padahal APP_URL berisi alamat IP jaringan lokal.
+        return asset('storage/'.$this->foto);
+    }
+
+    public function punyaFoto(): bool
+    {
+        return $this->url_foto !== null;
     }
 }

@@ -1,11 +1,39 @@
 @php
     $keuangan = $usulan->keuangan;
-    $rincian = $keuangan->rincianBiaya ?? collect();
+
+    // Transport lokal punya menunya sendiri: ia dipertanggungjawabkan lewat
+    // Daftar Pengeluaran Riil, bukan lewat rincian biaya ini.
+    $rincian = ($keuangan->rincianBiaya ?? collect())
+        ->reject(fn ($baris) => $baris->kategori === \App\Enums\KategoriBiaya::TransportLokal)
+        ->values();
     $dokKeuangan = $keuangan->dokumenKeuangan;
     $dokumen = $usulan->dokumen->last();
     $isAdmin = auth()->user()->isAdmin();
-    $canEditRincian = $keuangan->status === 'belum bayar' || $isAdmin;
+
+    // Angka yang sudah ditandatangani tidak boleh bergeser: dokumen
+    // tercetak dan daftar nominatif menumpang di atasnya.
+    $alasanKunci = app(\App\Services\PenguncianBerkas::class)->rincianBiaya($usulan);
+
+    // Input rincian biaya terbatas pada tim keuangan dan bendahara.
+    // Menyusun angka dan menyatakannya benar adalah dua kewenangan berbeda.
+    $bisaValidasi = auth()->user()->bisaMemvalidasiBiaya() && $alasanKunci === null;
+
+    $canEditRincian = auth()->user()->bisaMengelolaBiaya()
+        && $alasanKunci === null
+        && ($keuangan->status === 'belum bayar' || $isAdmin);
 @endphp
+
+@if ($alasanKunci)
+    <div class="mb-5 flex items-start gap-3 px-5 py-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        <div>
+            <p class="text-sm font-bold text-amber-800">Rincian biaya terkunci</p>
+            <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">{{ $alasanKunci }}</p>
+        </div>
+    </div>
+@endif
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
 
@@ -42,32 +70,56 @@
             {{-- Form Tambah Komponen --}}
             @if($canEditRincian)
                 <div id="tambah-rincian" class="hidden border-b border-slate-100 bg-teal-50/30 px-6 py-4">
-                    <form action="{{ route('keuangan.rincian.store', $usulan->no_usulan) }}" method="POST">
+                    <form action="{{ route('keuangan.rincian.store', $usulan->no_usulan) }}" method="POST"
+                          x-data="{
+                            standar: {{ Js::from(($komponenBiaya ?? collect())->mapWithKeys(fn ($k) => [$k->nama => ['satuan' => $k->satuan, 'harga_satuan' => (int) $k->harga_satuan]])) }},
+                            terapkanStandar(nama) {
+                                const acuan = this.standar[nama];
+                                if (! acuan) return;
+                                this.$refs.satuan.value = acuan.satuan;
+                                this.$refs.harga.value = acuan.harga_satuan;
+                            }
+                          }">
                         @csrf
                         <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                            <div class="sm:col-span-4">
+                            <div class="sm:col-span-3">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori <span class="text-red-500">*</span></label>
+                                <select name="kategori" required
+                                        class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent">
+                                    @foreach (($kategoriBiaya ?? []) as $nilai => $label)
+                                        <option value="{{ $nilai }}" {{ old('kategori') === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="sm:col-span-3">
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Komponen Biaya <span class="text-red-500">*</span></label>
                                 <input type="text" name="komponen" required placeholder="cth. Uang harian, Tiket pesawat"
-                                       value="{{ old('komponen') }}"
+                                       value="{{ old('komponen') }}" list="daftar-komponen"
+                                       @change="terapkanStandar($event.target.value)"
                                        class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent">
+                                <datalist id="daftar-komponen">
+                                    @foreach (($komponenBiaya ?? collect()) as $k)
+                                        <option value="{{ $k->nama }}">{{ $k->satuan }} — Rp {{ number_format($k->harga_satuan, 0, ',', '.') }}</option>
+                                    @endforeach
+                                </datalist>
                             </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Volume <span class="text-red-500">*</span></label>
+                            <div class="sm:col-span-1">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Vol. <span class="text-red-500">*</span></label>
                                 <input type="number" name="volume" required min="1" value="{{ old('volume', 1) }}"
                                        class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent">
                             </div>
                             <div class="sm:col-span-2">
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Satuan <span class="text-red-500">*</span></label>
-                                <select name="satuan" required
+                                <select name="satuan" required x-ref="satuan"
                                         class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white">
                                     @foreach(['OH','OK','OB','Tiket','Paket','Hari','Kali'] as $s)
                                         <option value="{{ $s }}" {{ old('satuan') === $s ? 'selected' : '' }}>{{ $s }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="sm:col-span-3">
+                            <div class="sm:col-span-2">
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Satuan (Rp) <span class="text-red-500">*</span></label>
-                                <input type="number" name="harga_satuan" required min="0" value="{{ old('harga_satuan') }}" placeholder="500000"
+                                <input type="number" name="harga_satuan" required min="0" value="{{ old('harga_satuan') }}" placeholder="500000" x-ref="harga"
                                        class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent">
                             </div>
                             <div class="sm:col-span-1 flex items-end">
@@ -96,11 +148,14 @@
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-100">
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3 w-10">No</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3 w-36">Kategori</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Komponen Biaya</th>
                             <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-20">Vol.</th>
                             <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-20">Satuan</th>
                             <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Harga Satuan</th>
                             <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Jumlah</th>
+                            <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-36">Status</th>
+                            <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-20">Validasi</th>
                             @if($canEditRincian)
                                 <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3 w-24">Aksi</th>
                             @endif
@@ -110,11 +165,52 @@
                         @forelse($rincian as $i => $item)
                             <tr class="hover:bg-slate-50/60 transition" id="row-{{ $item->id }}">
                                 <td class="px-6 py-3 text-slate-500 font-medium display-cell">{{ $i + 1 }}</td>
-                                <td class="px-4 py-3 font-semibold text-slate-700 display-cell">{{ $item->komponen }}</td>
+                                <td class="px-4 py-3 display-cell"><span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full {{ $item->kategori->badge() }}">{{ $item->kategori->label() }}</span></td>
+                                <td class="px-4 py-3 font-semibold text-slate-700 display-cell">
+                                    {{ $item->komponen }}
+                                    @if ($item->dariDokumen())
+                                        <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Nominal dari pelaksana</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-center text-slate-600 display-cell">{{ $item->volume }}</td>
                                 <td class="px-4 py-3 text-center text-slate-600 display-cell">{{ $item->satuan }}</td>
                                 <td class="px-4 py-3 text-right text-slate-600 display-cell">Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right font-semibold text-slate-800 display-cell">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
+
+                                {{-- Hanya nominal dari dokumen pelaksana yang perlu
+                                     divalidasi; baris yang ditulis tim keuangan sendiri
+                                     sudah menjadi tanggung jawabnya. --}}
+                                <td class="px-4 py-3 text-center display-cell">
+                                    @if (! $item->dariDokumen())
+                                        <span class="text-[11px] text-slate-400">Ditulis tim keuangan</span>
+                                    @elseif ($item->divalidasi_at)
+                                        <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                                            Sudah divalidasi
+                                        </span>
+                                    @else
+                                        <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                                            Belum diperiksa
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td class="px-4 py-3 text-center display-cell">
+                                    {{-- Validasi menyatakan nominalnya sudah diperiksa dan
+                                         menggerakkan berkas ke pelaksana, jadi ia ditanya ulang
+                                         sekali sebelum tercatat. --}}
+                                    @if ($item->dariDokumen() && $bisaValidasi)
+                                        <x-konfirmasi-validasi
+                                            :nama="'validasi-'.$item->id"
+                                            :aksi="$item->divalidasi_at
+                                                ? route('keuangan.rincian.batal-validasi', [$usulan->no_usulan, $item->id])
+                                                : route('keuangan.rincian.validasi', [$usulan->no_usulan, $item->id])"
+                                            :metode="$item->divalidasi_at ? 'DELETE' : 'PUT'"
+                                            :tervalidasi="(bool) $item->divalidasi_at"
+                                            :komponen="$item->komponen"
+                                            :nominal="(float) $item->jumlah" />
+                                    @endif
+                                </td>
+
                                 @if($canEditRincian)
                                     <td class="px-4 py-3 display-cell">
                                         <div class="flex items-center justify-center gap-1">
@@ -141,15 +237,23 @@
                             {{-- Inline Edit Row --}}
                             @if($canEditRincian)
                                 <tr id="edit-{{ $item->id }}" class="hidden bg-blue-50/40">
-                                    <td colspan="7" class="px-6 py-3">
+                                    <td colspan="10" class="px-6 py-3">
                                         <form action="{{ route('keuangan.rincian.update', [$usulan->no_usulan, $item->id]) }}" method="POST">
                                             @csrf @method('PUT')
                                             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                                                <div class="sm:col-span-4">
+                                                <div class="sm:col-span-3">
+                                                    <select name="kategori" required
+                                                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white">
+                                                        @foreach (($kategoriBiaya ?? []) as $nilai => $label)
+                                                            <option value="{{ $nilai }}" {{ $item->kategori->value === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="sm:col-span-3">
                                                     <input type="text" name="komponen" required value="{{ $item->komponen }}"
                                                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent">
                                                 </div>
-                                                <div class="sm:col-span-2">
+                                                <div class="sm:col-span-1">
                                                     <input type="number" name="volume" required min="1" value="{{ $item->volume }}"
                                                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent">
                                                 </div>
@@ -161,7 +265,7 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
-                                                <div class="sm:col-span-2">
+                                                <div class="sm:col-span-1">
                                                     <input type="number" name="harga_satuan" required min="0" value="{{ (int) $item->harga_satuan }}"
                                                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent">
                                                 </div>
@@ -176,7 +280,7 @@
                             @endif
                         @empty
                             <tr>
-                                <td colspan="{{ $canEditRincian ? 7 : 6 }}" class="px-6 py-8 text-center text-slate-400 text-sm">
+                                <td colspan="{{ $canEditRincian ? 10 : 9 }}" class="px-6 py-8 text-center text-slate-400 text-sm">
                                     <svg class="w-8 h-8 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                         <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                     </svg>
@@ -188,19 +292,27 @@
 
                     @if($rincian->isNotEmpty())
                         <tfoot class="border-t-2 border-slate-200 bg-slate-50">
+                            {{-- Tiap baris ringkasan menyisakan satu sel untuk kolom
+                                 Validasi, dan satu lagi untuk Aksi bila tampil. --}}
                             <tr>
-                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Total Estimasi</td>
+                                <td colspan="6" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Total Estimasi</td>
                                 <td class="px-4 py-3 text-right text-sm font-bold text-slate-800">Rp {{ number_format($keuangan->total, 0, ',', '.') }}</td>
+                                <td></td>
+                                <td></td>
                                 @if($canEditRincian) <td></td> @endif
                             </tr>
                             <tr>
-                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka (80%)</td>
+                                <td colspan="6" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-teal-700">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</td>
+                                <td></td>
+                                <td></td>
                                 @if($canEditRincian) <td></td> @endif
                             </tr>
                             <tr>
-                                <td colspan="{{ $canEditRincian ? 5 : 4 }}" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar (20%)</td>
+                                <td colspan="6" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar</td>
                                 <td class="px-4 py-2 text-right text-sm font-semibold text-slate-500">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</td>
+                                <td></td>
+                                <td></td>
                                 @if($canEditRincian) <td></td> @endif
                             </tr>
                         </tfoot>
@@ -236,7 +348,7 @@
                     <tbody class="divide-y divide-slate-50">
                         {{-- Uang Muka --}}
                         <tr class="hover:bg-slate-50/60 transition">
-                            <td class="px-6 py-3.5 font-medium text-slate-700">Uang Muka (80%)</td>
+                            <td class="px-6 py-3.5 font-medium text-slate-700">Uang Muka</td>
                             <td class="px-4 py-3.5 text-slate-600">
                                 {{ $keuangan->tanggal_transfer ? $keuangan->tanggal_transfer->format('d/m/Y') : '—' }}
                             </td>
@@ -263,7 +375,7 @@
                         </tr>
                         {{-- Sisa Bayar --}}
                         <tr class="hover:bg-slate-50/60 transition">
-                            <td class="px-6 py-3.5 font-medium text-slate-700">Sisa Bayar (20%)</td>
+                            <td class="px-6 py-3.5 font-medium text-slate-700">Sisa Bayar</td>
                             <td class="px-4 py-3.5 text-slate-600">
                                 {{ $keuangan->tanggal_pelunasan ? $keuangan->tanggal_pelunasan->format('d/m/Y') : '—' }}
                             </td>
@@ -313,25 +425,19 @@
             </div>
 
             @php
-                $checklistItems = [
-                    ['label' => 'Surat Tugas',       'field' => $dokumen?->surat_tugas],
-                    ['label' => 'SPPD',              'field' => $dokumen?->sppd],
-                    ['label' => 'Boarding Pass',      'field' => $dokumen?->boarding_pass],
-                    ['label' => 'Faktur / Invoice',   'field' => $dokumen?->faktur],
-                    ['label' => 'Bill Hotel',         'field' => $dokumen?->bill_hotel],
-                    ['label' => 'Kwitansi',           'field' => $dokumen?->kwintasi],
-                    ['label' => 'Laporan Hasil',      'field' => $dokumen?->laporan_hasil],
-                ];
+                // Satu definisi kelengkapan untuk seluruh aplikasi; lihat
+                // PenagihDokumen. Layar dan penagihan tidak boleh berbeda.
+                $checklistItems = app(\App\Services\PenagihDokumen::class)->checklist($usulan);
                 $totalLPJ = count($checklistItems);
-                $filledLPJ = collect($checklistItems)->filter(fn($i) => $i['field'])->count();
+                $filledLPJ = collect($checklistItems)->where('terpenuhi', true)->count();
                 $lpjComplete = $filledLPJ === $totalLPJ;
             @endphp
 
             <div class="space-y-2 mb-4">
                 @foreach($checklistItems as $check)
-                    <div class="flex items-center justify-between py-2.5 px-3 rounded-xl {{ $check['field'] ? 'bg-teal-50/60' : 'bg-amber-50/60' }}">
-                        <div class="flex items-center gap-2.5">
-                            @if($check['field'])
+                    <div class="flex items-center justify-between gap-3 py-2.5 px-3 rounded-xl {{ $check['terpenuhi'] ? 'bg-teal-50/60' : 'bg-amber-50/60' }}">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            @if($check['terpenuhi'])
                                 <div class="w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
                                     <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                                 </div>
@@ -340,14 +446,92 @@
                                     <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01"/></svg>
                                 </div>
                             @endif
-                            <span class="text-sm text-slate-700 font-medium">{{ $check['label'] }}</span>
+                            <span class="text-sm text-slate-700 font-medium min-w-0">
+                                {{ $check['label'] }}
+                                @if ($check['catatan'])
+                                    <span class="block text-[11px] font-normal {{ $check['terpenuhi'] ? 'text-slate-400' : 'text-amber-700' }}">
+                                        {{ $check['catatan'] }}
+                                    </span>
+                                @endif
+                            </span>
                         </div>
-                        <span class="text-xs font-semibold {{ $check['field'] ? 'text-teal-600' : 'text-amber-600' }}">
-                            {{ $check['field'] ? 'Lengkap' : 'Belum upload' }}
-                        </span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-semibold {{ $check['terpenuhi'] ? 'text-teal-600' : 'text-amber-600' }}">
+                                {{ $check['terpenuhi'] ? 'Lengkap' : 'Belum lengkap' }}
+                            </span>
+
+                            @if ($check['berkas'])
+                                <a href="{{ Storage::url($check['berkas']) }}" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 hover:border-teal-300 text-slate-600 hover:text-teal-700 text-[11px] font-bold rounded-lg transition"
+                                   title="Buka {{ $check['label'] }} di tab baru">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                                    </svg>
+                                    Lihat
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>
+
+            {{-- Cetak rincian biaya format PMK --}}
+            <a href="{{ route('keuangan.cetak-rincian', $usulan->no_usulan) }}"
+               class="w-full mb-3 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Cetak Rincian Biaya
+            </a>
+
+            {{-- Mengirim rincian biaya sekaligus daftar riilnya kepada
+                 pelaksana, membuka masa sanggah. Tombolnya diletakkan di sini
+                 karena inilah langkah berikutnya setelah nominal divalidasi. --}}
+            @php
+                $pesertaUtama = $usulan->peserta->firstWhere('id_user', $usulan->id_user)
+                    ?? $usulan->peserta->first();
+                $berkasRiil = $pesertaUtama
+                    ? $usulan->daftarRiil->firstWhere('id_peserta', $pesertaUtama->id)
+                    : null;
+                $belumDivalidasi = $rincian->whereNull('divalidasi_at')
+                    ->filter(fn ($b) => $b->dariDokumen())
+                    ->count();
+            @endphp
+
+            @can('mengelola-biaya')
+                @if ($pesertaUtama && ! ($berkasRiil?->sudah_ditandatangani))
+                    @if ($berkasRiil?->sudahDikirimKePegawai())
+                        <div class="w-full mb-3 px-4 py-2.5 bg-teal-50 border border-teal-100 rounded-xl text-center">
+                            <p class="text-xs font-bold text-teal-800">Sudah dikirim ke pelaksana</p>
+                            <p class="text-[11px] text-teal-700 mt-0.5">{{ $berkasRiil->status_label }}</p>
+                        </div>
+                    @else
+                        <form method="POST"
+                              action="{{ route('daftar-riil.kirim-pegawai', [$usulan->no_usulan, $pesertaUtama]) }}"
+                              class="mb-3"
+                              x-data
+                              @submit.prevent="if (confirm('Kirim rincian biaya dan daftar pengeluaran riil ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
+                            @csrf @method('PUT')
+                            <button type="submit" @disabled($belumDivalidasi > 0)
+                                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition
+                                           {{ $belumDivalidasi > 0
+                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                : 'bg-teal-500 hover:bg-teal-600 text-white' }}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                                </svg>
+                                Kirim ke Pelaksana
+                            </button>
+                        </form>
+
+                        @if ($belumDivalidasi > 0)
+                            <p class="-mt-1 mb-3 text-[11px] text-amber-700 text-center">
+                                Masih ada {{ $belumDivalidasi }} nominal yang belum divalidasi.
+                            </p>
+                        @endif
+                    @endif
+                @endif
+            @endcan
 
             {{-- Progress --}}
             <div class="bg-slate-50 rounded-xl p-3">
@@ -371,11 +555,11 @@
                     <span class="text-sm font-bold text-slate-800">Rp {{ number_format($keuangan->total, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-sm text-slate-500">Uang Muka (80%)</span>
+                    <span class="text-sm text-slate-500">Uang Muka</span>
                     <span class="text-sm font-semibold text-teal-700">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-sm text-slate-500">Sisa Bayar (20%)</span>
+                    <span class="text-sm text-slate-500">Sisa Bayar</span>
                     <span class="text-sm font-semibold text-slate-600">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</span>
                 </div>
                 <hr class="border-slate-100">

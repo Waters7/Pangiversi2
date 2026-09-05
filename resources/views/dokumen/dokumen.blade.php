@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Dokumen')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -17,6 +19,9 @@
             <p class="text-xs text-slate-400 mt-0.5">Pilih & Upload seluruh dokumen pertanggungjawaban perjalanan dinas</p>
         </div>
     </div>
+
+    <x-kotak-cari :rute="route('dokumen')" :nilai="$cari"
+                  petunjuk="Cari no. usulan, no. surat tugas, tujuan, atau nama pelaksana" />
 
     @if ($usulan->isEmpty())
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
@@ -48,7 +53,28 @@
                     </thead>
 
                     <tbody class="divide-y divide-slate-50">
-                        @foreach ($usulan as $item)
+                        @foreach ($perBulan as $bulan => $perTanggal)
+                            <tr class="bg-slate-100/70">
+                                <td colspan="5" class="px-6 py-2.5">
+                                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                        {{ \Carbon\Carbon::parse($bulan.'-01')->translatedFormat('F Y') }}
+                                    </span>
+                                    <span class="ml-2 text-[11px] font-bold text-slate-400">
+                                        {{ $perTanggal->flatten()->count() }} perjalanan
+                                    </span>
+                                </td>
+                            </tr>
+
+                            @foreach ($perTanggal as $tanggal => $sehari)
+                                <tr class="bg-slate-50/60">
+                                    <td colspan="5" class="px-6 py-1.5">
+                                        <span class="text-[11px] font-semibold text-slate-500">
+                                            {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('l, d F Y') }}
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                @foreach ($sehari as $item)
                             <tr class="hover:bg-slate-50/60 transition">
                                 <td class="px-6 py-4">
                                     <p class="font-bold text-slate-800 text-xs">{{ $item->no_usulan }}</p>
@@ -56,7 +82,7 @@
                                 </td>
 
                                 <td class="px-4 py-4">
-                                    <p class="text-sm text-slate-700">{{ $item->kegiatan->nama }}</p>
+                                    <p class="text-sm text-slate-700">{{ $item->kategoriPerjadin?->nama ?? $item->kegiatan?->nama ?? '—' }}</p>
                                     <p class="text-xs text-slate-400">{{ $item->lokasi }}</p>
                                 </td>
 
@@ -69,20 +95,7 @@
 
                                 <td class="px-4 py-4">
                                     <div class="flex items-center justify-center">
-                                        @php
-                                            $statusConfig = match($item->status) {
-                                                'draft'     => ['label' => 'Draft',     'class' => 'bg-slate-100 text-slate-600'],
-                                                'diajukan'  => ['label' => 'Diajukan',  'class' => 'bg-blue-50 text-blue-600'],
-                                                'menunggu'  => ['label' => 'Menunggu',  'class' => 'bg-yellow-50 text-yellow-600'],
-                                                'disetujui' => ['label' => 'Disetujui', 'class' => 'bg-teal-50 text-teal-600'],
-                                                'ditolak'   => ['label' => 'Ditolak',   'class' => 'bg-red-50 text-red-600'],
-                                                'selesai'   => ['label' => 'Selesai',   'class' => 'bg-green-50 text-green-600'],
-                                                default     => ['label' => ucfirst($item->status), 'class' => 'bg-slate-100 text-slate-600'],
-                                            };
-                                        @endphp
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $statusConfig['class'] }}">
-                                            {{ $statusConfig['label'] }}
-                                        </span>
+                                        <x-status-badge :usulan="$item" />
                                     </div>
                                 </td>
 
@@ -99,6 +112,8 @@
                                     </div>
                                 </td>
                             </tr>
+                                @endforeach
+                            @endforeach
                         @endforeach
                     </tbody>
                 </table>

@@ -21,9 +21,7 @@ class DokumenKeuanganFactory extends Factory
         return [
             'transfer_uang_muka' => fake()->imageUrl(),
             'transfer_sisa' => fake()->imageUrl(),
-            'id_keuangan' => function () {
-                return Keuangan::inRandomOrder()->first()->id;
-            },
+            'id_keuangan' => Keuangan::inRandomOrder()->value('id') ?? Keuangan::factory(),
         ];
     }
 }

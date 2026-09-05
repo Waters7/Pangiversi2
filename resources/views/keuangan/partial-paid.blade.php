@@ -31,7 +31,7 @@
                     <p class="text-sm font-semibold text-slate-800">{{ $usulan->keuangan->tanggal_transfer?->format('d/m/Y') ?? '—' }}</p>
                 </div>
                 <div>
-                    <p class="text-xs text-slate-500 mb-0.5">Nominal Ditransfer (80%)</p>
+                    <p class="text-xs text-slate-500 mb-0.5">Nominal Ditransfer</p>
                     <p class="text-sm font-bold text-teal-700">Rp {{ number_format($usulan->keuangan->uang_muka, 0, ',', '.') }}</p>
                 </div>
                 <div>
@@ -53,6 +53,17 @@
                 </svg>
                 <span>Uang muka telah dibayarkan. Pastikan dokumen LPJ sudah lengkap sebelum memproses pembayaran sisa.</span>
             </div>
+
+            @can('mencatat-pembayaran')
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <x-batal-pembayaran
+                        :aksi="route('keuangan.batal-uang-muka', $usulan->no_usulan)"
+                        :nama="'batal-um-'.$usulan->id"
+                        judul="Batalkan pencatatan uang muka?"
+                        :ringkas="$usulan->no_usulan.' · Rp '.number_format($usulan->keuangan->uang_muka, 0, ',', '.')" />
+                    <p class="text-xs text-slate-400">Dipakai bila tanggal atau buktinya keliru.</p>
+                </div>
+            @endcan
         </div>
     </div>
 </div>
@@ -84,6 +95,14 @@
                     <p class="text-xl font-bold text-slate-800">Rp {{ number_format($usulan->keuangan->total, 0, ',', '.') }}</p>
                 </div>
             </div>
+            {{-- Bukti pelunasan hanya untuk bendahara --}}
+            @cannot('mencatat-pembayaran')
+                <p class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
+                    Pencatatan pelunasan beserta bukti transfernya hanya dapat dilakukan bendahara.
+                </p>
+            @endcannot
+
+            @can('mencatat-pembayaran')
             <form action="{{ route('keuangan.bayar-sisa', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -109,6 +128,7 @@
                     </button>
                 </div>
             </form>
+            @endcan
         </div>
     </div>
 </div>

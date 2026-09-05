@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Detail Usulan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -50,14 +52,32 @@
                             <dd class="text-sm font-bold text-slate-800">{{ $usulan->no_usulan }}</dd>
                         </div>
 
+                        {{-- Jenis kegiatan hanya ditampilkan untuk usulan lama; penggolongannya
+                             kini memakai kategori perjalanan dinas. --}}
+                        @if ($usulan->kegiatan)
+                            <div>
+                                <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Jenis Kegiatan</dt>
+                                <dd class="text-sm text-slate-800">{{ $usulan->kegiatan->nama }}</dd>
+                            </div>
+                        @endif
+
                         <div>
-                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Jenis Kegiatan</dt>
-                            <dd class="text-sm text-slate-800">{{ $usulan->kegiatan?->nama ?? '—' }}</dd>
+                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Kategori Perjadin</dt>
+                            <dd class="text-sm text-slate-800">
+                                @if ($usulan->kategoriPerjadin)
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $usulan->kategoriPerjadin->badge }}">
+                                        {{ $usulan->kategoriPerjadin->nama }}
+                                    </span>
+                                    <span class="block text-xs text-slate-400 mt-1">{{ $usulan->kategoriPerjadin->grup }}</span>
+                                @else
+                                    —
+                                @endif
+                            </dd>
                         </div>
 
                         <div class="sm:col-span-2">
-                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Dasar Penugasan</dt>
-                            <dd class="text-sm text-slate-800">{{ $usulan->no_tugas }}</dd>
+                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Nomor Surat Tugas</dt>
+                            <dd class="text-sm text-slate-800">{{ $usulan->no_tugas ?: '—' }}</dd>
                         </div>
 
                         <div>
@@ -106,18 +126,268 @@
                 </div>
             </div>
 
-            {{-- Penolakan (jika ditolak) --}}
-            @if($usulan->status === 'ditolak' && $usulan->catatan)
-            <div class="bg-red-50 rounded-2xl border border-red-100 p-5 flex gap-3">
-                <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            {{-- Catatan approver saat usulan ditolak atau diminta revisi --}}
+            @if(in_array($usulan->status, ['ditolak', 'perlu_revisi']) && $usulan->catatan)
+            @php $revisi = $usulan->status === 'perlu_revisi'; @endphp
+            <div class="{{ $revisi ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100' }} rounded-2xl border p-5 flex gap-3">
+                <svg class="w-5 h-5 {{ $revisi ? 'text-amber-500' : 'text-red-500' }} shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <div>
-                    <p class="text-sm font-bold text-red-700 mb-1">Catatan Penolakan dari PPK</p>
-                    <p class="text-sm text-red-600 leading-relaxed">{{ $usulan->catatan }}</p>
+                    <p class="text-sm font-bold {{ $revisi ? 'text-amber-700' : 'text-red-700' }} mb-1">
+                        {{ $revisi ? 'Permintaan Revisi' : 'Catatan Penolakan' }}
+                    </p>
+                    <p class="text-sm {{ $revisi ? 'text-amber-700' : 'text-red-600' }} leading-relaxed">{{ $usulan->catatan }}</p>
+                    @if ($revisi)
+                        <a href="{{ route('usulan.edit', $usulan) }}" class="inline-block mt-2 text-xs font-bold text-amber-700 hover:underline">Perbaiki usulan →</a>
+                    @endif
                 </div>
             </div>
             @endif
+            {{-- Konfirmasi kesediaan atas usulan yang dibuatkan orang lain --}}
+            @if ($usulan->dibuatkanOrangLain() && auth()->id() === $usulan->id_user)
+            <div class="bg-white rounded-2xl border-2 {{ $usulan->menungguKonfirmasi() ? 'border-amber-200' : 'border-slate-100' }} shadow-sm p-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex gap-3">
+                        <div class="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center {{ $usulan->konfirmasi_badge }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">
+                                {{ $usulan->menungguKonfirmasi()
+                                    ? 'Usulan ini dibuatkan untuk Anda'
+                                    : 'Status kesediaan Anda: '.$usulan->konfirmasi_label }}
+                            </p>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                Dibuatkan oleh {{ $usulan->pembuat?->nama }}.
+                                Nomor pengajuan ini milik Anda sendiri, begitu pula pertanggungjawabannya.
+                            </p>
+                            @if ($usulan->alasan_batal)
+                                <p class="text-xs text-red-600 mt-1">Alasan pembatalan: {{ $usulan->alasan_batal }}</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if ($usulan->konfirmasiMasihTerbuka())
+                    <div class="flex gap-2 shrink-0">
+                        @unless ($usulan->sudahDikonfirmasi())
+                            <form method="POST" action="{{ route('usulan.konfirmasi', $usulan) }}">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit"
+                                        class="px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition whitespace-nowrap">
+                                    Bersedia Berangkat
+                                </button>
+                            </form>
+                        @endunless
+
+                        @unless ($usulan->konfirmasi === \App\Models\Usulan::KONFIRMASI_DIBATALKAN)
+                            <form method="POST" action="{{ route('usulan.batal-konfirmasi', $usulan) }}"
+                                  x-data
+                                  @submit.prevent="$refs.alasan.value = prompt('Alasan mengundurkan diri (boleh dikosongkan):') ?? ''; $el.submit()">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="alasan_batal" x-ref="alasan">
+                                <button type="submit"
+                                        class="px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 text-sm font-semibold rounded-xl transition whitespace-nowrap">
+                                    Mengundurkan Diri
+                                </button>
+                            </form>
+                        @endunless
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            {{-- Usulan lain yang dibuat dalam satu rombongan input --}}
+            @if ($usulan->kode_rombongan && $usulan->serombongan->isNotEmpty())
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Berangkat Bersama</h3>
+                        <p class="text-xs text-slate-400">
+                            Diajukan dalam satu rombongan, namun tiap orang punya nomor dan pertanggungjawaban sendiri
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($usulan->serombongan as $rekan)
+                        <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                            <span class="font-semibold text-slate-700">{{ $rekan->user?->nama ?? '—' }}</span>
+                            <span class="font-mono text-slate-400">{{ $rekan->no_usulan }}</span>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full {{ $rekan->konfirmasi_badge }}">{{ $rekan->konfirmasi_label }}</span>
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            {{-- Peserta Perjalanan --}}
+            @php
+                // Kunci status berlaku untuk semua peran, termasuk administrator.
+                $bolehKelolaPeserta = $usulan->bolehMengubahPeserta()
+                    && (auth()->user()->isAdmin() || auth()->id() === $usulan->id_user);
+            @endphp
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+                 x-data="{ showTambah: false, sumber: 'pegawai' }">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">Peserta Perjalanan</h3>
+                            <p class="text-xs text-slate-400">{{ $usulan->peserta->count() }} orang terdaftar</p>
+                        </div>
+                    </div>
+                    @if ($bolehKelolaPeserta)
+                        <button @click="showTambah = !showTambah"
+                                class="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg transition whitespace-nowrap">
+                            + Tambah Peserta
+                        </button>
+                    @elseif ($usulan->alasanPesertaTerkunci())
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-bold whitespace-nowrap"
+                              title="{{ $usulan->alasanPesertaTerkunci() }}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                            Terkunci
+                        </span>
+                    @endif
+                </div>
+
+                @if (! $bolehKelolaPeserta && $usulan->alasanPesertaTerkunci())
+                    <p class="px-6 py-3 bg-slate-50 border-b border-slate-100 text-xs text-slate-500 leading-relaxed">
+                        {{ $usulan->alasanPesertaTerkunci() }}
+                    </p>
+                @endif
+
+                @if ($bolehKelolaPeserta)
+                    <div x-show="showTambah" x-transition x-cloak class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                        <form method="POST" action="{{ route('usulan.peserta.store', $usulan) }}">
+                            @csrf
+
+                            <div class="flex gap-4 mb-3 text-xs font-semibold">
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="radio" value="pegawai" x-model="sumber" class="text-teal-500 focus:ring-teal-400">
+                                    Pilih pegawai terdaftar
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="radio" value="manual" x-model="sumber" class="text-teal-500 focus:ring-teal-400">
+                                    Isi manual
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <template x-if="sumber === 'pegawai'">
+                                    <div class="sm:col-span-3">
+                                        <select name="id_user"
+                                                class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                            <option value="">— Pilih pegawai —</option>
+                                            @foreach ($calonPeserta as $pegawai)
+                                                <option value="{{ $pegawai->id }}">{{ $pegawai->nama }}{{ $pegawai->jabatan ? ' — '.$pegawai->jabatan : '' }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </template>
+
+                                <template x-if="sumber === 'manual'">
+                                    <div class="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <input type="text" name="nama" placeholder="Nama peserta" value="{{ old('nama') }}"
+                                               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                        <input type="text" name="nip" placeholder="NIP (opsional)" value="{{ old('nip') }}"
+                                               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                        <input type="text" name="jabatan" placeholder="Jabatan (opsional)" value="{{ old('jabatan') }}"
+                                               class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                    </div>
+                                </template>
+
+                                <select name="peran" required
+                                        class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                    @foreach (\App\Models\PesertaUsulan::peranOptions() as $nilai => $label)
+                                        <option value="{{ $nilai }}" @selected($nilai === 'anggota')>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            @error('id_user') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+                            @error('nama') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+
+                            <div class="flex justify-end gap-2 mt-3">
+                                <button type="button" @click="showTambah = false"
+                                        class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-lg transition">Batal</button>
+                                <button type="submit"
+                                        class="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-lg transition">Simpan Peserta</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3 w-14">No</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3">Nama</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3">NIP</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3">Jabatan</th>
+                                <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3 w-32">Peran</th>
+                                @if ($bolehKelolaPeserta)
+                                    <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3 w-20">Aksi</th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            @forelse ($usulan->peserta as $peserta)
+                                <tr class="hover:bg-slate-50/60 transition">
+                                    <td class="px-4 py-3 text-center text-xs font-semibold text-slate-400">{{ $loop->iteration }}</td>
+                                    <td class="px-4 py-3 font-semibold text-slate-800">{{ $peserta->nama }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $peserta->nip ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $peserta->jabatan ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full {{ $peserta->peran === 'ketua' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600' }}">
+                                            {{ $peserta->peran_label }}
+                                        </span>
+                                    </td>
+                                    @if ($bolehKelolaPeserta)
+                                        <td class="px-4 py-3 text-center">
+                                            <form method="POST" action="{{ route('usulan.peserta.destroy', [$usulan, $peserta]) }}"
+                                                  x-data
+                                                  @submit.prevent="if (confirm('Hapus peserta {{ addslashes($peserta->nama) }}?')) $el.submit()">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-600 inline-flex items-center justify-center transition" title="Hapus">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    @endif
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="{{ $bolehKelolaPeserta ? 6 : 5 }}" class="px-4 py-8 text-center text-sm text-slate-400">
+                                        Belum ada peserta terdaftar
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             {{-- Lampiran Dokumen --}}
             @php $dokumen = $usulan->dokumen->last(); @endphp
@@ -235,11 +505,11 @@
                                 <td class="px-4 py-3 text-right text-sm font-bold text-slate-800">Rp {{ number_format($keuangan->total, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka (80%)</td>
+                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-teal-700">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar (20%)</td>
+                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-slate-600">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</td>
                             </tr>
                         </tfoot>
@@ -298,56 +568,12 @@
             </div>
             @endif
 
-            {{-- Timeline Status --}}
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                    </div>
-                    <h3 class="font-bold text-slate-800 text-sm">Riwayat Status</h3>
-                </div>
-                <div class="p-6">
-                    @php
-                        $allStatuses = ['draft', 'diajukan', 'menunggu', 'disetujui', 'selesai'];
-                        $currentIndex = array_search($usulan->status, $allStatuses);
-                        $isTolak = $usulan->status === 'ditolak';
-                    @endphp
-                    <ol class="relative border-l border-slate-200 ml-3 space-y-6">
-                        @foreach($allStatuses as $i => $s)
-                            @php
-                                $isDone = !$isTolak && $currentIndex !== false && $i <= $currentIndex;
-                                $isCurrent = !$isTolak && $i === $currentIndex;
-                            @endphp
-                            <li class="ml-6">
-                                <span class="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white
-                                    {{ $isDone ? 'bg-teal-500' : 'bg-slate-200' }}">
-                                    @if($isDone)
-                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                                    @else
-                                        <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                                    @endif
-                                </span>
-                                <p class="text-xs font-semibold {{ $isCurrent ? 'text-teal-600' : ($isDone ? 'text-slate-700' : 'text-slate-400') }}">
-                                    {{ ucfirst($s) }}
-                                    @if($isCurrent) <span class="ml-1 text-[10px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">Saat ini</span> @endif
-                                </p>
-                            </li>
-                        @endforeach
-                        @if($isTolak)
-                            <li class="ml-6">
-                                <span class="absolute -left-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white bg-red-500">
-                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                                </span>
-                                <p class="text-xs font-semibold text-red-600">
-                                    Ditolak <span class="ml-1 text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">Saat ini</span>
-                                </p>
-                            </li>
-                        @endif
-                    </ol>
-                </div>
-            </div>
+            {{-- Pelacakan tonggak berkas menggantikan jejak audit: yang
+                 dicari orang di sini bukan tiap tindakan siapa pun,
+                 melainkan sudah sampai mana berkasnya dan kapan tiap
+                 tahapnya terlewati. Jejak audit lengkap tetap ada pada
+                 menu Jejak Audit. --}}
+            <x-lacak-usulan :usulan="$usulan" />
 
         </div>
 
@@ -358,8 +584,7 @@
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                 <h3 class="font-bold text-slate-800 text-sm mb-4">Informasi Pengusul</h3>
                 <div class="flex items-center gap-3 mb-4">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode($usulan->user?->nama ?? 'U') }}&background=14b8a6&color=fff"
-                         class="w-10 h-10 rounded-full shrink-0" alt="avatar">
+                    <x-avatar :nama="$usulan->user?->nama" :foto="$usulan->user?->url_foto" />
                     <div>
                         <p class="text-sm font-semibold text-slate-800">{{ $usulan->user?->nama ?? '—' }}</p>
                         <p class="text-xs text-slate-400">{{ $usulan->user?->email ?? '—' }}</p>
@@ -382,13 +607,24 @@
                 <h3 class="font-bold text-slate-800 text-sm mb-1">Tindakan</h3>
 
                 @if(in_array($usulan->status, ['draft']))
-                    <a href="#"
-                       class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                        </svg>
-                        Ajukan Sekarang
-                    </a>
+                    @if($usulan->menungguKonfirmasi())
+                        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 leading-relaxed">
+                            Konfirmasi kesediaan Anda lebih dulu pada daftar usulan, baru usulan ini dapat dikirim ke PPK.
+                        </p>
+                    @elseif($usulan->id_user === auth()->id())
+                        <form method="POST" action="{{ route('usulan.ajukan', $usulan) }}"
+                              onsubmit="return confirm('Kirim usulan ini untuk diverifikasi PPK?')">
+                            @csrf
+                            @method('PUT')
+                            <button type="submit"
+                                    class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                                Ajukan Usulan Perjadin
+                            </button>
+                        </form>
+                    @endif
                     <a href="{{ route('usulan.edit', $usulan) }}"
                        class="w-full flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -406,7 +642,7 @@
                     Kembali ke List
                 </a>
 
-                @if(in_array($usulan->status, ['draft', 'diajukan']))
+                @if($usulan->bolehDisunting())
                     <form method="POST" action="{{ route('usulan.destroy', $usulan) }}"
                           x-data
                           @submit.prevent="if(confirm('Hapus usulan {{ $usulan->no_usulan }}?\nTindakan ini tidak dapat dibatalkan.')) $el.submit()">

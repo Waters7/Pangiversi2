@@ -24,6 +24,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $this->catatLogin($request);
 
             return redirect()->intended(route('dashboard'));
         }
@@ -52,12 +53,29 @@ class AuthController extends Controller
             'nip' => $validated['nip'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => User::ROLE_PEGAWAI,
+            'role' => User::ROLE_DOSEN_TENDIK,
         ]);
 
         Auth::login($user);
+        $this->catatLogin($request);
 
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * Catat kapan dan dari mana pengguna terakhir masuk.
+     *
+     * Ditulis tanpa menyentuh updated_at supaya jejak penyuntingan akun
+     * tidak tergeser hanya karena orangnya masuk.
+     */
+    private function catatLogin(Request $request): void
+    {
+        $pengguna = $request->user();
+
+        $pengguna?->forceFill([
+            'login_terakhir_at' => now(),
+            'login_terakhir_ip' => $request->ip(),
+        ])->saveQuietly();
     }
 
     public function logout(Request $request)

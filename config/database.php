@@ -38,9 +38,12 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            // Nilai berikut penting saat aplikasi diakses beberapa pengguna
+            // sekaligus: WAL membuat pembacaan tidak terhalang penulisan, dan
+            // busy_timeout memberi jeda tunggu alih-alih langsung gagal.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT'),
+            'journal_mode' => env('DB_JOURNAL_MODE'),
+            'synchronous' => env('DB_SYNCHRONOUS'),
             'transaction_mode' => 'DEFERRED',
         ],
 

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\DokumenKeuangan;
+use App\Models\Keuangan;
 use Illuminate\Database\Seeder;
 
 class DokumenKeuanganSeeder extends Seeder
@@ -12,6 +13,9 @@ class DokumenKeuanganSeeder extends Seeder
      */
     public function run(): void
     {
-        DokumenKeuangan::factory(10)->create();
+        // Setiap catatan keuangan punya tepat satu berkas bukti transfer.
+        Keuangan::all()->each(function (Keuangan $keuangan): void {
+            DokumenKeuangan::factory()->create(['id_keuangan' => $keuangan->id]);
+        });
     }
 }

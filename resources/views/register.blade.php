@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <x-ikon-tab />
     <title>Daftar Akun — PANGI</title>
     @vite('resources/css/app.css')
 </head>
@@ -18,7 +19,7 @@
         <div class="absolute w-64 h-64 bg-teal-700 rounded-full -bottom-16 -right-16 opacity-40"></div>
 
         <div class="relative z-10 text-center">
-            <img src="{{ asset('images/pangi.png') }}" alt="PANGI" class="w-64 mx-auto mb-8 drop-shadow-lg">
+            <img src="{{ asset('images/pangi-logo.png') }}" alt="PANGI" class="w-64 mx-auto mb-8 drop-shadow-lg">
             <h2 class="text-3xl font-bold text-white mb-3">Selamat Datang</h2>
             <p class="text-teal-100 text-sm leading-relaxed">
                 Sistem Administrasi Perjalanan Dinas<br>

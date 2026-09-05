@@ -1,0 +1,23 @@
+# Jaring pengaman untuk shared hosting.
+#
+# Susunan yang benar adalah menaruh akar dokumen pada folder public/, sehingga
+# berkas ini tidak pernah terbaca. Namun bila seluruh aplikasi terlanjur
+# diunggah ke dalam public_html, berkas ini mencegah .env, basis data SQLite,
+# log, dan kode sumber terunduh dari peramban.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Alihkan semua permintaan ke front controller di dalam public/.
+    RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+
+# Tolak berkas rahasia dan berkas kerja, apa pun susunan foldernya.
+<FilesMatch "^(\.env.*|\.git.*|composer\.(json|lock)|package(-lock)?\.json|artisan|.*\.sqlite|.*\.log|.*\.md)$">
+    Require all denied
+</FilesMatch>
+
+# Folder yang tidak boleh dijelajahi sama sekali.
+RedirectMatch 404 ^/(app|bootstrap|config|database|resources|routes|storage|tests|vendor|node_modules)(/|$)
+
+Options -Indexes

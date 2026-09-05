@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Master Data')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -82,12 +84,9 @@
                 <select name="status" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition min-w-[160px]">
                     @if ($tab === 'usulan')
                     <option value="">Semua Status</option>
-                    <option value="draft" {{ $statusFilter === 'draft' ? 'selected' : '' }}>Draft</option>
-                    <option value="diajukan" {{ $statusFilter === 'diajukan' ? 'selected' : '' }}>Diajukan</option>
-                    <option value="menunggu" {{ $statusFilter === 'menunggu' ? 'selected' : '' }}>Menunggu</option>
-                    <option value="disetujui" {{ $statusFilter === 'disetujui' ? 'selected' : '' }}>Disetujui</option>
-                    <option value="ditolak" {{ $statusFilter === 'ditolak' ? 'selected' : '' }}>Ditolak</option>
-                    <option value="selesai" {{ $statusFilter === 'selesai' ? 'selected' : '' }}>Selesai</option>
+                    @foreach (\App\Enums\StatusUsulan::options() as $nilai => $label)
+                        <option value="{{ $nilai }}" {{ $statusFilter === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
                     @else
                     <option value="">Semua Status</option>
                     <option value="belum bayar" {{ $statusFilter === 'belum bayar' ? 'selected' : '' }}>Belum Bayar</option>
@@ -149,19 +148,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3.5">
-                                @if ($u->status === 'disetujui')
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-100 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span> Disetujui</span>
-                                @elseif ($u->status === 'diajukan')
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Diajukan</span>
-                                @elseif ($u->status === 'selesai')
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-100 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Selesai</span>
-                                @elseif ($u->status === 'menunggu')
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Menunggu</span>
-                                @elseif ($u->status === 'draft')
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Draft</span>
-                                @else
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-700 border border-red-100 text-xs font-semibold rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Ditolak</span>
-                                @endif
+                                <x-status-badge :usulan="$u" />
                             </td>
                             <td class="px-4 py-3.5 text-center">
                                 <a href="{{ route('usulan.show', $u->no_usulan) }}"
@@ -200,8 +187,8 @@
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3">No. Usulan</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Kegiatan</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Total</th>
-                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Uang Muka (80%)</th>
-                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Sisa (20%)</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Uang Muka</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Sisa Bayar</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Status</th>
                             <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase">Aksi</th>
                         </tr>

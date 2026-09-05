@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Detail Persetujuan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -80,7 +82,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <p class="text-slate-500">Jenis Kegiatan</p>
-                            <p class="font-semibold">{{ $usulan->kegiatan->nama }}</p>
+                            <p class="font-semibold">{{ $usulan->kategoriPerjadin?->nama ?? $usulan->kegiatan?->nama ?? '—' }}</p>
                         </div>
 
                         <div>
@@ -175,91 +177,12 @@
         {{-- RIGHT SIDEBAR --}}
         <div class="space-y-5">
 
-            {{-- TIMELINE PERSETUJUAN --}}
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <div class="flex items-center gap-3 mb-5">
-                <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                </div>
-                <div>
-                <h3 class="font-bold text-slate-800 text-sm">Timeline Persetujuan</h3>
-                </div>
-            </div>
+            {{-- JEJAK AUDIT --}}
+            <x-timeline-audit :logs="$usulan->riwayat" judul="Jejak Audit Usulan" />
 
-            <div class="space-y-4 text-sm">
+            {{-- RANTAI PERSETUJUAN BERJENJANG --}}
+            <x-rantai-persetujuan :usulan="$usulan" />
 
-                {{-- STEP 1: Submit Usulan --}}
-                <div class="flex gap-3">
-                <div class="flex flex-col items-center">
-                    <div class="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
-                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
-                    </div>
-                    <div class="w-0.5 h-8 bg-slate-200 my-1"></div>
-                </div>
-                <div class="pb-4">
-                    <p class="font-semibold text-slate-800">Submit Usulan</p>
-                    <p class="text-xs text-slate-500">10 Jan 2026</p>
-                </div>
-                </div>
-
-                {{-- STEP 2: PPK --}}
-                <div class="flex gap-3">
-
-                @if ($usulan->status == 'disetujui' || $usulan->status == 'selesai')
-                    <div class="flex flex-col items-center">
-                        <div class="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
-                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        </div>
-                        <div class="w-0.5 h-8 bg-slate-200 my-1"></div>
-                    </div>
-                @else
-                    <div class="flex flex-col items-center">
-                        <div class="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center">
-                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                        </div>
-                        <div class="w-0.5 h-8 bg-slate-200 my-1"></div>
-                    </div>
-                @endif
-
-                <div class="pb-4">
-                    <p class="font-semibold text-slate-800">PPK</p>
-                    <p class="text-xs text-slate-500">
-                    @if ($usulan->status == 'disetujui' || $usulan->status == 'selesai')
-                        Disetujui pada {{ $usulan->updated_at->format('d M Y') }}
-                    @elseif ($usulan->status == 'ditolak')
-                        Ditolak pada {{ $usulan->updated_at->format('d M Y') }}
-                    </p>
-                    @else
-                        Menunggu keputusan...
-                    @endif
-                </div>
-                </div>
-
-                {{-- STEP 3: Bendahara --}}
-                <div class="flex gap-3">
-                <div class="flex flex-col items-center">
-                    <div class="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center">
-                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                    </svg>
-                    </div>
-                </div>
-                <div>
-                    <p class="font-semibold text-slate-800">Bendahara</p>
-                    <p class="text-xs text-slate-500">Menunggu...</p>
-                </div>
-                </div>
-
-            </div>
-            </div>
 
             {{-- STATUS & AKSI --}}
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
@@ -279,8 +202,12 @@
                 </svg>
                 Unduh Dokumen
                 </a>
-                {{-- SETUJU --}}
-                @if ($usulan->status == 'diajukan' || $usulan->status == 'menunggu')
+                {{-- Keputusan pada tahap yang sedang berjalan --}}
+                @if ($usulan->sedangMenunggu() && $bolehMemutuskan)
+
+                    <div class="px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700 font-semibold text-center">
+                        Tahap Anda: {{ $levelBerjalan?->label() }}
+                    </div>
 
                     {{-- setuju --}}
                     <form action="{{ route('persetujuan.approve', $usulan->no_usulan) }}" method="post">
@@ -295,14 +222,28 @@
                         </button>
                     </form>
 
+                    {{-- minta revisi --}}
+                    <button id="btnRevisi" type="button" class="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold
+                            bg-amber-50 text-amber-700 border border-amber-100 hover:bg-amber-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M3 10h10M3 6h14M3 14h6m6 6l4-4-4-4"/>
+                        </svg>
+                        Minta Revisi
+                    </button>
+
                     {{-- tolak --}}
                     <button id="btnTolak" type="button" class="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold
                             bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                         </svg>
-                        Tolak / Revisi
+                        Tolak Usulan
                     </button>
+                @elseif ($usulan->sedangMenunggu())
+                    <div class="px-3 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
+                        Usulan sedang menunggu keputusan <span class="font-bold text-slate-700">{{ $levelBerjalan?->label() }}</span>.
+                        Tahap ini bukan kewenangan Anda.
+                    </div>
                 @elseif ($usulan->status == 'selesai')
                     @if(auth()->user()->isAdmin())
                         <button type="button" id="btnBatalkan"
@@ -402,8 +343,8 @@
                 </svg>
             </div>
             <div>
-                <h3 class="font-bold text-slate-800 text-sm">Tolak / Revisi Usulan</h3>
-                <p class="text-xs text-slate-400">Berikan catatan untuk pemohon</p>
+                <h3 class="font-bold text-slate-800 text-sm">Tolak Usulan</h3>
+                <p class="text-xs text-slate-400">Penolakan menghentikan proses dan wajib disertai alasan</p>
             </div>
         </div>
 
@@ -421,7 +362,7 @@
                         name="catatan"
                         rows="4"
                         required
-                        placeholder="Tuliskan alasan penolakan atau revisi yang diperlukan..."
+                        placeholder="Tuliskan alasan penolakan usulan ini..."
                         class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 resize-none transition"
                     >{{ old('catatan') }}</textarea>
                 </div>
@@ -436,6 +377,58 @@
                 <button type="submit"
                     class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors">
                     Kirim Penolakan
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{{-- Modal Minta Revisi --}}
+<div id="modalRevisi" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M3 10h10M3 6h14M3 14h6m6 6l4-4-4-4"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-800 text-sm">Minta Revisi</h3>
+                <p class="text-xs text-slate-400">Usulan dikembalikan agar pengusul dapat memperbaikinya</p>
+            </div>
+        </div>
+
+        <form action="{{ route('persetujuan.revisi', $usulan->no_usulan) }}" method="post">
+            @csrf
+            @method('PUT')
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="catatan_revisi" class="block text-xs font-semibold text-slate-600 mb-1.5">
+                        Yang perlu diperbaiki <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        id="catatan_revisi"
+                        name="catatan"
+                        rows="4"
+                        required
+                        placeholder="Contoh: lampiran surat undangan belum dilampirkan, tanggal kegiatan belum sesuai..."
+                        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-400 resize-none transition"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="px-6 pb-6 flex gap-2">
+                <button type="button"
+                    onclick="document.getElementById('modalRevisi').classList.add('hidden')"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-colors">
+                    Batal
+                </button>
+                <button type="submit"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-100 hover:bg-amber-100 transition-colors">
+                    Kirim Permintaan
                 </button>
             </div>
         </form>
@@ -498,6 +491,22 @@
         modalTolak.addEventListener('click', function (e) {
             if (e.target === modalTolak) {
                 modalTolak.classList.add('hidden');
+            }
+        });
+
+        // Modal Minta Revisi
+        const btnRevisi = document.getElementById('btnRevisi');
+        const modalRevisi = document.getElementById('modalRevisi');
+
+        if (btnRevisi) {
+            btnRevisi.addEventListener('click', function () {
+                modalRevisi.classList.remove('hidden');
+            });
+        }
+
+        modalRevisi.addEventListener('click', function (e) {
+            if (e.target === modalRevisi) {
+                modalRevisi.classList.add('hidden');
             }
         });
 

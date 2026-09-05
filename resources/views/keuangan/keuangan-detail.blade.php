@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Detail Keuangan')
+
 @section('content')
 
     <div class="flex-1 px-4 md:px-8 py-7">
@@ -66,6 +68,19 @@
                 <p class="text-xs text-slate-400">Periode</p>
                 <p class="text-sm font-semibold text-slate-700">{{ $usulan->periode }}</p>
             </div>
+
+            {{-- Rekening tujuan transfer ditampilkan di sini supaya bendahara
+                 tidak perlu membuka profil pegawai saat hendak membayar. --}}
+            <div>
+                <p class="text-xs text-slate-400">Rekening Pelaksana</p>
+                @if ($usulan->user?->punyaRekening())
+                    <p class="text-sm font-semibold text-slate-700">{{ $usulan->user->nama_bank }}</p>
+                    <p class="text-xs font-mono text-slate-500">{{ $usulan->user->nomor_rekening }} a.n. {{ $usulan->user->nama_rekening }}</p>
+                @else
+                    <p class="text-sm font-semibold text-amber-700">Belum dilengkapi</p>
+                    <p class="text-xs text-amber-600">Pelaksana perlu mengisinya pada menu Profil.</p>
+                @endif
+            </div>
             <div class="ml-auto">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-{{ $statusColor }}-50 text-{{ $statusColor }}-700 border border-{{ $statusColor }}-200 text-xs font-bold rounded-full">
                     <span class="w-1.5 h-1.5 rounded-full bg-{{ $statusColor }}-500"></span> {{ $statusLabel }}
@@ -93,7 +108,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-bold text-slate-800">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</p>
-                    <p class="text-xs text-slate-500 font-medium">Uang Muka (80%)</p>
+                    <p class="text-xs text-slate-500 font-medium">Uang Muka</p>
                 </div>
             </div>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
@@ -104,7 +119,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-bold text-slate-800">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</p>
-                    <p class="text-xs text-slate-500 font-medium">Sisa Bayar (20%)</p>
+                    <p class="text-xs text-slate-500 font-medium">Sisa Bayar</p>
                 </div>
             </div>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">

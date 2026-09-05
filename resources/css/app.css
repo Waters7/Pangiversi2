@@ -8,4 +8,30 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /*
+     * Palet resmi PANGI.
+     * Nilai CMYK dari panduan merek, dikonversi ke layar.
+     */
+    --color-pangi-turquoise: #00b39b;  /* C75 M0  Y45  K0  */
+    --color-pangi-lime: #d2df23;       /* C20 M0  Y100 K0  */
+    --color-pangi-cyan: #00b4d8;       /* C74 M0  Y21  K0  */
+    --color-pangi-abu: #5f6663;        /* C58 M50 Y51  K19 */
+
+    /* Latar gelap merek, diambil dari latar berkas logo agar menyatu. */
+    --color-pangi-malam: #141d24;
+    --color-pangi-malam-muda: #1b2730;
+}
+
+/*
+ * Palet yang sama sebagai variabel biasa, supaya halaman yang belum
+ * memakai kelas Tailwind hasil build tetap bisa memanggilnya.
+ */
+:root {
+    --pangi-turquoise: #00b39b;
+    --pangi-lime: #d2df23;
+    --pangi-cyan: #00b4d8;
+    --pangi-abu: #5f6663;
+    --pangi-malam: #141d24;
+    --pangi-malam-muda: #1b2730;
 }

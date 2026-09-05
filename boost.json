@@ -3,12 +3,15 @@
         "claude_code",
         "codex"
     ],
+    "cloud": false,
     "guidelines": true,
     "mcp": true,
     "nightwatch_mcp": false,
     "sail": false,
     "skills": [
+        "infer-conventions",
         "laravel-best-practices",
+        "testing-best-practices",
         "tailwindcss-development"
     ]
 }

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\UnitKerja;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -28,7 +29,15 @@ class UserFactory extends Factory
             'nama' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'nip' => fake()->unique()->numerify('NIP-##########'),
-            'role' => 'pegawai',
+            // Dipakai tautan wa.me saat tim keuangan menagih kelengkapan berkas.
+            'no_hp' => fake()->numerify('08##########'),
+            'role' => User::ROLE_DOSEN_TENDIK,
+            'jabatan' => fake()->randomElement([
+                'Dosen', 'Dosen Tetap', 'Instruktur', 'Analis Kepegawaian',
+                'Pranata Laboratorium Pendidikan', 'Pengadministrasi Umum',
+                'Bendahara Pengeluaran', 'Arsiparis',
+            ]),
+            'id_unit' => UnitKerja::inRandomOrder()->value('id'),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -51,7 +60,7 @@ class UserFactory extends Factory
     public function administrator(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => 'administrator',
+            'role' => User::ROLE_SUPER_ADMIN,
         ]);
     }
 
@@ -61,7 +70,27 @@ class UserFactory extends Factory
     public function ppk(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => 'ppk',
+            'role' => User::ROLE_PPK,
+        ]);
+    }
+
+    /**
+     * Assign the user to a unit kerja.
+     */
+    public function diUnit(UnitKerja $unit): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'id_unit' => $unit->id,
+        ]);
+    }
+
+    /**
+     * Assign the user's direct supervisor.
+     */
+    public function berAtasan(User $atasan): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'id_atasan' => $atasan->id,
         ]);
     }
 }

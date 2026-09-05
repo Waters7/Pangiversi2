@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Persetujuan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -14,8 +16,25 @@
         </a>
         <div>
             <h1 class="text-xl font-bold text-slate-800">Persetujuan</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Daftar usulan yang membutuhkan persetujuan Anda</p>
+            <p class="text-xs text-slate-400 mt-0.5">Alur berjenjang: atasan langsung → SDM → PPK → direktur</p>
         </div>
+    </div>
+
+    <x-flash />
+
+    {{-- Tab antrian vs seluruh usulan --}}
+    <div class="flex gap-2 mb-5">
+        <a href="{{ route('persetujuan', ['tab' => 'antrian']) }}"
+           class="px-4 py-2.5 rounded-xl text-sm font-semibold transition {{ $tab === 'antrian' ? 'bg-teal-500 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+            Menunggu Keputusan Saya
+            @if ($jumlahAntrian > 0)
+                <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] {{ $tab === 'antrian' ? 'bg-white/25' : 'bg-red-100 text-red-600' }}">{{ $jumlahAntrian }}</span>
+            @endif
+        </a>
+        <a href="{{ route('persetujuan', ['tab' => 'semua']) }}"
+           class="px-4 py-2.5 rounded-xl text-sm font-semibold transition {{ $tab !== 'antrian' ? 'bg-teal-500 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+            Semua Usulan
+        </a>
     </div>
 
     {{-- Filter --}}
@@ -34,13 +53,11 @@
 
             <select name="status" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition min-w-[160px]">
                 <option value="">Semua Status</option>
-                <option value="draft" @selected(request('status') === 'draft')>Draft</option>
-                <option value="diajukan" @selected(request('status') === 'diajukan')>Diajukan</option>
-                <option value="menunggu" @selected(request('status') === 'menunggu')>Menunggu</option>
-                <option value="disetujui" @selected(request('status') === 'disetujui')>Disetujui</option>
-                <option value="ditolak" @selected(request('status') === 'ditolak')>Ditolak</option>
-                <option value="selesai" @selected(request('status') === 'selesai')>Selesai</option>
+                @foreach ($statusOptions as $nilai => $label)
+                    <option value="{{ $nilai }}" @selected(request('status') === $nilai)>{{ $label }}</option>
+                @endforeach
             </select>
+            <input type="hidden" name="tab" value="{{ $tab }}">
 
             <button type="submit"
                     class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">
@@ -65,7 +82,7 @@
             <p class="text-sm font-bold text-slate-700">
                 Daftar Persetujuan
                 <span class="ml-2 text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-                    5 data
+                    {{ $usulan->total() }} data
                 </span>
             </p>
         </div>
@@ -96,7 +113,7 @@
                             </td>
 
                             <td class="px-4 py-4">
-                                <p class="text-sm text-slate-700">{{ $item->kegiatan->nama }}</p>
+                                <p class="text-sm text-slate-700">{{ $item->kategoriPerjadin?->nama ?? $item->kegiatan?->nama ?? '—' }}</p>
                                 <p class="text-xs text-slate-400">{{ $item->lokasi }}</p>
                             </td>
 
@@ -109,20 +126,7 @@
 
                             <td class="px-4 py-4">
                                 <div class="flex items-center justify-center">
-                                    @php
-                                        $statusConfig = match($item->status) {
-                                            'draft'     => ['label' => 'Draft',     'class' => 'bg-slate-100 text-slate-600'],
-                                            'diajukan'  => ['label' => 'Diajukan',  'class' => 'bg-blue-50 text-blue-600'],
-                                            'menunggu'  => ['label' => 'Menunggu',  'class' => 'bg-yellow-50 text-yellow-600'],
-                                            'disetujui' => ['label' => 'Disetujui', 'class' => 'bg-teal-50 text-teal-600'],
-                                            'ditolak'   => ['label' => 'Ditolak',   'class' => 'bg-red-50 text-red-600'],
-                                            'selesai'   => ['label' => 'Selesai',   'class' => 'bg-green-50 text-green-600'],
-                                            default     => ['label' => ucfirst($item->status), 'class' => 'bg-slate-100 text-slate-600'],
-                                        };
-                                    @endphp
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $statusConfig['class'] }}">
-                                        {{ $statusConfig['label'] }}
-                                    </span>
+                                    <x-status-badge :usulan="$item" />
                                 </div>
                             </td>
 

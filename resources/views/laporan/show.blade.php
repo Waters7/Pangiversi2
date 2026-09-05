@@ -1,5 +1,7 @@
 @extends('app')
 
+@section('title', 'Laporan')
+
 @section('content')
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -18,11 +20,26 @@
                 <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }}</p>
             </div>
         </div>
-        <a href="{{ route('laporan.export-detail', $usulan->no_usulan) }}"
-           class="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition shadow-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Unduh CSV
-        </a>
+        @php
+            $riilTerkonfirmasi = $riil->filter(fn (array $baris) => $baris['daftar']?->sudah_ditandatangani)->count();
+        @endphp
+
+        @if ($riil->isNotEmpty())
+            <span @class([
+                'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold',
+                'bg-emerald-50 text-emerald-700' => $riilTerkonfirmasi === $riil->count(),
+                'bg-amber-50 text-amber-700' => $riilTerkonfirmasi !== $riil->count(),
+            ])>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    @if ($riilTerkonfirmasi === $riil->count())
+                        <path d="M5 13l4 4L19 7"/>
+                    @else
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                    @endif
+                </svg>
+                Daftar riil {{ $riilTerkonfirmasi }}/{{ $riil->count() }} ditandatangani PPK
+            </span>
+        @endif
     </div>
 
     @php
@@ -42,8 +59,7 @@
     {{-- Info Usulan Bar --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
         <div class="flex items-center gap-3">
-            <img src="https://ui-avatars.com/api/?name={{ urlencode($usulan->user?->nama ?? 'U') }}&background=14b8a6&color=fff&size=40"
-                 class="w-10 h-10 rounded-full shrink-0" alt="">
+            <x-avatar :nama="$usulan->user?->nama" :foto="$usulan->user?->url_foto" />
             <div>
                 <p class="text-sm font-bold text-slate-800">{{ $usulan->user?->nama ?? '—' }}</p>
                 <p class="text-xs text-slate-400">{{ $usulan->user?->email ?? '—' }}</p>
@@ -119,11 +135,11 @@
                                 <td class="px-4 py-3 text-right text-sm font-bold text-slate-800">Rp {{ number_format($keuangan?->total ?? 0, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka (80%)</td>
+                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-teal-700">Uang Muka</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-teal-700">Rp {{ number_format($keuangan?->uang_muka ?? 0, 0, ',', '.') }}</td>
                             </tr>
                             <tr>
-                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar (20%)</td>
+                                <td colspan="5" class="px-6 py-2 text-right text-sm font-semibold text-slate-500">Sisa Bayar</td>
                                 <td class="px-4 py-2 text-right text-sm font-bold text-slate-600">Rp {{ number_format($keuangan?->sisa ?? 0, 0, ',', '.') }}</td>
                             </tr>
                         </tfoot>
@@ -167,7 +183,7 @@
                         <tbody class="divide-y divide-slate-50">
                             {{-- Uang Muka --}}
                             <tr class="hover:bg-slate-50/60 transition">
-                                <td class="px-6 py-3.5 font-semibold text-slate-700">Uang Muka (80%)</td>
+                                <td class="px-6 py-3.5 font-semibold text-slate-700">Uang Muka</td>
                                 <td class="px-4 py-3.5 text-slate-600">{{ $keuangan?->tanggal_transfer?->format('d/m/Y') ?? '—' }}</td>
                                 <td class="px-4 py-3.5 text-right font-semibold text-slate-800">Rp {{ number_format($keuangan?->uang_muka ?? 0, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3.5 text-center">
@@ -188,7 +204,7 @@
                             </tr>
                             {{-- Sisa --}}
                             <tr class="hover:bg-slate-50/60 transition">
-                                <td class="px-6 py-3.5 font-semibold text-slate-700">Sisa Bayar (20%)</td>
+                                <td class="px-6 py-3.5 font-semibold text-slate-700">Sisa Bayar</td>
                                 <td class="px-4 py-3.5 text-slate-600">{{ $keuangan?->tanggal_pelunasan?->format('d/m/Y') ?? '—' }}</td>
                                 <td class="px-4 py-3.5 text-right font-semibold text-slate-800">Rp {{ number_format($keuangan?->sisa ?? 0, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3.5 text-center">
@@ -212,6 +228,80 @@
                 </div>
             </div>
 
+            {{-- Daftar pengeluaran riil: sudah ditandatangani PPK atau belum --}}
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Daftar Pengeluaran Riil</h3>
+                        <p class="text-xs text-slate-400">Status konfirmasi pelaksana dan tanda tangan PPK</p>
+                    </div>
+                </div>
+
+                @forelse ($riil as $baris)
+                    @php
+                        $peserta = $baris['peserta'];
+                        $daftar = $baris['daftar'];
+                    @endphp
+
+                    <div class="px-6 py-4 {{ ! $loop->last ? 'border-b border-slate-50' : '' }} flex flex-wrap items-start gap-3">
+                        <x-avatar :nama="$peserta->nama" :foto="$peserta->user?->url_foto" ukuran="sm" />
+
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate">{{ $peserta->nama }}</p>
+                            <p class="text-xs text-slate-400">{{ $peserta->nip ?: 'NIP belum tercatat' }}</p>
+
+                            @if ($daftar?->sudah_ditandatangani)
+                                <p class="text-xs text-slate-500 mt-1.5">
+                                    Ditandatangani {{ $daftar->ppk?->nama ?? 'PPK' }} pada
+                                    {{ $daftar->ditandatangani_at->translatedFormat('d M Y, H:i') }}
+                                </p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">
+                                    Kode verifikasi
+                                    <span class="font-mono font-bold text-slate-700">{{ $daftar->kode_verifikasi }}</span>
+                                </p>
+                            @elseif ($daftar?->sedangDisanggah())
+                                <p class="text-xs text-red-600 mt-1.5">Disanggah pelaksana — nominal sedang diperbaiki tim keuangan.</p>
+                            @elseif ($daftar?->sudahDisetujuiPegawai())
+                                <p class="text-xs text-amber-700 mt-1.5">Sudah dikonfirmasi pelaksana, menunggu tanda tangan PPK.</p>
+                            @elseif ($daftar?->sanggahKedaluwarsa())
+                                <p class="text-xs text-amber-700 mt-1.5">
+                                    Masa sanggah berakhir {{ $daftar->batas_sanggah->translatedFormat('d F Y') }},
+                                    menunggu tanda tangan PPK.
+                                </p>
+                            @elseif ($daftar?->masaSanggahBerjalan())
+                                <p class="text-xs text-amber-700 mt-1.5">
+                                    Menunggu tanggapan pelaksana — sisa {{ $daftar->sisaHariSanggah() }} hari masa sanggah.
+                                </p>
+                            @elseif ($daftar && $daftar->total_riil > 0)
+                                <p class="text-xs text-slate-500 mt-1.5">Nominal sudah disusun, belum dikirim ke pelaksana.</p>
+                            @else
+                                <p class="text-xs text-slate-400 mt-1.5">Daftar riil belum disusun tim keuangan.</p>
+                            @endif
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <span class="inline-block text-xs font-bold px-3 py-1.5 rounded-full {{ $daftar?->status_badge ?? 'bg-slate-100 text-slate-600' }}">
+                                {{ $daftar?->status_label ?? 'Belum Disusun' }}
+                            </span>
+                            @if ($daftar && $daftar->total_riil > 0)
+                                <p class="text-sm font-bold text-slate-800 mt-1.5">
+                                    Rp {{ number_format($daftar->total_riil, 0, ',', '.') }}
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="px-6 py-8 text-center text-sm text-slate-400">
+                        Belum ada peserta tercatat pada perjalanan dinas ini.
+                    </p>
+                @endforelse
+            </div>
+
         </div>
 
         {{-- RIGHT: Sidebar --}}
@@ -226,11 +316,11 @@
                         <span class="text-sm font-bold text-slate-800">Rp {{ number_format($keuangan?->total ?? 0, 0, ',', '.') }}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-xs text-slate-500">Uang Muka (80%)</span>
+                        <span class="text-xs text-slate-500">Uang Muka</span>
                         <span class="text-sm font-bold text-teal-700">Rp {{ number_format($keuangan?->uang_muka ?? 0, 0, ',', '.') }}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-xs text-slate-500">Sisa Bayar (20%)</span>
+                        <span class="text-xs text-slate-500">Sisa Bayar</span>
                         <span class="text-sm font-bold text-slate-600">Rp {{ number_format($keuangan?->sisa ?? 0, 0, ',', '.') }}</span>
                     </div>
                     <div class="border-t border-slate-100 pt-3 flex justify-between items-center">
@@ -297,11 +387,15 @@
             {{-- Quick Actions --}}
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
                 <h3 class="font-bold text-slate-800 text-sm mb-1">Tindakan</h3>
-                <a href="{{ route('laporan.export-detail', $usulan->no_usulan) }}"
-                   class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Unduh Rincian (CSV)
-                </a>
+                @can('melihat-keuangan')
+                    <a href="{{ route('daftar-riil.show', $usulan->no_usulan) }}"
+                       class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Kelola Daftar Riil
+                    </a>
+                @endcan
                 <a href="{{ route('keuangan.detail', $usulan->no_usulan) }}"
                    class="w-full flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

@@ -24,17 +24,18 @@ class MasterDataController extends Controller
         $totalUsulan = Usulan::count();
         $totalKeuangan = Keuangan::count();
 
-        $dokumenFields = ['surat_tugas', 'rundown', 'dokumen_pendukung', 'sppd', 'boarding_pass', 'faktur', 'kwintasi', 'bill_hotel', 'laporan_hasil'];
+        $dokumenFields = ['surat_tugas', 'rundown', 'dokumen_pendukung', 'sppd', 'boarding_pass', 'nota_transportasi', 'faktur', 'kwintasi', 'bill_hotel', 'laporan_hasil'];
         $totalDokumen = 0;
         foreach ($dokumenFields as $field) {
             $totalDokumen += Dokumen::whereNotNull($field)->count();
         }
 
         // ── Pegawai ──
-        $pegawaiQuery = User::withCount('usulan');
+        $pegawaiQuery = User::with('unit')->withCount('usulan');
         if ($tab === 'pegawai' && $search) {
             $pegawaiQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('nama', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -46,7 +47,7 @@ class MasterDataController extends Controller
             $usulanQuery->where(function ($q) use ($search) {
                 $q->where('no_usulan', 'like', "%{$search}%")
                     ->orWhere('lokasi', 'like', "%{$search}%")
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$search}%"))
                     ->orWhereHas('kegiatan', fn ($k) => $k->where('nama', 'like', "%{$search}%"));
             });
         }
@@ -74,7 +75,7 @@ class MasterDataController extends Controller
         if ($tab === 'dokumen' && $search) {
             $dokumenQuery->whereHas('usulan', function ($q) use ($search) {
                 $q->where('no_usulan', 'like', "%{$search}%")
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$search}%"));
             });
         }
         $dokumenList = $dokumenQuery->latest()->paginate(10, ['*'], 'page')->appends($request->query());

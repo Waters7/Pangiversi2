@@ -37,11 +37,18 @@
                     <p class="text-xl font-bold text-amber-700">Rp {{ number_format($usulan->keuangan->uang_muka, 0, ',', '.') }}</p>
                 </div>
                 <div class="bg-slate-50 rounded-xl p-4 text-center">
-                    <p class="text-xs text-slate-500 mb-1">Sisa Bayar (20%)</p>
+                    <p class="text-xs text-slate-500 mb-1">Sisa Bayar</p>
                     <p class="text-xl font-bold text-slate-600">Rp {{ number_format($usulan->keuangan->sisa, 0, ',', '.') }}</p>
                 </div>
             </div>
-            {{-- Form Upload --}}
+            {{-- Form Upload — bukti pembayaran hanya untuk bendahara --}}
+            @cannot('mencatat-pembayaran')
+                <p class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
+                    Pencatatan pembayaran uang muka beserta bukti transfernya hanya dapat dilakukan bendahara.
+                </p>
+            @endcannot
+
+            @can('mencatat-pembayaran')
             <form action="{{ route('keuangan.bayar-uang-muka', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -67,6 +74,7 @@
                     </button>
                 </div>
             </form>
+            @endcan
         </div>
     </div>
 </div>
