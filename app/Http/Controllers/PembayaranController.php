@@ -215,6 +215,68 @@ class PembayaranController extends Controller
     }
 
     /**
+     * Batalkan catatan penggantian transport lokal yang keliru.
+     *
+     * Seperti pembatalan uang muka dan pelunasan: wajib beralasan, dicatat
+     * sebagai baris jurnal tersendiri, dan bukti lamanya tidak dihapus.
+     */
+    public function batalBayarTransport(Request $request, DaftarRiil $daftar): RedirectResponse
+    {
+        abort_unless(
+            $request->user()->punyaKemampuan(Kemampuan::MencatatPembayaran),
+            403,
+            'Pencatatan pembayaran dikerjakan bendahara.'
+        );
+
+        $validated = $request->validate([
+            'alasan' => ['required', 'string', 'min:10', 'max:1000'],
+        ], [
+            'alasan.required' => 'Jelaskan kenapa pembayaran ini dibatalkan.',
+            'alasan.min' => 'Uraikan alasannya sedikit lebih rinci.',
+        ]);
+
+        if (! $daftar->sudahDibayar()) {
+            return back()->with('error', 'Penggantian transport lokal ini belum pernah dicatat.');
+        }
+
+        $usulan = $daftar->usulan;
+        $nominal = (float) $daftar->total_riil;
+        $tanggal = $daftar->dibayar_at->toDateString();
+        $teksNominal = 'Rp '.number_format($nominal, 0, ',', '.');
+
+        $daftar->batalkanBayarTransport();
+
+        if ($usulan?->keuangan) {
+            RiwayatPembayaran::catat(
+                $usulan->keuangan,
+                RiwayatPembayaran::JENIS_BATAL_TRANSPORT_LOKAL,
+                $nominal,
+                $tanggal,
+                $request->user(),
+                null,
+                $validated['alasan'],
+            );
+        }
+
+        $this->audit->catat(
+            AuditLog::AKSI_PEMBAYARAN,
+            "Penggantian transport lokal {$teksNominal} pada usulan {$usulan?->no_usulan} dibatalkan.",
+            ['usulan' => $usulan, 'catatan' => $validated['alasan']],
+        );
+
+        if ($daftar->peserta?->user) {
+            $this->notifikasi->kirim(
+                $daftar->peserta->user,
+                'Penggantian transport lokal dibatalkan',
+                "Catatan penggantian transport lokal {$teksNominal} dibatalkan bendahara: {$validated['alasan']}",
+                ['usulan' => $usulan, 'tipe' => Notifikasi::TIPE_PERINGATAN],
+            );
+        }
+
+        return back()->with('success', "Penggantian transport lokal {$teksNominal} dibatalkan dan dicatat pada riwayat pembayaran.");
+    }
+
+    /**
      * Catat penggantian transport lokal seorang pelaksana.
      */
     public function bayarTransport(Request $request, DaftarRiil $daftar): RedirectResponse

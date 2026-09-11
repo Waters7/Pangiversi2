@@ -23,59 +23,107 @@
     <meta charset="UTF-8">
     <title>Surat Perjalanan Dinas</title>
     <style>
-        * { font-family: DejaVu Sans, sans-serif; }
-        @page { margin: 10mm 13mm 10mm; }
-        body { font-size: 10px; color: #000; margin: 0; line-height: 1.35; }
+        /* Arial dipetakan dompdf ke Helvetica, salah satu font baku PDF yang
+           metriknya setara dan tersedia di semua pembaca — jadi tidak ada
+           font yang perlu dipasang, dan berkasnya jauh lebih ringan karena
+           tidak ada font yang ikut ditanam. */
+        * { font-family: Arial, Helvetica, sans-serif; }
+
+        /* Margin atas dirapatkan 2 mm untuk memberi ruang kop yang lebih
+           besar; sisanya diambil dari jarak blok nomor dan judul di bawahnya,
+           sehingga tabel isi tetap mulai pada ketinggian yang sama.
+
+           Kertasnya folio (215,9 mm). Margin kiri-kanan 16 mm menyisakan
+           ruang cetak 184 mm — sama persis dengan A4 bermargin 13 mm yang
+           menjadi acuan seluruh lebar kolom di bawah, sehingga tata letaknya
+           tidak bergeser sedikit pun; kelebihan tingginya jatuh ke bawah. */
+        @page { margin: 8mm 16mm 7mm; }
+        body { font-size: 11pt; color: #000; margin: 0; line-height: 1.15; }
 
         .kop { text-align: center; }
-        .kop img { width: 66%; height: auto; }
+        .kop img { width: 82%; height: auto; }
 
         /* Blok kode dan nomor di kanan atas. */
-        .nomor-atas { width: 100%; margin: 6px 0 2px; }
-        .nomor-atas td { padding: 0; vertical-align: top; font-size: 10px; }
-        .nomor-atas .label { width: 92px; }
-        .nomor-atas .titik { width: 34px; }
+        .nomor-atas { width: 100%; margin: 2px 0 0; }
+        .nomor-atas td { padding: 0; vertical-align: top; font-size: 11pt; line-height: 1.15; }
+        .nomor-atas .spasi { width: 47.7%; }
+        .nomor-atas .label { width: 96px; }
+        .nomor-atas .titik { width: 12px; }
 
-        .judul { text-align: center; margin: 10px 0 8px; }
+        .judul { text-align: center; margin: 4px 0; }
         .judul span {
-            font-size: 12px; font-weight: bold;
+            font-size: 13pt; font-weight: bold;
             text-decoration: underline; letter-spacing: .2px;
         }
 
+        /* ─────────────────────────────────────────────────────────────
+           Lebar kolom dipatok dalam milimeter, bukan persen.
+
+           8 + 78 + 5 + 93 = 184 mm, tepat selebar ruang cetak folio setelah
+           margin kiri-kanan 16 mm. Dengan angka pasti, titik dua dan kolom
+           isian jatuh pada garis tegak yang sama dari butir 1 sampai 10 —
+           termasuk pada tabel pengikut di butir 8 yang lebarnya disetel
+           mengikuti pembagian ini.
+           ───────────────────────────────────────────────────────────── */
         table.isi { width: 100%; border-collapse: collapse; }
-        table.isi > tr > td, table.isi td { border: 1px solid #000; padding: 3px 6px; vertical-align: top; }
+        table.isi > tr > td, table.isi td { border: 1px solid #000; padding: 1px 6px; vertical-align: top; }
         td.no { width: 26px; text-align: left; }
         td.label { width: 44%; }
         td.pemisah { width: 12px; text-align: center; }
         .sub { padding-left: 14px; }
-        .rapat { line-height: 1.5; }
+        .rapat { line-height: 1.35; }
 
-        /* Butir 8 memakai kolom sendiri untuk Tanggal Lahir dan Keterangan. */
+        /* Butir 8 memakai kolom sendiri untuk Tanggal Lahir dan Keterangan.
+           Tiga kolomnya berjumlah 176 mm — sisa lebar setelah kolom nomor.
+
+           Judul "Tanggal Lahir" dan "Keterangan" berdiri sekali di baris
+           teratas, sedangkan garis tegaknya menerus sampai baris ketiga
+           karena setiap sel di bawahnya ikut memasang border-left. */
         table.pengikut { width: 100%; border-collapse: collapse; }
-        table.pengikut td { border: none; padding: 0 4px; vertical-align: top; }
+        table.pengikut td { border: none; padding: 2px 6px; vertical-align: top; }
         table.pengikut td.garis-kiri { border-left: 1px solid #000; }
+        table.pengikut td.nama { width: 46%; }
+        table.pengikut td.lahir { width: 27%; }
+        table.pengikut td.ket { width: 27%; }
+        table.pengikut tr.baris td { padding: 1px 6px; }
 
-        .catatan-kaki { font-size: 9px; margin: 3px 0 0; }
+        .catatan-kaki { font-size: 9pt; margin: 3px 0 0; }
 
         /* Blok pengesahan kanan bawah halaman depan. */
-        .pengesahan { width: 100%; margin-top: 14px; }
-        .pengesahan td { padding: 0; vertical-align: top; font-size: 10px; }
+        .pengesahan { width: 100%; margin-top: 6px; }
+        .pengesahan td { padding: 0; vertical-align: top; font-size: 11pt; }
         .pengesahan .kanan { width: 52%; }
 
         .blok-ttd { text-align: center; }
         .nama-ttd { font-weight: bold; text-decoration: underline; }
 
-        /* Halaman belakang. */
+        /* Halaman belakang. Kolom nomor Romawi 8 mm, lalu dua kolom sisi yang
+           benar-benar sama lebar — 88 mm masing-masing. Sebelumnya kolom kiri
+           47% dan kolom kanan mengambil sisanya, sehingga keduanya tampak
+           timpang meski isinya sejenis. */
         table.belakang { width: 100%; border-collapse: collapse; }
-        table.belakang td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; font-size: 9px; line-height: 1.3; }
+        table.belakang td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; font-size: 9pt; line-height: 1.25; }
         td.rom { width: 26px; }
-        td.sisi { width: 47%; }
+        td.sisi { width: 88mm; }
         .titik-isi { letter-spacing: .5px; }
         .perhatian { text-align: justify; }
 
-        .logo-bawah { width: 100%; margin-top: 10px; }
-        .logo-bawah td { padding: 0; text-align: right; }
-        .logo-bawah img { width: 92px; height: auto; }
+        /* Kaki halaman depan: kotak pernyataan antigratifikasi di kiri, logo
+           akreditasi di kanan — logonya berada di luar garis kotak, seperti
+           pada berkas cetakan bakunya. */
+        .kaki { width: 100%; margin-top: 5px; border-collapse: collapse; }
+        .kaki td { padding: 0; vertical-align: middle; }
+        .kaki td.pesan {
+            width: 76%;
+            border: 1px solid #000;
+            padding: 3px 8px;
+            text-align: center;
+            font-size: 7.5pt;
+            line-height: 1.25;
+        }
+        .kaki td.logo { padding-left: 6px; text-align: right; }
+        .kaki td.logo img { width: 155px; height: auto; }
+        .kaki .tautan { text-decoration: underline; }
 
         .pecah { page-break-after: always; }
 
@@ -100,18 +148,25 @@
             text-align: center;
             vertical-align: middle;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 11pt;
             line-height: 1.2;
         }
 
         /* Pasangan label dan isian seperti "Berangkat dari / Ke / Pada
-           Tanggal" tidak bergaris. */
+           Tanggal" tidak bergaris.
+
+           Lebar labelnya dipatok satu angka untuk seluruh dokumen — dulu
+           110px di halaman depan dan 96px di halaman belakang, sehingga titik
+           duanya tidak segaris antarblok. */
         table.rincian-dalam { width: 100%; border-collapse: collapse; }
         table.rincian-dalam td {
             border: none;
             padding: 0;
             vertical-align: top;
         }
+        table.rincian-dalam td.k { width: 96px; }
+        table.rincian-dalam.terbit td.k { width: 128px; }
+        table.rincian-dalam td.t { width: 12px; }
     </style>
 </head>
 <body>
@@ -127,7 +182,7 @@
 
     <table class="nomor-atas">
         <tr>
-            <td style="width:46%">&nbsp;</td>
+            <td class="spasi">&nbsp;</td>
             <td class="label">Kode Nomor</td>
             <td class="titik">:</td>
             <td>{{ $spd->akun_pembebanan ?: '.........................................' }}</td>
@@ -136,7 +191,8 @@
             <td>&nbsp;</td>
             <td class="label">Nomor</td>
             <td class="titik">:</td>
-            <td>{{ $orang->nomor_surat }}</td>
+            {{-- Diganti nomor naskah oleh SRIKANDI saat surat diregistrasi. --}}
+            <td>${nomor_naskah}</td>
         </tr>
     </table>
 
@@ -206,7 +262,7 @@
             </td>
             <td class="pemisah">:</td>
             <td class="rapat">
-                a.&nbsp; {{ $spd->lama_hari }} ({{ $terbilang->konversi($spd->lama_hari) }}) hari<br>
+                a.&nbsp; {{ $spd->lama_hari }} ({{ $terbilang->kata($spd->lama_hari) }}) hari<br>
                 b.&nbsp; {{ $tanggal($spd->tanggal_berangkat) }}<br>
                 c.&nbsp; {{ $tanggal($spd->tanggal_kembali) }}
             </td>
@@ -216,20 +272,23 @@
             <td colspan="3" style="padding:0">
                 <table class="pengikut">
                     <tr>
-                        <td style="width:46%; padding:4px 6px">
-                            <span style="padding-left:52px">Pengikut&nbsp; :&nbsp; Nama</span>
-                        </td>
-                        <td class="garis-kiri" style="width:27%; padding:4px 6px">Tanggal Lahir</td>
-                        <td class="garis-kiri" style="width:27%; padding:4px 6px">Keterangan</td>
+                        <td class="nama">Pengikut&nbsp; :</td>
+                        <td class="garis-kiri lahir">Tanggal Lahir</td>
+                        <td class="garis-kiri ket">Keterangan</td>
                     </tr>
                     @for ($i = 0; $i < 3; $i++)
                         @php $ikut = $pengikut->get($i); @endphp
-                        <tr>
-                            <td style="padding:1px 6px">{{ $i + 1 }}.&nbsp; {{ $ikut->nama ?? '' }}</td>
-                            <td class="garis-kiri" style="padding:1px 6px">
+                        <tr class="baris">
+                            {{-- Kata "Nama" hanya menemani baris pertama, persis
+                                 seperti pada berkas cetakan bakunya. --}}
+                            <td class="nama">
+                                @if ($i === 0) Nama @endif
+                                {{ $i + 1 }}.&nbsp; {{ $ikut->nama ?? '' }}
+                            </td>
+                            <td class="garis-kiri lahir">
                                 {{ $ikut && $ikut->tanggal_lahir ? $tanggal($ikut->tanggal_lahir) : '' }}
                             </td>
-                            <td class="garis-kiri" style="padding:1px 6px">{{ $ikut->keterangan ?? '' }}</td>
+                            <td class="garis-kiri ket">{{ $ikut->keterangan ?? '' }}</td>
                         </tr>
                     @endfor
                 </table>
@@ -263,23 +322,23 @@
         <tr>
             <td>&nbsp;</td>
             <td class="kanan">
-                <table class="rincian-dalam">
+                <table class="rincian-dalam terbit">
                     <tr>
-                        <td style="width:110px; padding:0">DIKELUARKAN DI</td>
-                        <td style="width:12px; padding:0">:</td>
-                        <td style="padding:0">{{ mb_strtoupper($spd->dikeluarkan_di) }}</td>
+                        <td class="k">DIKELUARKAN DI</td>
+                        <td class="t">:</td>
+                        <td>{{ mb_strtoupper($spd->dikeluarkan_di) }}</td>
                     </tr>
                     <tr>
-                        <td style="padding:0"><span style="text-decoration:underline">TANGGAL</span></td>
-                        <td style="padding:0">:</td>
-                        <td style="padding:0"><span style="text-decoration:underline">{{ $tanggal($spd->tanggal_surat) }}</span></td>
+                        <td class="k">TANGGAL</td>
+                        <td class="t">:</td>
+                        <td>{{ $tanggal($spd->tanggal_surat) }}</td>
                     </tr>
                 </table>
 
                 {{-- Blok tanda tangan rata tengah agar QR SRIKANDI jatuh
                      tepat di tengah kolom, bukan menempel ke tepi. --}}
                 <div class="blok-ttd">
-                    <p style="margin:12px 0 0">Pejabat Pembuat Komitmen</p>
+                    <p style="margin:6px 0 0">Pejabat Pembuat Komitmen</p>
 
                     {{-- Diganti QR tanda tangan elektronik oleh SRIKANDI. --}}
                     <table class="kotak-ttd"><tr><td>${ttd_pengirim1}</td></tr></table>
@@ -291,9 +350,19 @@
         </tr>
     </table>
 
-    <table class="logo-bawah">
+    <table class="kaki">
         <tr>
-            <td><img src="{{ public_path('images/logo-akreditasi.jpg') }}" alt="KAN dan BLU"></td>
+            <td class="pesan">
+                Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun.
+                Jika terdapat potensi suap atau gratifikasi silakan laporkan melalui HALO KEMENKES
+                1500567 dan <span class="tautan">https://wbs.kemkes.go.id</span>. Untuk verifikasi
+                keaslian tanda tangan elektronik, silakan unggah dokumen pada laman
+                <span class="tautan">https://tte.kominfo.go.id/verifyPDF</span>.
+            </td>
+            <td class="logo">
+                <img src="{{ public_path('images/logo-akreditasi.jpg') }}"
+                     alt="KAN, Garuda Sertifikasi Indonesia, dan BLU">
+            </td>
         </tr>
     </table>
 
@@ -306,22 +375,22 @@
         <tr>
             <td class="rom">&nbsp;</td>
             <td class="sisi">&nbsp;</td>
-            <td>
+            <td class="sisi">
                 <table class="rincian-dalam">
                     <tr>
-                        <td style="width:96px; padding:0">Berangkat dari</td>
-                        <td style="width:12px; padding:0">:</td>
-                        <td style="padding:0">{{ $spd->tempat_berangkat }}</td>
+                        <td class="k">Berangkat dari</td>
+                        <td class="t">:</td>
+                        <td>{{ $spd->tempat_berangkat }}</td>
                     </tr>
                     <tr>
-                        <td style="padding:0">Ke</td>
-                        <td style="padding:0">:</td>
-                        <td style="padding:0">{{ $spd->tempat_tujuan }}</td>
+                        <td>Ke</td>
+                        <td>:</td>
+                        <td>{{ $spd->tempat_tujuan }}</td>
                     </tr>
                     <tr>
-                        <td style="padding:0">Pada Tanggal</td>
-                        <td style="padding:0">:</td>
-                        <td style="padding:0">{{ $tanggal($spd->tanggal_berangkat) }}</td>
+                        <td>Pada Tanggal</td>
+                        <td>:</td>
+                        <td>{{ $tanggal($spd->tanggal_berangkat) }}</td>
                     </tr>
                 </table>
 
@@ -344,42 +413,42 @@
                 <td class="sisi">
                     <table class="rincian-dalam">
                         <tr>
-                            <td style="width:96px; padding:0">Tiba di</td>
-                            <td style="width:12px; padding:0">:</td>
-                            <td style="padding:0">&nbsp;</td>
+                            <td class="k">Tiba di</td>
+                            <td class="t">:</td>
+                            <td>&nbsp;</td>
                         </tr>
                         <tr>
-                            <td style="padding:0">Pada Tanggal</td>
-                            <td style="padding:0">:</td>
-                            <td style="padding:0">&nbsp;</td>
+                            <td>Pada Tanggal</td>
+                            <td>:</td>
+                            <td>&nbsp;</td>
                         </tr>
                     </table>
-                    <p style="margin:5px 0 0" class="titik-isi">Kepala ......................................................</p>
+                    <p style="margin:5px 0 0" class="titik-isi">Kepala ........................................</p>
                     <div style="height:7mm"></div>
-                    <p style="margin:0" class="titik-isi">(....................................................)</p>
+                    <p style="margin:0" class="titik-isi">(......................................)</p>
                     <p style="margin:0">NIP.</p>
                 </td>
-                <td>
+                <td class="sisi">
                     <table class="rincian-dalam">
                         <tr>
-                            <td style="width:96px; padding:0">Berangkat dari</td>
-                            <td style="width:12px; padding:0">:</td>
-                            <td style="padding:0">&nbsp;</td>
+                            <td class="k">Berangkat dari</td>
+                            <td class="t">:</td>
+                            <td>&nbsp;</td>
                         </tr>
                         <tr>
-                            <td style="padding:0">Ke</td>
-                            <td style="padding:0">:</td>
-                            <td style="padding:0">&nbsp;</td>
+                            <td>Ke</td>
+                            <td>:</td>
+                            <td>&nbsp;</td>
                         </tr>
                         <tr>
-                            <td style="padding:0">Pada Tanggal</td>
-                            <td style="padding:0">:</td>
-                            <td style="padding:0">&nbsp;</td>
+                            <td>Pada Tanggal</td>
+                            <td>:</td>
+                            <td>&nbsp;</td>
                         </tr>
                     </table>
-                    <p style="margin:5px 0 0" class="titik-isi">&nbsp;Kepala ......................................................</p>
+                    <p style="margin:5px 0 0" class="titik-isi">Kepala ........................................</p>
                     <div style="height:7mm"></div>
-                    <p style="margin:0" class="titik-isi">(....................................................)</p>
+                    <p style="margin:0" class="titik-isi">(......................................)</p>
                     <p style="margin:0">NIP.</p>
                 </td>
             </tr>
@@ -392,24 +461,30 @@
             <td class="sisi">
                 <table class="rincian-dalam">
                     <tr>
-                        <td style="width:96px; padding:0">Tiba di</td>
-                        <td style="width:12px; padding:0">:</td>
-                        <td style="padding:0">{{ $spd->tempat_berangkat }}</td>
+                        <td class="k">Tiba di</td>
+                        <td class="t">:</td>
+                        <td>{{ $spd->tempat_berangkat }}</td>
                     </tr>
                     <tr>
-                        <td style="padding:0">&nbsp;</td>
-                        <td style="padding:0">&nbsp;</td>
-                        <td style="padding:0">(Tempat Kedudukan)</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>(Tempat Kedudukan)</td>
                     </tr>
                     <tr>
-                        <td style="padding:0">Pada Tanggal</td>
-                        <td style="padding:0">:</td>
-                        <td style="padding:0" class="titik-isi">....................................</td>
+                        <td>Pada Tanggal</td>
+                        <td>:</td>
+                        <td class="titik-isi">....................................</td>
                     </tr>
                 </table>
 
+                {{-- Jarak atasnya lebih besar daripada kolom kanan supaya
+                     kedua blok tanda tangan baris V berdiri sejajar: kolom
+                     kanan didahului paragraf "Telah diperiksa" empat baris
+                     dan satu baris "Pejabat yang memberi perintah", sedangkan
+                     kolom kiri hanya tiga baris. Teks dan lebar kolomnya
+                     tetap, jadi selisihnya pun tetap. --}}
                 <div class="blok-ttd">
-                    <p style="margin:6px 0 0">Direktur Poltekkes Manado</p>
+                    <p style="margin:37px 0 0">Direktur Poltekkes Manado</p>
 
                     {{-- Diganti QR tanda tangan elektronik oleh SRIKANDI. --}}
                     <table class="kotak-ttd"><tr><td>${ttd_pengirim2}</td></tr></table>
@@ -418,7 +493,7 @@
                     <p style="margin:0">NIP. {{ $direktur?->nip ?? '' }}</p>
                 </div>
             </td>
-            <td>
+            <td class="sisi">
                 <p class="perhatian" style="margin:0">
                     Telah diperiksa dengan keterangan, bahwa perjalanan tersebut di atas benar
                     dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam
@@ -441,7 +516,7 @@
         <tr>
             <td class="rom">VII.</td>
             <td class="sisi">Catatan Lain-lain</td>
-            <td>&nbsp;</td>
+            <td class="sisi">&nbsp;</td>
         </tr>
 
         <tr>

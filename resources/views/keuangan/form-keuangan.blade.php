@@ -321,6 +321,86 @@
             </div>
         </div>
 
+        {{-- ── TRANSPORT LOKAL ──
+             Dipertanggungjawabkan lewat Daftar Pengeluaran Riil dan dibayar
+             saat pelunasan, jadi bukan baris rincian di atas — tetapi ia bagian
+             dari biaya perjalanan, sehingga dicantumkan di sini dan ikut
+             tercetak pada dokumen rincian biaya. --}}
+        @php
+            $pesertaRiil = $usulan->peserta->firstWhere('id_user', $usulan->id_user) ?? $usulan->peserta->first();
+            $riilTransport = $pesertaRiil ? $usulan->daftarRiil->firstWhere('id_peserta', $pesertaRiil->id) : null;
+            $barisTransport = $riilTransport?->rincian ?? collect();
+            $totalTransport = (float) ($riilTransport?->total_riil ?? $barisTransport->sum('nominal'));
+        @endphp
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13v6h-2a2 2 0 01-4 0H9a2 2 0 01-4 0H3v-6z"/><path d="M3 13h18"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Transport Lokal</h3>
+                        <p class="text-xs text-slate-400">
+                            Dari nota pelaksana — dipertanggungjawabkan lewat Daftar Pengeluaran Riil, dibayar saat pelunasan
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if ($riilTransport)
+                        <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full {{ $riilTransport->status_badge }}">
+                            {{ $riilTransport->status_label }}
+                        </span>
+                    @endif
+                    @can('mengelola-biaya')
+                        <a href="{{ route('keuangan.transport-lokal') }}"
+                           class="text-xs font-bold text-teal-600 hover:text-teal-700">Periksa Transport Lokal →</a>
+                    @endcan
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr class="text-left text-xs uppercase tracking-wide text-slate-400">
+                            <th class="px-6 py-3 font-semibold w-10">No</th>
+                            <th class="px-4 py-3 font-semibold">Ruas / Uraian</th>
+                            <th class="px-4 py-3 font-semibold text-right">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse ($barisTransport as $baris)
+                            <tr>
+                                <td class="px-6 py-3 text-xs text-slate-400">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 text-slate-700">{{ $baris->uraian }}</td>
+                                <td class="px-4 py-3 text-right font-semibold text-slate-800 tabular-nums">Rp {{ number_format($baris->nominal, 0, ',', '.') }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="px-6 py-6 text-center text-xs text-slate-400">
+                                    Pelaksana belum mengisi nota transportasi lokal.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if ($barisTransport->isNotEmpty())
+                        <tfoot class="border-t-2 border-slate-200 bg-slate-50">
+                            <tr>
+                                <td colspan="2" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Total Transport Lokal</td>
+                                <td class="px-4 py-3 text-right text-sm font-bold text-slate-800 tabular-nums">Rp {{ number_format($totalTransport, 0, ',', '.') }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="px-6 py-2 text-right text-sm font-bold text-indigo-800">Total Biaya Perjalanan (rincian + transport lokal)</td>
+                                <td class="px-4 py-2 text-right text-sm font-black text-indigo-900 tabular-nums">Rp {{ number_format((float) $keuangan->total + $totalTransport, 0, ',', '.') }}</td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+        </div>
+
         {{-- ── RIWAYAT PEMBAYARAN ── --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
@@ -455,21 +535,23 @@
                                 @endif
                             </span>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex flex-wrap items-center justify-end gap-2 shrink-0 max-w-[55%]">
                             <span class="text-xs font-semibold {{ $check['terpenuhi'] ? 'text-teal-600' : 'text-amber-600' }}">
                                 {{ $check['terpenuhi'] ? 'Lengkap' : 'Belum lengkap' }}
                             </span>
 
-                            @if ($check['berkas'])
-                                <a href="{{ Storage::url($check['berkas']) }}" target="_blank" rel="noopener"
+                            {{-- Satu baris bisa membawa beberapa berkas: tiket punya boarding
+                                 pass dan invoice, nota punya bukti per ruas. --}}
+                            @foreach ($check['berkas'] as $berkas)
+                                <a href="{{ Storage::url($berkas['path']) }}" target="_blank" rel="noopener"
                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 hover:border-teal-300 text-slate-600 hover:text-teal-700 text-[11px] font-bold rounded-lg transition"
-                                   title="Buka {{ $check['label'] }} di tab baru">
+                                   title="Buka {{ $berkas['label'] }} di tab baru">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
                                     </svg>
-                                    Lihat
+                                    {{ count($check['berkas']) > 1 ? $berkas['label'] : 'Lihat' }}
                                 </a>
-                            @endif
+                            @endforeach
                         </div>
                     </div>
                 @endforeach
@@ -496,6 +578,14 @@
                 $belumDivalidasi = $rincian->whereNull('divalidasi_at')
                     ->filter(fn ($b) => $b->dariDokumen())
                     ->count();
+
+                // Alasan berkas belum bisa dikirim, dari aturan yang sama dengan
+                // penyimpanannya — termasuk transport lokal yang belum divalidasi,
+                // yang dulu tidak tampak di sini sehingga tombolnya terlihat siap
+                // padahal kirimannya ditolak.
+                $alasanTertahan = $berkasRiil
+                    ? app(\App\Services\PengirimanBerkas::class)->alasanBelumSiap($usulan, $berkasRiil)
+                    : null;
             @endphp
 
             @can('mengelola-biaya')
@@ -512,9 +602,9 @@
                               x-data
                               @submit.prevent="if (confirm('Kirim rincian biaya dan daftar pengeluaran riil ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
                             @csrf @method('PUT')
-                            <button type="submit" @disabled($belumDivalidasi > 0)
+                            <button type="submit" @disabled($alasanTertahan !== null)
                                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition
-                                           {{ $belumDivalidasi > 0
+                                           {{ $alasanTertahan !== null
                                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                 : 'bg-teal-500 hover:bg-teal-600 text-white' }}">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -524,9 +614,13 @@
                             </button>
                         </form>
 
-                        @if ($belumDivalidasi > 0)
+                        @if ($alasanTertahan !== null)
                             <p class="-mt-1 mb-3 text-[11px] text-amber-700 text-center">
-                                Masih ada {{ $belumDivalidasi }} nominal yang belum divalidasi.
+                                {{ $alasanTertahan }}
+                            </p>
+                        @else
+                            <p class="-mt-1 mb-3 text-[11px] text-slate-400 text-center">
+                                Seluruh nominal sudah divalidasi. Berkas ini biasanya terkirim sendiri saat validasi terakhir dicatat.
                             </p>
                         @endif
                     @endif

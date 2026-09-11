@@ -208,10 +208,11 @@ class RevisiMenuKeuanganTest extends TestCase
     }
 
     /**
-     * Nominatif yang belum sampai ke tim keuangan berarti dokumennya belum
-     * menjadi dasar pembayaran, jadi belum terhitung lengkap.
+     * Daftar nominatif tidak ditunggu: rincian yang sudah disahkan PPK
+     * sudah terkunci, jadi ia diarsipkan meski nominatifnya belum dikirim —
+     * atau belum terbit sama sekali.
      */
-    public function test_berkas_tanpa_nominatif_terkirim_tidak_ikut(): void
+    public function test_berkas_ikut_meski_nominatif_belum_terkirim(): void
     {
         DaftarRiil::create([
             'id_usulan' => $this->usulan->id,
@@ -231,9 +232,29 @@ class RevisiMenuKeuanganTest extends TestCase
 
         $halaman = $this->actingAs($this->timKeuangan)
             ->get(route('laporan.rincian-lengkap'))
+            ->assertOk()
+            ->assertSee($this->usulan->no_usulan);
+
+        $this->assertSame(1, $halaman->viewData('jumlahBerkas'));
+    }
+
+    public function test_berkas_ikut_meski_nominatif_belum_terbit(): void
+    {
+        DaftarRiil::create([
+            'id_usulan' => $this->usulan->id,
+            'id_peserta' => $this->peserta->id,
+            'total_riil' => 474_500,
+            'ditandatangani_at' => now(),
+            'id_ppk' => $this->ppk->id,
+            'rincian_ditandatangani_at' => now(),
+            'rincian_id_ppk' => $this->ppk->id,
+        ]);
+
+        $halaman = $this->actingAs($this->timKeuangan)
+            ->get(route('laporan.rincian-lengkap'))
             ->assertOk();
 
-        $this->assertSame(0, $halaman->viewData('jumlahBerkas'));
+        $this->assertSame(1, $halaman->viewData('jumlahBerkas'));
     }
 
     public function test_laporan_dikelompokkan_dan_dapat_disaring_per_periode(): void

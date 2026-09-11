@@ -199,6 +199,15 @@ class PembagianUangMukaTest extends TestCase
             ->whereNull('divalidasi_at')
             ->update(['divalidasi_at' => now(), 'id_validator' => $timKeuangan->id]);
 
+        // Transport lokalnya pun harus diperiksa; alasannya tampak di halaman.
+        $this->actingAs($timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan->no_usulan))
+            ->assertOk()
+            ->assertSee('Transport lokal belum divalidasi');
+
+        DaftarRiil::where('id_usulan', $this->usulan->id)
+            ->update(['divalidasi_at' => now(), 'id_validator' => $timKeuangan->id]);
+
         $this->actingAs($timKeuangan)
             ->get(route('keuangan.detail', $this->usulan->no_usulan))
             ->assertOk()

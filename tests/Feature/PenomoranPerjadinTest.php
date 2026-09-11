@@ -116,8 +116,9 @@ class PenomoranPerjadinTest extends TestCase
             'instansi' => 'Kemenkes',
             'tanggal_mulai' => '2026-10-05',
             'tanggal_selesai' => '2026-10-07',
-            'jenis_pengajuan' => 'personal',
             'surat_tugas' => UploadedFile::fake()->create('st.pdf', 100, 'application/pdf'),
+            'no_spd' => 'KU.02.04/F.XXX.8/1234/2026',
+            'spd_ditandatangani' => UploadedFile::fake()->create('spd.pdf', 100, 'application/pdf'),
         ]);
 
         $this->assertSame('PJ-KESLING-'.now()->format('Y').'-10-001', Usulan::first()->no_usulan);

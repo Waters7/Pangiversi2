@@ -18,16 +18,28 @@ class Terbilang
 
     public function konversi(float|int $angka): string
     {
+        return $this->kata($angka).' rupiah';
+    }
+
+    /**
+     * Bilangan dalam kata tanpa satuan mata uang.
+     *
+     * Dipakai untuk hitungan yang bukan uang — lamanya perjalanan dinas pada
+     * SPD, misalnya, yang sebelumnya ikut membawa kata "rupiah" dan tercetak
+     * sebagai "2 (dua rupiah) hari".
+     */
+    public function kata(float|int $angka): string
+    {
         $angka = (int) round(abs($angka));
 
         if ($angka === 0) {
-            return 'nol rupiah';
+            return 'nol';
         }
 
         // Rekursi menyisakan spasi ganda pada bilangan bulat seperti 250.000.
         $kata = preg_replace('/\s+/', ' ', $this->eja($angka));
 
-        return trim((string) $kata).' rupiah';
+        return trim((string) $kata);
     }
 
     private function eja(int $angka): string

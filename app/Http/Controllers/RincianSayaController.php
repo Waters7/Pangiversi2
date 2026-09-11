@@ -29,6 +29,7 @@ class RincianSayaController extends Controller
      */
     private const KELOMPOK = [
         'perlu-tanggapan' => 'Perlu Tanggapan',
+        'dicek' => 'Dicek Tim Keuangan',
         'menunggu-ppk' => 'Menunggu PPK',
         'disanggah' => 'Disanggah',
         'selesai' => 'Selesai',
@@ -115,8 +116,13 @@ class RincianSayaController extends Controller
     }
 
     /**
-     * Berkas yang sudah dikirim tim keuangan kepada pengguna ini, sudah
-     * dilengkapi keadaan jalur dan penanda periodenya.
+     * Berkas milik pengguna ini yang sudah disentuh tim keuangan — dikirim
+     * kepadanya, atau sekurangnya sudah diperiksa nominalnya — dilengkapi
+     * keadaan jalur dan penanda periodenya.
+     *
+     * Yang baru diperiksa tetapi belum dikirim ikut tampil supaya pelaksana
+     * tahu berkasnya sudah dicek dan tinggal menunggu dikirim; sebelumnya
+     * berkas seperti itu tidak terlihat sama sekali dari sisi pelaksana.
      *
      * @return Collection<int, array<string, mixed>>
      */
@@ -125,7 +131,10 @@ class RincianSayaController extends Controller
         $cari = $request->input('cari');
 
         return DaftarRiil::with(['usulan.keuangan.rincianBiaya', 'peserta', 'rincian'])
-            ->whereNotNull('dikirim_ke_pegawai_at')
+            ->where(fn ($q) => $q
+                ->whereNotNull('dikirim_ke_pegawai_at')
+                ->orWhereNotNull('divalidasi_at')
+                ->orWhereHas('usulan.keuangan.rincianBiaya', fn ($r) => $r->whereNotNull('divalidasi_at')))
             ->whereHas('peserta', fn ($q) => $q->where('id_user', $request->user()->id))
             ->when($cari, fn ($q) => $q->whereHas(
                 'usulan',
@@ -133,7 +142,8 @@ class RincianSayaController extends Controller
                     ->orWhere('no_tugas', 'like', "%{$cari}%")
                     ->orWhere('lokasi', 'like', "%{$cari}%")
             ))
-            ->latest('dikirim_ke_pegawai_at')
+            ->orderByDesc('dikirim_ke_pegawai_at')
+            ->orderByDesc('updated_at')
             ->get()
             ->map(function (DaftarRiil $berkas) use ($jenis): array {
                 $jalur = $berkas->jalur($jenis);

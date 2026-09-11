@@ -65,10 +65,10 @@ class AlurSpdSebelumUsulanTest extends TestCase
         $this->actingAs($this->pengguna)
             ->get(route('usulan.create'))
             ->assertOk()
-            ->assertSee('Ajukan usulan perjalanan dinas?')
+            ->assertSee('Kirim pengajuan perjalanan dinas?')
             ->assertSee('Apakah Anda sudah benar mengisi seluruh datanya?')
             ->assertSee('Periksa Lagi')
-            ->assertSee('Ya, Ajukan');
+            ->assertSee('Ya, Kirim');
     }
 
     public function test_formulir_usulan_tertutup_sebelum_spd_dibuat(): void

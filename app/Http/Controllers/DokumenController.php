@@ -9,6 +9,7 @@ use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\DokService;
 use App\Services\FormatLaporanPerjadin;
+use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PenagihDokumen;
@@ -87,7 +88,8 @@ class DokumenController extends Controller
     {
         abort_if($usulan->id_user !== Auth::id() && ! request()->user()->isAdmin(), 403);
 
-        $pdf = Pdf::loadView('dokumen.format-laporan', $format->data($usulan));
+        $pdf = Pdf::loadView('dokumen.format-laporan', $format->data($usulan))
+            ->setPaper(KertasCetak::UKURAN);
 
         return $pdf->download("Format-Laporan-Perjadin_{$usulan->no_usulan}.pdf");
     }

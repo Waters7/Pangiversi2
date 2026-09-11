@@ -36,8 +36,10 @@ class DokService
     {
         $dokumen = $this->dokumen($usulan);
 
+        // Surat tugas tidak ditagih di sini: sudah diunggah saat pengajuan dan
+        // formulir seksi ini tidak memuat kolomnya lagi.
         $request->validate([
-            'surat_tugas' => [$this->aturanBerkas($dokumen, 'surat_tugas'), 'file', 'mimes:pdf', 'max:2048'],
+            'surat_tugas' => ['nullable', 'file', 'mimes:pdf', 'max:2048'],
             'sppd' => [$this->aturanBerkas($dokumen, 'sppd'), 'file', 'mimes:pdf', 'max:2048'],
         ], [
             'sppd.required' => 'Unggah SPPD yang sudah ditandatangani lengkap.',
@@ -68,16 +70,24 @@ class DokService
                 $tiket->boarding_pass ? 'nullable' : 'required',
                 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
             ],
+            // Invoice pembelian tiket: bukti harganya, yang diganti bendahara.
+            'invoice' => [
+                $tiket->invoice ? 'nullable' : 'required',
+                'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
+            ],
         ], [
             'harga.required' => 'Isi harga tiket yang sudah termasuk pajak.',
             'boarding_pass.required' => 'Unggah boarding pass untuk tiket ini.',
+            'invoice.required' => 'Unggah invoice pembelian tiket ini.',
         ]);
 
-        if ($request->hasFile('boarding_pass')) {
-            $this->hapusBerkasLama($tiket->boarding_pass);
-            $data['boarding_pass'] = $request->file('boarding_pass')->store('dokumen/boarding-pass', 'public');
-        } else {
-            unset($data['boarding_pass']);
+        foreach (['boarding_pass' => 'dokumen/boarding-pass', 'invoice' => 'dokumen/invoice-tiket'] as $kolom => $folder) {
+            if ($request->hasFile($kolom)) {
+                $this->hapusBerkasLama($tiket->{$kolom});
+                $data[$kolom] = $request->file($kolom)->store($folder, 'public');
+            } else {
+                unset($data[$kolom]);
+            }
         }
 
         $tiket->fill($data + ['arah' => $arah->value]);
@@ -93,16 +103,48 @@ class DokService
 
     private function simpanNota(Request $request, Usulan $usulan): bool
     {
-        $request->validate([
+        $tersimpan = $usulan->notaTransport->keyBy('urutan');
+
+        // Dalam kota hanya satu ruas — transport lokalnya; luar kota empat
+        // ruas dari rumah sampai kembali ke rumah.
+        $ruasBerlaku = RuasTransport::untuk($usulan->dalamKota());
+
+        $aturan = [
             'ruas' => ['required', 'array'],
             'ruas.*.nominal' => ['nullable', 'numeric', 'min:0'],
             'ruas.*.keterangan' => ['nullable', 'string', 'max:255'],
-            'ruas.*.bukti' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-        ]);
+        ];
+        $pesan = [];
 
-        $tersimpan = $usulan->notaTransport->keyBy('urutan');
+        // Nota hanya wajib untuk ruas yang diisi nominalnya — ruas kosong memang
+        // tidak dilalui — dan yang notanya sudah pernah diunggah tidak ditagih lagi.
+        foreach ($ruasBerlaku as $ruas) {
+            $bernominal = (float) $request->input("ruas.{$ruas->value}.nominal", 0) > 0;
+            $sudahAda = filled($tersimpan->get($ruas->value)?->bukti);
 
-        foreach (RuasTransport::urutan() as $ruas) {
+            $aturan["ruas.{$ruas->value}.bukti"] = [
+                $bernominal && ! $sudahAda ? 'required' : 'nullable',
+                'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
+            ];
+            $pesan["ruas.{$ruas->value}.bukti.required"] = $ruas->dalamKota()
+                ? 'Unggah bukti/nota transport lokal karena nominalnya diisi.'
+                : "Unggah bukti/nota untuk ruas {$ruas->value} ({$ruas->label()}) karena nominalnya diisi.";
+        }
+
+        $request->validate($aturan, $pesan);
+
+        // Ruas yang tidak berlaku lagi — misalnya kategori usulan berpindah
+        // wilayah — dibuang supaya tidak diam-diam ikut ke daftar riil.
+        $berlaku = array_map(fn (RuasTransport $ruas) => $ruas->value, $ruasBerlaku);
+
+        foreach ($tersimpan as $urutan => $usang) {
+            if (! in_array($urutan, $berlaku, true)) {
+                $this->hapusBerkasLama($usang->bukti);
+                $usang->delete();
+            }
+        }
+
+        foreach ($ruasBerlaku as $ruas) {
             $masukan = $request->input("ruas.{$ruas->value}", []);
             $nota = $tersimpan->get($ruas->value) ?? $usulan->notaTransport()->make(['urutan' => $ruas->value]);
 
@@ -137,10 +179,16 @@ class DokService
             'bill_hotel_no_transaksi' => ['nullable', 'string', 'max:100'],
             'bill_hotel_nominal' => ['nullable', 'numeric', 'min:0'],
             'kwintasi' => [$this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'faktur' => [$this->aturanBerkas($dokumen, 'faktur'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+        ], [
+            'bill_hotel.required' => 'Unggah bill hotel.',
+            'kwintasi.required' => 'Unggah kuitansi.',
         ]);
 
-        $this->simpanBerkas($request, $usulan, ['bill_hotel', 'kwintasi', 'faktur'], [
+        // Faktur sengaja tidak ditagih: satuan kerja tidak menerbitkannya dan
+        // formulirnya pun tidak memuat kolom itu — dulu aturannya tertinggal
+        // di sini sehingga seksi ini menolak dengan pesan tentang kolom yang
+        // tidak pernah ada di layar.
+        $this->simpanBerkas($request, $usulan, ['bill_hotel', 'kwintasi'], [
             'bill_hotel_no_transaksi' => $request->input('bill_hotel_no_transaksi') ?: null,
             'bill_hotel_nominal' => $request->filled('bill_hotel_nominal')
                 ? (float) $request->input('bill_hotel_nominal')

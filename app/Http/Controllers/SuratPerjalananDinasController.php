@@ -10,7 +10,9 @@ use App\Models\SpdPelaksana;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
 use App\Services\EkspresiTanggal;
+use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
+use App\Services\PenomoranPerjadin;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +20,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SuratPerjalananDinasController extends Controller
@@ -26,6 +27,7 @@ class SuratPerjalananDinasController extends Controller
     public function __construct(
         private EkspresiTanggal $tanggal,
         private NotifikasiService $notifikasi,
+        private PenomoranPerjadin $penomoran,
     ) {}
 
     public function index(Request $request): View
@@ -93,8 +95,9 @@ class SuratPerjalananDinasController extends Controller
         $data = $this->periksa($request);
 
         $spd = DB::transaction(function () use ($data, $request) {
-            // Tanggal dikeluarkan mengikuti tanggal pembuatan SPD, dan tetap
-            // begitu meski berkasnya disunting kemudian.
+            // Tanggal dikeluarkan mengikuti tanggal pembuatan SPD. Operator +
+            // mempertahankan nilai operand kiri, jadi tanggal pilihan pimpinan
+            // atau administrator — bila ada — menang atas hari ini.
             $spd = SuratPerjalananDinas::create($this->kolomPokok($data) + [
                 'id_pembuat' => $request->user()->id,
                 'tanggal_surat' => today(),
@@ -119,8 +122,10 @@ class SuratPerjalananDinasController extends Controller
      * Usulan perjadin baru boleh diajukan setelah SPD ada. Tanpa kabar ini
      * pelaksana tidak punya cara lain selain masuk berkali-kali memeriksa
      * sendiri, dan berkasnya menganggur sementara ia menunggu.
+     *
+     * @param  list<int>  $lewati  Pengguna yang sudah pernah dikabari.
      */
-    private function kabarkanTerbit(SuratPerjalananDinas $spd, User $pembuat): void
+    private function kabarkanTerbit(SuratPerjalananDinas $spd, User $pembuat, array $lewati = []): void
     {
         $penerima = $spd->pelaksana()
             ->with('user')
@@ -128,7 +133,8 @@ class SuratPerjalananDinasController extends Controller
             ->pluck('user')
             ->filter()
             // Pembuatnya sudah tahu — ia baru saja menerbitkannya sendiri.
-            ->reject(fn (User $orang) => $orang->is($pembuat));
+            ->reject(fn (User $orang) => $orang->is($pembuat))
+            ->reject(fn (User $orang) => in_array($orang->id, $lewati, true));
 
         if ($penerima->isEmpty()) {
             return;
@@ -167,18 +173,33 @@ class SuratPerjalananDinasController extends Controller
 
         $data = $this->periksa($request, $spd);
 
-        DB::transaction(function () use ($spd, $data) {
+        $bolehPengikut = $request->user()->punyaKemampuan(Kemampuan::MengisiPengikutSpd);
+        $sudahDikabari = $spd->pelaksana()->pluck('id_user')->filter()->values()->all();
+
+        DB::transaction(function () use ($spd, $data, $bolehPengikut) {
             $spd->update($this->kolomPokok($data));
 
-            // Pelaksana dan pengikut disusun ulang seluruhnya: barisnya dapat
-            // bertambah, berkurang, atau berpindah urutan, sehingga menyamakan
-            // satu per satu lebih rumit daripada menulis ulang.
+            // Pelaksana disusun ulang seluruhnya: barisnya dapat bertambah,
+            // berkurang, atau berpindah urutan, sehingga menyamakan satu per
+            // satu lebih rumit daripada menulis ulang.
             $spd->pelaksana()->delete();
-            $spd->pengikut()->delete();
-
             $this->simpanPelaksana($spd, $data);
-            $this->simpanPengikut($spd, $data);
+
+            // Pengikut hanya disusun ulang oleh yang berwenang mengisinya.
+            // Tanpa penjagaan ini, pelaksana yang menyunting suratnya sendiri
+            // akan menghapus pengikut yang dipasang pimpinan — formulirnya
+            // memang tidak memuat bagian itu, jadi kiriman tanpa pengikut
+            // akan terbaca sebagai perintah mengosongkan.
+            if ($bolehPengikut) {
+                $spd->pengikut()->delete();
+                $this->simpanPengikut($spd, $data);
+            }
         });
+
+        // Pelaksana yang baru ditambahkan lewat penyuntingan juga perlu tahu
+        // SPD-nya sudah ada; tanpa ini hanya yang tercantum sejak awal yang
+        // dikabari, dan sisanya menunggu tanpa pernah diberi tahu.
+        $this->kabarkanTerbit($spd->fresh(), $request->user(), $sudahDikabari);
 
         return redirect()
             ->route('spd.show', $spd)
@@ -216,7 +237,7 @@ class SuratPerjalananDinasController extends Controller
         $pelaksana = collect(array_values($data['pelaksana']))
             ->map(fn (array $orang, int $i) => new SpdPelaksana(array_merge($orang, [
                 'urutan' => $i + 1,
-                'nomor_surat' => SpdPelaksana::rakitNomor($orang['nomor_surat'], $spd->tanggal_surat->year),
+                'nomor_surat' => $this->nomorBaru($orang, $spd),
             ])));
 
         $pengikut = collect($data['pengikut'] ?? [])
@@ -264,7 +285,11 @@ class SuratPerjalananDinasController extends Controller
             'instansi_pembebanan' => $data['instansi_pembebanan'] ?? null,
             'akun_pembebanan' => $data['akun_pembebanan'] ?? null,
             'keterangan_lain' => $data['keterangan_lain'] ?? null,
-        ];
+        ]
+        // Kuncinya hanya ada bila periksa() meloloskannya, yaitu ketika
+        // penggunanya berwenang. Peran lain tidak menyentuh kolom ini sama
+        // sekali, sehingga tanggal terbitnya tetap seperti semula.
+        + (isset($data['tanggal_surat']) ? ['tanggal_surat' => $data['tanggal_surat']] : []);
     }
 
     /**
@@ -272,13 +297,11 @@ class SuratPerjalananDinasController extends Controller
      */
     private function simpanPelaksana(SuratPerjalananDinas $spd, array $data): void
     {
-        $tahun = $spd->tanggal_surat?->year ?? now()->year;
-
         foreach (array_values($data['pelaksana']) as $urutan => $orang) {
             $spd->pelaksana()->create([
                 'urutan' => $urutan + 1,
                 'id_user' => $orang['id_user'] ?? null,
-                'nomor_surat' => SpdPelaksana::rakitNomor($orang['nomor_surat'], $tahun),
+                'nomor_surat' => $this->nomorBaru($orang, $spd),
                 'nama' => $orang['nama'],
                 'nip' => $orang['nip'] ?? null,
                 'pangkat_golongan' => $orang['pangkat_golongan'] ?? null,
@@ -286,6 +309,21 @@ class SuratPerjalananDinasController extends Controller
                 'tingkat_biaya' => $orang['tingkat_biaya'] ?? null,
             ]);
         }
+    }
+
+    /**
+     * Nomor SPD berikutnya, berpola sama dengan nomor perjadin.
+     *
+     * Pratinjau memakai jalur yang sama agar nomor yang diperlihatkan sama
+     * dengan yang nanti tersimpan.
+     *
+     * @param  array<string, mixed>  $orang
+     */
+    private function nomorBaru(array $orang, SuratPerjalananDinas $spd): string
+    {
+        $pemilik = isset($orang['id_user']) ? User::find($orang['id_user']) : null;
+
+        return $this->penomoran->nomorSpd($pemilik, $spd->tanggal_berangkat);
     }
 
     /**
@@ -322,7 +360,7 @@ class SuratPerjalananDinasController extends Controller
                 ->where('jabatan', 'like', '%Direktur%')
                 ->whereRaw('LOWER(jabatan) not like ?', ['%wakil%'])
                 ->first(),
-        ])->setPaper('a4');
+        ])->setPaper(KertasCetak::UKURAN);
 
         $nomor = $pelaksana->first()?->nomor_surat ?? 'SPD';
         $berkas = 'SPD_'.str_replace(['/', ' '], ['-', ''], $nomor).'.pdf';
@@ -339,7 +377,6 @@ class SuratPerjalananDinasController extends Controller
             'dikeluarkan_di' => ['required', 'string', 'max:100'],
 
             'pelaksana' => ['required', 'array', 'min:1', 'max:'.SuratPerjalananDinas::MAKS_PELAKSANA],
-            'pelaksana.*.nomor_surat' => ['required', 'string', 'max:20', 'regex:/^[0-9A-Za-z.\-]+$/'],
             'pelaksana.*.nama' => ['required', 'string', 'max:255'],
             'pelaksana.*.nip' => ['required', 'string', 'max:50'],
             'pelaksana.*.id_user' => ['nullable', 'exists:users,id'],
@@ -363,58 +400,41 @@ class SuratPerjalananDinasController extends Controller
             'akun_pembebanan' => ['nullable', 'string', 'max:100'],
             'keterangan_lain' => ['nullable', 'string'],
         ], [
-            'pelaksana.*.nomor_surat.required' => 'Nomor surat wajib diisi sesuai buku agenda.',
-            'pelaksana.*.nomor_surat.regex' => 'Nomor surat cukup angka urutnya saja, tanpa garis miring maupun tahun.',
             'pelaksana.max' => 'Paling banyak '.SuratPerjalananDinas::MAKS_PELAKSANA.' pelaksana dalam satu SPD.',
             'pengikut.max' => 'Paling banyak '.SuratPerjalananDinas::MAKS_PENGIKUT.' pengikut.',
             'tanggal_kembali.after_or_equal' => 'Tanggal kembali tidak boleh mendahului tanggal berangkat.',
         ]);
 
-        $this->pastikanNomorBelumTerpakai($request, $data, $spd);
+        // Pengikut hanya diterima dari yang berwenang mencantumkannya; kiriman
+        // peran lain dibuang di sini, bukan diabaikan di penyimpanan, supaya
+        // formulir yang diakali dari luar pun tidak menyelundupkannya.
+        if (! $request->user()->punyaKemampuan(Kemampuan::MengisiPengikutSpd)) {
+            unset($data['pengikut']);
+        }
+
+        // Tanggal terbit diperiksa terpisah dan hanya ikut bila penggunanya
+        // berwenang, sehingga kiriman dari peran lain tidak pernah sampai ke
+        // kolomPokok() sekalipun formulirnya diakali dari luar.
+        if ($this->bolehMengubahTanggal($request)) {
+            $data += $request->validate([
+                'tanggal_surat' => ['required', 'date'],
+            ], [
+                'tanggal_surat.required' => 'Tanggal dikeluarkan wajib diisi.',
+            ]);
+        }
 
         return $data;
     }
 
     /**
-     * Nomor surat adalah rujukan resmi sebuah perjalanan dinas, jadi ia
-     * tidak boleh dipakai dua kali — baik bentrok dengan surat lain yang
-     * sudah tersimpan, maupun terketik dua kali pada formulir yang sama.
+     * Tanggal terbit SPD hanya boleh disesuaikan pimpinan dan administrator.
      *
-     * Tahunnya ikut menentukan: nomor urut yang sama pada tahun berbeda
-     * adalah dua surat yang sah dan berlainan.
-     *
-     * @param  array<string, mixed>  $data
+     * Bagi peran lain tanggalnya mengikuti tanggal pembuatan, supaya tanggal
+     * pada dokumen tidak berselisih dengan kapan surat benar-benar terbit.
      */
-    private function pastikanNomorBelumTerpakai(Request $request, array $data, ?SuratPerjalananDinas $spd): void
+    private function bolehMengubahTanggal(Request $request): bool
     {
-        $tahun = $spd?->tanggal_surat?->year ?? now()->year;
-        $galat = [];
-        $terpakai = [];
-
-        foreach (array_values($data['pelaksana']) as $i => $orang) {
-            $lengkap = SpdPelaksana::rakitNomor($orang['nomor_surat'], $tahun);
-            $kunci = "pelaksana.{$i}.nomor_surat";
-
-            if (isset($terpakai[$lengkap])) {
-                $galat[$kunci] = "Nomor {$lengkap} sudah dipakai pelaksana lain pada surat ini.";
-
-                continue;
-            }
-
-            $terpakai[$lengkap] = true;
-
-            $bentrok = SpdPelaksana::where('nomor_surat', $lengkap)
-                ->when($spd, fn ($q) => $q->where('id_spd', '!=', $spd->id))
-                ->first();
-
-            if ($bentrok) {
-                $galat[$kunci] = "Nomor {$lengkap} sudah dipakai atas nama {$bentrok->nama}.";
-            }
-        }
-
-        if ($galat !== []) {
-            throw ValidationException::withMessages($galat);
-        }
+        return $request->user()->punyaKemampuan(Kemampuan::MengubahTanggalSpd);
     }
 
     /**
@@ -424,7 +444,6 @@ class SuratPerjalananDinasController extends Controller
     {
         return [
             'pengguna' => $pengguna,
-            'awalanNomor' => SpdPelaksana::AWALAN_NOMOR,
             // Tahun mengikuti tanggal surat diterbitkan, bukan tahun
             // berjalan: SPD lama yang disunting tidak boleh berpindah tahun.
             'tahunSurat' => $spd?->tanggal_surat?->year ?? now()->year,

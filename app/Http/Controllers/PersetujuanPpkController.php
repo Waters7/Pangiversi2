@@ -10,8 +10,10 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\NotifikasiService;
 use App\Services\PenyusunNominatif;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -60,10 +62,21 @@ class PersetujuanPpkController extends Controller
             $status = null;
         }
 
+        $periode = $this->kelompokkanPeriode(
+            $status ? $kelompok[$status] : $semua,
+            fn (array $baris) => $baris['usulan']->tanggal_mulai,
+            $request->input('tahun'),
+            $request->input('bulan'),
+        );
+
         return view('persetujuan-ppk.rincian-biaya', [
-            'daftar' => $status ? $kelompok[$status] : $semua,
+            'daftar' => $periode['daftar'],
             'status' => $status,
             'cari' => $cari,
+            'tahun' => $request->input('tahun'),
+            'bulan' => $request->input('bulan'),
+            'tahunTersedia' => $periode['tahunTersedia'],
+            'jumlahBulan' => $periode['jumlahBulan'],
             'jumlah' => [
                 'semua' => $semua->count(),
                 'menunggu' => $kelompok['menunggu']->count(),
@@ -139,10 +152,21 @@ class PersetujuanPpkController extends Controller
             $status = 'perlu-tindakan';
         }
 
+        $periode = $this->kelompokkanPeriode(
+            $kelompok[$status],
+            fn (DaftarRiil $daftar) => $daftar->usulan?->tanggal_mulai,
+            $request->input('tahun'),
+            $request->input('bulan'),
+        );
+
         return view('persetujuan-ppk.daftar-riil', [
             'status' => $status,
             'cari' => $cari,
-            'daftar' => $kelompok[$status],
+            'daftar' => $periode['daftar'],
+            'tahun' => $request->input('tahun'),
+            'bulan' => $request->input('bulan'),
+            'tahunTersedia' => $periode['tahunTersedia'],
+            'jumlahBulan' => $periode['jumlahBulan'],
             'jumlah' => collect($kelompok)->map->count()->all(),
             'label' => [
                 'perlu-tindakan' => 'Perlu Tindakan',
@@ -207,9 +231,16 @@ class PersetujuanPpkController extends Controller
 
         $cari = $request->input('cari');
 
+        $tahun = $request->input('tahun');
+        $bulan = $request->input('bulan');
+
+        // Periode dibaca dari tanggal surat tugasnya; yang belum bertanggal
+        // ikut tampil bila tidak ada saringan periode.
         $dasar = fn () => DaftarNominatif::query()
             ->when($fokus, fn ($q) => $q->where('no_tugas', $fokus))
-            ->when($cari, fn ($q) => $q->where('no_tugas', 'like', "%{$cari}%"));
+            ->when($cari, fn ($q) => $q->where('no_tugas', 'like', "%{$cari}%"))
+            ->when($tahun, fn ($q) => $q->whereYear('tanggal_tugas', $tahun))
+            ->when($bulan, fn ($q) => $q->whereMonth('tanggal_tugas', $bulan));
 
         // Barisnya disusun dari usulan, bukan disimpan, sehingga tiap daftar
         // nominatif yang tampil membawa rangkaian kuerinya sendiri. Karena
@@ -224,20 +255,39 @@ class PersetujuanPpkController extends Controller
             ->withQueryString();
 
         $baris = $this->penyusun->barisBanyak($halaman->pluck('no_tugas'));
+        $menunggu = $this->penyusun->menungguBanyak($halaman->pluck('no_tugas'));
 
         $muat = fn (DaftarNominatif $daftar) => [
             'daftar' => $daftar,
             'baris' => $baris->get($daftar->no_tugas) ?? collect(),
+            'menunggu' => $menunggu->get($daftar->no_tugas) ?? collect(),
         ];
 
         $tampil = $halaman->getCollection();
 
+        // Tahun dan bulan yang tersedia dihitung dari seluruh surat tugas yang
+        // memenuhi pencarian, bukan hanya halaman berjalan.
+        $tanggalSemua = DaftarNominatif::query()
+            ->when($fokus, fn ($q) => $q->where('no_tugas', $fokus))
+            ->when($cari, fn ($q) => $q->where('no_tugas', 'like', "%{$cari}%"))
+            ->whereNotNull('tanggal_tugas')
+            ->pluck('tanggal_tugas');
+
+        $perPeriode = fn (Collection $isi) => $isi
+            ->groupBy(fn (array $entri) => $entri['daftar']->tanggal_tugas?->translatedFormat('F Y') ?? 'Tanpa Tanggal');
+
         return view('persetujuan-ppk.nominatif', [
             'tandaTangan' => $tandaTangan,
             'cari' => $cari,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'tahunTersedia' => $tanggalSemua->map(fn ($t) => Carbon::parse($t)->year)->unique()->sortDesc()->values(),
+            'jumlahBulan' => $tanggalSemua
+                ->when($tahun, fn (Collection $t) => $t->filter(fn ($x) => Carbon::parse($x)->year === (int) $tahun))
+                ->countBy(fn ($t) => Carbon::parse($t)->month),
             'halaman' => $halaman,
-            'belum' => $tampil->reject->sudahDitandatangani()->map($muat)->values(),
-            'sudah' => $tampil->filter->sudahDitandatangani()->map($muat)->values(),
+            'belum' => $perPeriode($tampil->reject->sudahDitandatangani()->map($muat)->values()),
+            'sudah' => $perPeriode($tampil->filter->sudahDitandatangani()->map($muat)->values()),
             'jumlahBelum' => $dasar()->whereNull('ditandatangani_at')->count(),
             'jumlahSudah' => $dasar()->whereNotNull('ditandatangani_at')->count(),
             'suratTugas' => $suratTugas->map(fn (DaftarNominatif $d) => [
@@ -256,6 +306,7 @@ class PersetujuanPpkController extends Controller
             'nominatif' => $nominatif,
             'baris' => $baris,
             'total' => $this->penyusun->total($baris),
+            'menunggu' => $this->penyusun->menunggu($nominatif->no_tugas),
         ]);
     }
 
@@ -370,5 +421,42 @@ class PersetujuanPpkController extends Controller
                 'nominatif' => $nominatif->count(),
             ],
         ]);
+    }
+
+    /**
+     * Saring baris menurut tahun/bulan lalu kelompokkan per periode
+     * ("September 2026"), diurutkan dari yang terbaru.
+     *
+     * Tab status tetap dihitung dari seluruh baris; saringan periode hanya
+     * mengurangi yang ditampilkan — angka tab dan angka bulan menjawab
+     * pertanyaan yang berbeda.
+     *
+     * @param  Collection<int, mixed>  $baris
+     * @param  callable(mixed): mixed  $tanggalDari  Mengambil tanggal (string|Carbon|null) dari satu baris.
+     * @return array{daftar: Collection<string, Collection<int, mixed>>, tahunTersedia: Collection<int, int>, jumlahBulan: Collection<int, int>}
+     */
+    private function kelompokkanPeriode(Collection $baris, callable $tanggalDari, ?string $tahun, ?string $bulan): array
+    {
+        $bertanggal = $baris->map(fn ($item) => [
+            'item' => $item,
+            'tanggal' => ($t = $tanggalDari($item)) ? Carbon::parse($t) : null,
+        ]);
+
+        $tampil = $bertanggal
+            ->when($tahun, fn (Collection $b) => $b->filter(fn (array $x) => $x['tanggal']?->year === (int) $tahun))
+            ->when($bulan, fn (Collection $b) => $b->filter(fn (array $x) => $x['tanggal']?->month === (int) $bulan))
+            ->sortByDesc(fn (array $x) => $x['tanggal']?->timestamp ?? 0)
+            ->groupBy(fn (array $x) => $x['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal')
+            ->map(fn (Collection $kelompok) => $kelompok->pluck('item')->values());
+
+        return [
+            'daftar' => $tampil,
+            'tahunTersedia' => $bertanggal->pluck('tanggal')->filter()
+                ->map(fn (Carbon $t) => $t->year)->unique()->sortDesc()->values(),
+            'jumlahBulan' => $bertanggal
+                ->when($tahun, fn (Collection $b) => $b->filter(fn (array $x) => $x['tanggal']?->year === (int) $tahun))
+                ->pluck('tanggal')->filter()
+                ->countBy(fn (Carbon $t) => $t->month),
+        ];
     }
 }

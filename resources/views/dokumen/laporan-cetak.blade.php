@@ -42,9 +42,19 @@
         .bagian p { margin: 0 0 6px; text-align: justify; }
 
         table.ttd { width: 100%; margin-top: 34px; }
-        table.ttd td { width: 50%; text-align: center; font-size: 11pt; vertical-align: top; }
-        .ruang-ttd { height: 62px; }
+        table.ttd td { width: 50%; text-align: center; font-size: 11pt; vertical-align: top; line-height: 1.35; }
         .nama-ttd { font-weight: bold; text-decoration: underline; }
+
+        /* QR tanda tangan: 26 mm, cukup dipindai dari kertas tanpa mendesak
+           kolom nama di bawahnya. Kodenya ditulis juga sebagai teks untuk
+           diketik ulang bila QR gagal dipindai. */
+        /* Kotak tanda tangan bertinggi tetap: berisi QR bila sudah terbit,
+           kosong bila belum — kedua kolom selalu sejajar. */
+        .kotak-ttd { height: 30mm; margin: 6px 0 4px; }
+        .qr { width: 26mm; height: 26mm; margin: 2mm auto 0; }
+        .kode-verifikasi { font-family: monospace; font-size: 9pt; letter-spacing: .5px; }
+        .catatan-qr { font-size: 8pt; color: #444; line-height: 1.35; margin: 2px 0 0; }
+        .belum { font-style: italic; color: #777; font-size: 9pt; }
 
         .catatan-terbit {
             margin-top: 22px;
@@ -111,7 +121,9 @@
             @for ($i = 0; $i < $baris; $i++)
                 <tr>
                     <td class="nomor">{{ $i + 1 }}</td>
-                    <td>{{ $i === 0 ? $tempat : '' }}</td>
+                    {{-- Tempat per hari dari isian laporan; baris lama tanpa tempat
+                         memakai instansi dan lokasi usulannya. --}}
+                    <td>{{ $kegiatan[$i]->tempat ?? ($i === 0 ? $tempat : '') }}</td>
                     <td>{{ $kegiatan[$i]->tanggal?->translatedFormat('l, d F Y') ?? ($i === 0 ? $hariTanggal : '') }}</td>
                     <td>{{ $kegiatan[$i]->uraian ?? '' }}</td>
                     <td>
@@ -148,20 +160,58 @@
         </div>
     @endif
 
+    {{-- Tanda tangan elektronik. QR pelaksana terbit saat laporan dikirim,
+         QR Direktur saat dikonfirmasi; sebelum itu kotaknya dibiarkan kosong
+         dengan tinggi yang sama supaya kedua kolom sejajar dan dokumen tetap
+         dapat dicetak sebagai draf.
+
+         Laporan hanya ditandatangani Direktur Poltekkes Kemenkes Manado —
+         bukan wakil direktur — jadi label kolom kirinya tetap, dan nama yang
+         tercetak adalah Direktur yang mengonfirmasinya. --}}
+    @php
+        $penandatangan = $laporan->pimpinan ?? $direktur;
+        $tanggalPelaksana = $laporan->dikirim_at ?? $laporan->diselesaikan_at;
+    @endphp
+
     <table class="ttd">
         <tr>
             <td>
                 Mengetahui,<br>
                 Direktur Poltekkes Kemenkes Manado
-                <div class="ruang-ttd"></div>
-                <span class="nama-ttd">{{ $direktur?->nama ?? '…………………………………………' }}</span><br>
-                NIP {{ $direktur?->nip ?? '…………………………………' }}
+                <div class="kotak-ttd">
+                    @if ($laporan->sudahDikonfirmasi() && $qrPimpinan)
+                        <img src="{{ $qrPimpinan }}" alt="QR tanda tangan Direktur" class="qr">
+                    @endif
+                </div>
+                <span class="nama-ttd">{{ $penandatangan?->nama ?? '…………………………………………' }}</span><br>
+                NIP {{ $penandatangan?->nip ?? '…………………………………' }}
+                @if ($laporan->sudahDikonfirmasi())
+                    <br><span class="kode-verifikasi">{{ $laporan->kode_pimpinan }}</span>
+                    <p class="catatan-qr">
+                        Ditandatangani secara elektronik pada
+                        {{ $laporan->dikonfirmasi_at->translatedFormat('d F Y, H:i') }} WITA.
+                    </p>
+                @elseif ($laporan->sudahDikirim())
+                    <p class="catatan-qr"><span class="belum">Menunggu konfirmasi Direktur</span></p>
+                @endif
             </td>
             <td>
-                Yang membuat
-                <div class="ruang-ttd" style="height:82px"></div>
+                {{ $tempatTandaTangan ?? 'Manado' }}, {{ $tanggalPelaksana?->translatedFormat('d F Y') ?? '……………………' }}<br>
+                Yang membuat laporan
+                <div class="kotak-ttd">
+                    @if ($laporan->dikirim_at && $qrPelaksana)
+                        <img src="{{ $qrPelaksana }}" alt="QR tanda tangan pelaksana" class="qr">
+                    @endif
+                </div>
                 <span class="nama-ttd">{{ $usulan->user?->nama ?? '…………………………………………' }}</span><br>
                 NIP {{ $usulan->user?->nip ?? '…………………………………' }}
+                @if ($laporan->dikirim_at)
+                    <br><span class="kode-verifikasi">{{ $laporan->kode_pelaksana }}</span>
+                    <p class="catatan-qr">
+                        Ditandatangani secara elektronik pada
+                        {{ $laporan->dikirim_at->translatedFormat('d F Y, H:i') }} WITA.
+                    </p>
+                @endif
             </td>
         </tr>
     </table>
@@ -169,6 +219,10 @@
     <p class="catatan-terbit">
         Dokumen ini terbit dari isian Laporan Perjalanan Dinas pada aplikasi PANGI,
         dinyatakan selesai {{ $laporan->diselesaikan_at?->translatedFormat('d F Y H:i') }} WITA.
+        @if ($laporan->kode_pelaksana || $laporan->kode_pimpinan)
+            Keabsahan tanda tangan elektronik dapat diperiksa dengan memindai QR
+            atau mengetik kodenya pada halaman verifikasi PANGI.
+        @endif
     </p>
 
 </body>

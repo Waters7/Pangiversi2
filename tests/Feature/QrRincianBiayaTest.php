@@ -96,8 +96,10 @@ class QrRincianBiayaTest extends TestCase
     private function lunasi(): Keuangan
     {
         // Pelunasan baru boleh keluar setelah daftar nominatif surat
-        // tugasnya ditandatangani PPK dan diterima tim keuangan.
+        // tugasnya ditandatangani PPK dan diterima tim keuangan, dan
+        // laporan perjalanannya dikonfirmasi pimpinan.
         $this->terbitkanNominatif($this->usulan);
+        $this->konfirmasiLaporan($this->usulan);
 
         $this->actingAs($this->bendahara)
             ->post(route('keuangan.bayar-uang-muka', $this->usulan), [
@@ -315,6 +317,9 @@ class QrRincianBiayaTest extends TestCase
             'peserta' => $this->peserta,
             'rincianPerKategori' => $keuangan->rincianBiaya->groupBy(fn ($i) => $i->kategori->value),
             'total' => (float) $keuangan->rincianBiaya->sum('jumlah'),
+            'transportLokal' => collect(),
+            'totalTransportLokal' => 0.0,
+            'totalKeseluruhan' => (float) $keuangan->rincianBiaya->sum('jumlah'),
             'dibayarkan' => (float) $keuangan->uang_muka,
             'terbilang' => 'satu juta lima ratus sembilan puluh ribu rupiah',
             'bendahara' => $this->bendahara,

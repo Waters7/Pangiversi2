@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DaftarRiil;
+use App\Models\RincianBiaya;
 use App\Models\User;
 
 /**
@@ -164,6 +165,36 @@ class JalurPersetujuan
             && ! today()->greaterThan($this->berkas->batas_sanggah);
     }
 
+    /**
+     * Tim keuangan sudah memeriksa nominal jalur ini, walau berkasnya belum
+     * dikirim ke pelaksana.
+     *
+     * Ditampilkan kepada pelaksana sebagai tahap tersendiri: tanpa ini ia
+     * tidak tahu berkasnya sudah dicek dan hanya menunggu dikirim, dan
+     * mengira rinciannya belum disentuh siapa pun.
+     */
+    public function sudahDicekTimKeuangan(): bool
+    {
+        if ($this->total() <= 0) {
+            return false;
+        }
+
+        if ($this->jenis === self::RIIL) {
+            return $this->berkas->sudahDivalidasi();
+        }
+
+        return ($this->berkas->usulan?->keuangan?->rincianBiaya ?? collect())
+            ->where('sumber', RincianBiaya::SUMBER_DOKUMEN)
+            ->whereNull('divalidasi_at')
+            ->isEmpty();
+    }
+
+    /** Sudah dicek tim keuangan tetapi belum dikirim ke pelaksana. */
+    public function menungguDikirim(): bool
+    {
+        return ! $this->berkas->sudahDikirimKePegawai() && $this->sudahDicekTimKeuangan();
+    }
+
     public function sanggahKedaluwarsa(): bool
     {
         return $this->berkas->sudahDikirimKePegawai()
@@ -171,6 +202,26 @@ class JalurPersetujuan
             && ! $this->sedangDisanggah()
             && $this->berkas->batas_sanggah !== null
             && today()->greaterThan($this->berkas->batas_sanggah);
+    }
+
+    /**
+     * Pelaksana masih boleh menyetujui dan menandatangani dokumen ini.
+     *
+     * Berbeda dari sanggahan yang tertutup begitu masa sanggahnya lewat,
+     * tanda tangan pelaksana terbuka sampai PPK mengesahkannya: masa
+     * sanggah yang berakhir berarti nominalnya dianggap diterima, bukan
+     * pelaksananya dilarang menandatangani. Dulu tombolnya ikut hilang
+     * setelah tujuh hari, sehingga pelaksana yang terlambat membuka tidak
+     * pernah bisa membubuhkan tanda tangan — dan QR-nya pun tidak terbit.
+     */
+    public function bolehDitandatanganiPelaksana(): bool
+    {
+        return $this->berkas->sudahDikirimKePegawai()
+            && $this->total() > 0
+            && ! $this->sudahDisetujui()
+            && ! $this->sedangDisanggah()
+            && ! $this->sudahDitandatangani()
+            && ! $this->berkas->sedangDikembalikan();
     }
 
     /**
@@ -252,6 +303,7 @@ class JalurPersetujuan
             $this->sudahDisetujui() => 'Disetujui Pelaksana',
             $this->sanggahKedaluwarsa() => 'Masa Sanggah Berakhir',
             $this->masaSanggahBerjalan() => 'Menunggu Tanggapan Pelaksana',
+            $this->menungguDikirim() => 'Sudah Dicek Tim Keuangan',
             $this->total() > 0 => 'Menunggu Verifikasi Tim Keuangan',
             default => 'Nominal Belum Diisi',
         };
@@ -265,6 +317,7 @@ class JalurPersetujuan
             $this->sedangDisanggah() => 'bg-red-100 text-red-700',
             $this->sudahDisetujui(), $this->sanggahKedaluwarsa() => 'bg-teal-100 text-teal-700',
             $this->masaSanggahBerjalan() => 'bg-amber-100 text-amber-700',
+            $this->menungguDikirim() => 'bg-indigo-100 text-indigo-700',
             $this->total() > 0 => 'bg-blue-100 text-blue-700',
             default => 'bg-slate-100 text-slate-600',
         };
@@ -279,7 +332,9 @@ class JalurPersetujuan
             $this->sudahDitandatangani() => 'selesai',
             $this->sedangDisanggah() => 'disanggah',
             $this->sudahDisetujui() => 'menunggu-ppk',
-            $this->masaSanggahBerjalan() => 'perlu-tanggapan',
+            // Termasuk yang masa sanggahnya sudah lewat: tanda tangannya masih ditunggu.
+            $this->bolehDitandatanganiPelaksana() => 'perlu-tanggapan',
+            $this->menungguDikirim() => 'dicek',
             default => 'lainnya',
         };
     }

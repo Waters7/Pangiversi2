@@ -251,13 +251,32 @@ class MasaSanggahTest extends TestCase
         $this->assertNotNull($daftar->fresh()->ditandatangani_at);
     }
 
-    public function test_pelaksana_tidak_dapat_menanggapi_setelah_masa_sanggah_berakhir(): void
+    /**
+     * Masa sanggah yang lewat menutup sanggahan, bukan tanda tangan: tombol
+     * tanda tangan tetap ada dan hanya diberi pengingat, supaya pelaksana
+     * yang terlambat membuka tetap dapat menandatangani sampai PPK mengesahkan.
+     */
+    public function test_pelaksana_masih_dapat_menandatangani_setelah_masa_sanggah_berakhir(): void
     {
         $daftar = $this->kirimKePelaksana();
         $daftar->update(['batas_sanggah' => today()->subDay()]);
 
         $this->actingAs($this->pelaksana)
             ->put(route('daftar-riil.setuju', [$this->usulan, $this->peserta]))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($daftar->fresh()->disetujui_pegawai_at);
+    }
+
+    public function test_pelaksana_tidak_dapat_menyanggah_setelah_masa_sanggah_berakhir(): void
+    {
+        $daftar = $this->kirimKePelaksana();
+        $daftar->update(['batas_sanggah' => today()->subDay()]);
+
+        $this->actingAs($this->pelaksana)
+            ->put(route('daftar-riil.sanggah', [$this->usulan, $this->peserta]), [
+                'sanggahan' => 'Nominal transport tidak sesuai nota yang diunggah.',
+            ])
             ->assertForbidden();
     }
 

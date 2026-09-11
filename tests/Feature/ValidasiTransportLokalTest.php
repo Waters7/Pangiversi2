@@ -113,6 +113,33 @@ class ValidasiTransportLokalTest extends TestCase
         $this->assertNull($this->daftar()->dikirim_ke_pegawai_at);
     }
 
+    /**
+     * Alasan tertahannya tampak di samping tombol kirim, bukan baru muncul
+     * sebagai pesan penolakan setelah tombolnya ditekan.
+     */
+    public function test_halaman_keuangan_menyebut_transport_lokal_yang_menahan_pengiriman(): void
+    {
+        $this->validasiRincianBiaya();
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertSee('Transport lokal belum divalidasi');
+    }
+
+    public function test_mencabut_validasi_transport_tercatat_di_jejak_audit(): void
+    {
+        $this->actingAs($this->timKeuangan)
+            ->put(route('daftar-riil.validasi', [$this->usulan, $this->peserta]));
+        $this->actingAs($this->timKeuangan)
+            ->delete(route('daftar-riil.batal-validasi', [$this->usulan, $this->peserta]));
+
+        $this->assertDatabaseHas('audit_logs', [
+            'id_usulan' => $this->usulan->id,
+            'deskripsi' => "Validasi transport lokal pada usulan {$this->usulan->no_usulan} dicabut oleh {$this->timKeuangan->nama}.",
+        ]);
+    }
+
     public function test_berkas_berjalan_setelah_keduanya_divalidasi(): void
     {
         $this->validasiRincianBiaya();
@@ -164,7 +191,22 @@ class ValidasiTransportLokalTest extends TestCase
             ->get(route('keuangan.transport-lokal'))
             ->assertOk()
             ->assertSee(route('daftar-riil.validasi', [$this->usulan, $this->peserta]))
-            ->assertSee('Validasi transport lokal ini');
+            // Ditanya ulang sekali sebelum tercatat, seperti validasi rincian biaya.
+            ->assertSee('Validasi komponen ini?')
+            ->assertSee('Ya, Validasi');
+    }
+
+    public function test_mencabut_validasi_transport_ditanya_ulang(): void
+    {
+        $this->actingAs($this->timKeuangan)
+            ->put(route('daftar-riil.validasi', [$this->usulan, $this->peserta]));
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.transport-lokal'))
+            ->assertOk()
+            ->assertSee(route('daftar-riil.batal-validasi', [$this->usulan, $this->peserta]))
+            ->assertSee('Cabut validasi komponen ini?')
+            ->assertSee('Ya, Cabut');
     }
 
     // ── Checklist LPJ ──
@@ -218,6 +260,6 @@ class ValidasiTransportLokalTest extends TestCase
             ->firstWhere('label', 'Laporan Perjalanan Dinas');
 
         $this->assertTrue($baris['terpenuhi']);
-        $this->assertNull($baris['berkas']);
+        $this->assertSame([], $baris['berkas']);
     }
 }

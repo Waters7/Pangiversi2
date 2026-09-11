@@ -18,6 +18,7 @@ use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\KomponenBiayaController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LaporanPerjadinController;
+use App\Http\Controllers\LaporanPimpinanController;
 use App\Http\Controllers\LokasiTujuanController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\NotifikasiController;
@@ -146,9 +147,24 @@ Route::middleware('auth')->group(function () {
             ->name('dokumen.laporan.selesaikan');
         Route::put('/{usulan:no_usulan}/laporan/buka', [LaporanPerjadinController::class, 'bukaKembali'])
             ->name('dokumen.laporan.buka');
+        Route::put('/{usulan:no_usulan}/laporan/kirim', [LaporanPerjadinController::class, 'kirim'])
+            ->name('dokumen.laporan.kirim');
         Route::get('/{usulan:no_usulan}/laporan/cetak', [LaporanPerjadinController::class, 'cetak'])
             ->name('dokumen.laporan.cetak');
     });
+
+    // Meja pimpinan: laporan perjalanan dinas yang dikirim pelaksana untuk
+    // dikonfirmasi dan ditandatangani, atau dikembalikan untuk direvisi.
+    Route::middleware('can:mengonfirmasi-laporan-perjadin')
+        ->prefix('laporan-perjadin')->name('laporan-perjadin.')->group(function () {
+            Route::get('/', [LaporanPimpinanController::class, 'index'])->name('index');
+            Route::get('/status', [LaporanPimpinanController::class, 'status'])->name('status');
+            Route::get('/tindak-lanjut', [LaporanPimpinanController::class, 'tindakLanjut'])->name('tindak-lanjut');
+            Route::get('/{usulan:no_usulan}', [LaporanPimpinanController::class, 'show'])->name('show');
+            Route::put('/{usulan:no_usulan}/konfirmasi', [LaporanPimpinanController::class, 'konfirmasi'])->name('konfirmasi');
+            Route::delete('/{usulan:no_usulan}/konfirmasi', [LaporanPimpinanController::class, 'batalKonfirmasi'])->name('batal-konfirmasi');
+            Route::put('/{usulan:no_usulan}/kembalikan', [LaporanPimpinanController::class, 'kembalikan'])->name('kembalikan');
+        });
 
     // Meja kerja PPK: berkas yang menunggu verifikasi dan tanda tangannya.
     Route::middleware('can:menandatangani-daftar-riil')->prefix('persetujuan')->group(function () {
@@ -192,6 +208,7 @@ Route::middleware('auth')->group(function () {
         // sebab nominalnya berasal dari daftar riil, bukan rincian biaya.
         Route::get('/pembayaran/transport-lokal', [PembayaranController::class, 'transportLokal'])->name('pembayaran.transport-lokal');
         Route::post('/pembayaran/transport-lokal/{daftar}', [PembayaranController::class, 'bayarTransport'])->name('pembayaran.bayar-transport');
+        Route::put('/pembayaran/transport-lokal/{daftar}/batal', [PembayaranController::class, 'batalBayarTransport'])->name('pembayaran.batal-transport');
     });
 
     // Keuangan — dibuka oleh peran yang berhak melihat data keuangan.
@@ -221,6 +238,7 @@ Route::middleware('auth')->group(function () {
 
     // Panduan penggunaan — terbuka untuk seluruh peran
     Route::get('/panduan', PanduanController::class)->name('panduan');
+    Route::get('/panduan/unduh', [PanduanController::class, 'unduh'])->name('panduan.unduh');
 
     // Saluran bantuan — terbuka bagi seluruh peran: siapa pun dapat
     // mengalami kendala, dan administrator menjawab di halaman yang sama.

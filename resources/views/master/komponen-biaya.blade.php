@@ -127,7 +127,7 @@
                         <option value="{{ $nilai }}" @selected($jenis === $nilai)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Cari</button>
+                <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Search</button>
                 @if ($search || $jenis)
                     <a href="{{ route('master.komponen-biaya') }}" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">Reset</a>
                 @endif

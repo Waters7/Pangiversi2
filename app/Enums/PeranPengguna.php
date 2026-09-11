@@ -80,6 +80,13 @@ enum PeranPengguna: string
                 Kemampuan::MelihatDashboardEksekutif,
                 Kemampuan::MelihatLaporan,
                 Kemampuan::MelihatArsipPerjadin,
+                // Menyesuaikan tanggal terbit SPD dengan buku agenda, dan
+                // memutuskan siapa yang ikut berangkat sebagai pengikut.
+                Kemampuan::MengubahTanggalSpd,
+                Kemampuan::MengisiPengikutSpd,
+                // Laporan perjalanan dinas berakhir di meja pimpinan: dikonfirmasi
+                // dan ditandatangani, atau dikembalikan untuk direvisi.
+                Kemampuan::MengonfirmasiLaporanPerjadin,
             ],
 
             // Satu-satunya peran yang memvalidasi usulan perjalanan dinas.

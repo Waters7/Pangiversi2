@@ -47,9 +47,11 @@ class WorkflowUsulan
         $this->audit->catatPerubahanStatus(
             $usulan,
             AuditLog::AKSI_DIAJUKAN,
-            "Usulan {$usulan->no_usulan} diajukan dan langsung berlaku karena penugasannya sudah disahkan lewat SPD.",
+            "Usulan {$usulan->no_usulan} diajukan beserta SPD bertanda tangan nomor {$usulan->no_spd}.",
             $statusLama,
         );
+
+        $this->catatPersetujuanPpk($usulan);
 
         $this->beritahuPengusul(
             $usulan,
@@ -57,6 +59,46 @@ class WorkflowUsulan
             "Usulan {$usulan->no_usulan} berlaku sejak sekarang. Setelah perjalanan selesai, "
                 .'lengkapi berkas pertanggungjawaban agar pembayaran dapat diproses bendahara.',
             Notifikasi::TIPE_SUKSES,
+        );
+    }
+
+    /**
+     * Persetujuan PPK tercatat pada jejak audit saat usulan masuk membawa
+     * SPD yang sudah ditandatangani.
+     *
+     * PPK menandatangani SPD itu di SRIKANDI sebelum usulan diajukan, jadi
+     * tanda tangannya adalah persetujuannya; tidak ada tombol setuju lagi
+     * di aplikasi. Keputusannya tetap direkam sebagai baris persetujuan
+     * supaya rantai persetujuan dan jejak audit memperlihatkan PPK
+     * menyetujui, lengkap dengan nomor SPD yang menjadi dasarnya.
+     */
+    private function catatPersetujuanPpk(Usulan $usulan): void
+    {
+        $ppk = $this->approverUntuk($usulan, LevelPersetujuan::Ppk)->first();
+
+        $dasar = filled($usulan->no_spd)
+            ? "SPD bertanda tangan nomor {$usulan->no_spd}"
+            : 'SPD bertanda tangan yang dilampirkan';
+
+        if ($ppk) {
+            $usulan->persetujuan()->create([
+                'id_approver' => $ppk->id,
+                'level' => LevelPersetujuan::Ppk,
+                'peran' => PeranPengguna::Ppk->value,
+                'keputusan' => Persetujuan::KEPUTUSAN_SETUJU,
+                'catatan' => "Disetujui melalui {$dasar}.",
+                'waktu_keputusan' => now(),
+            ]);
+        }
+
+        $this->audit->catat(
+            AuditLog::AKSI_DISETUJUI,
+            'PPK'.($ppk ? " {$ppk->nama}" : '')." menyetujui usulan {$usulan->no_usulan} melalui {$dasar}.",
+            [
+                'usulan' => $usulan,
+                'status_lama' => StatusUsulan::Disetujui->value,
+                'status_baru' => StatusUsulan::Disetujui->value,
+            ],
         );
     }
 

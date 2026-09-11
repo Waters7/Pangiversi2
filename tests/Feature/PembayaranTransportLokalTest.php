@@ -126,6 +126,78 @@ class PembayaranTransportLokalTest extends TestCase
         $this->assertFalse($daftar->fresh()->sudahDibayar());
     }
 
+    // ── Pembatalan ──
+
+    private function batalkan(DaftarRiil $daftar, array $isian = ['alasan' => 'Salah pilih pelaksana, transfer ke rekening lain.']): TestResponse
+    {
+        return $this->actingAs($this->bendahara)
+            ->put(route('pembayaran.batal-transport', $daftar), $isian);
+    }
+
+    public function test_pembatalan_mencabut_catatan_dan_masuk_jurnal(): void
+    {
+        $daftar = $this->riilDitandatangani();
+        $this->bayar($daftar);
+
+        $this->batalkan($daftar)->assertSessionHas('success');
+
+        $segar = $daftar->fresh();
+
+        $this->assertFalse($segar->sudahDibayar());
+        $this->assertNull($segar->bukti_bayar);
+        $this->assertNull($segar->id_pembayar);
+
+        $baris = RiwayatPembayaran::firstWhere('jenis', RiwayatPembayaran::JENIS_BATAL_TRANSPORT_LOKAL);
+
+        $this->assertNotNull($baris, 'Pembatalan tidak tercatat pada jurnal.');
+        $this->assertSame(474_500.0, (float) $baris->nominal);
+        $this->assertTrue($baris->pembatalan());
+        $this->assertStringContainsString('Salah pilih pelaksana', (string) $baris->catatan);
+
+        // Bukti transfer yang lama tetap tersimpan pada baris pembayarannya.
+        $this->assertNotNull(RiwayatPembayaran::firstWhere('jenis', RiwayatPembayaran::JENIS_TRANSPORT_LOKAL)->bukti);
+    }
+
+    public function test_pembatalan_wajib_beralasan(): void
+    {
+        $daftar = $this->riilDitandatangani();
+        $this->bayar($daftar);
+
+        $this->batalkan($daftar, [])->assertSessionHasErrors('alasan');
+        $this->batalkan($daftar, ['alasan' => 'salah'])->assertSessionHasErrors('alasan');
+
+        $this->assertTrue($daftar->fresh()->sudahDibayar());
+    }
+
+    public function test_yang_belum_dibayar_tidak_dapat_dibatalkan(): void
+    {
+        $this->batalkan($this->riilDitandatangani())->assertSessionHas('error');
+    }
+
+    public function test_setelah_dibatalkan_dapat_dicatat_ulang(): void
+    {
+        $daftar = $this->riilDitandatangani();
+        $this->bayar($daftar);
+        $this->batalkan($daftar);
+
+        $this->bayar($daftar, '2026-04-22')->assertSessionHas('success');
+
+        $this->assertSame('2026-04-22', $daftar->fresh()->dibayar_at->toDateString());
+    }
+
+    public function test_halaman_menawarkan_pembatalan_beserta_alasannya(): void
+    {
+        $daftar = $this->riilDitandatangani();
+        $this->bayar($daftar);
+
+        $this->actingAs($this->bendahara)
+            ->get(route('pembayaran.transport-lokal'))
+            ->assertOk()
+            ->assertSee(route('pembayaran.batal-transport', $daftar))
+            ->assertSee('Batalkan pencatatan penggantian transport lokal?')
+            ->assertSee('Alasan pembatalan');
+    }
+
     // ── Penjagaan ──
 
     public function test_yang_belum_ditandatangani_ppk_tidak_dapat_dibayar(): void

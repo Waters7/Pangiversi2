@@ -4,7 +4,12 @@
 
 @section('content')
 
-@php $terkunci = $laporan->sudahSelesai(); @endphp
+@php
+    // Terkunci begitu diselesaikan — dan sejak dikirim ke pimpinan isinya
+    // tidak boleh berubah lagi tanpa ditarik lebih dulu.
+    $terkunci = $laporan->sudahSelesai();
+    $statusLaporan = $laporan->status();
+@endphp
 
 <div class="flex-1 px-4 md:px-8 py-7">
 
@@ -19,11 +24,9 @@
             <h1 class="text-xl font-bold text-slate-800">Laporan Perjalanan Dinas</h1>
             <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }}</p>
         </div>
-        @if ($terkunci)
-            <span class="ml-auto text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-full shrink-0">
-                Sudah diselesaikan
-            </span>
-        @endif
+        <span class="ml-auto text-xs font-bold px-3 py-1.5 rounded-full shrink-0 {{ $statusLaporan->badge() }}">
+            {{ $statusLaporan->label() }}
+        </span>
     </div>
 
     <x-flash />
@@ -38,20 +41,68 @@
         </div>
     @endif
 
-    @if ($terkunci)
+    @if ($laporan->perluRevisi())
+        <div class="mb-5 px-5 py-4 bg-red-50 border border-red-200 rounded-2xl">
+            <p class="text-sm font-bold text-red-800">Dikembalikan pimpinan untuk direvisi</p>
+            <p class="text-sm text-red-800 mt-1 leading-relaxed">{{ $laporan->catatan_pimpinan }}</p>
+            <p class="text-xs text-red-500 mt-2">
+                {{ $laporan->pimpinan?->nama }} ·
+                {{ $laporan->dikembalikan_at->translatedFormat('d F Y H:i') }} WITA.
+                Perbaiki isinya, nyatakan selesai, lalu kirim ulang.
+            </p>
+        </div>
+    @endif
+
+    @if ($laporan->sudahDikonfirmasi())
         <div class="mb-5 flex flex-wrap items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
             <p class="text-sm text-emerald-800 flex-1 min-w-0">
-                Laporan dinyatakan selesai {{ $laporan->diselesaikan_at?->translatedFormat('d F Y H:i') }} WITA.
-                Dokumennya sudah dapat diunduh.
+                Dikonfirmasi dan ditandatangani <strong>{{ $laporan->pimpinan?->nama }}</strong>
+                pada {{ $laporan->dikonfirmasi_at->translatedFormat('d F Y H:i') }} WITA.
+                Laporan terkunci dan pelunasan pembayaran dapat diproses.
             </p>
             <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shrink-0">
                 Unduh Dokumen
             </a>
+        </div>
+    @elseif ($laporan->sudahDikirim())
+        <div class="mb-5 flex flex-wrap items-center gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-2xl">
+            <p class="text-sm text-amber-800 flex-1 min-w-0">
+                Dikirim ke pimpinan {{ $laporan->dikirim_at->translatedFormat('d F Y H:i') }} WITA
+                dan sedang menunggu konfirmasi. Isinya terkunci sampai diputuskan.
+            </p>
+            <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
+               class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shrink-0">
+                Unduh Dokumen
+            </a>
+            <form method="POST" action="{{ route('dokumen.laporan.buka', $usulan->no_usulan) }}" class="shrink-0"
+                  onsubmit="return confirm('Tarik laporan dari meja pimpinan? QR pelaksana yang sudah tercetak tidak lagi sah.')">
+                @csrf @method('PUT')
+                <button type="submit" class="px-4 py-2 border border-amber-300 bg-white text-amber-800 text-xs font-bold rounded-xl hover:bg-amber-50 transition">
+                    Tarik &amp; Perbaiki
+                </button>
+            </form>
+        </div>
+    @elseif ($terkunci)
+        <div class="mb-5 flex flex-wrap items-center gap-3 px-5 py-4 bg-blue-50 border border-blue-200 rounded-2xl">
+            <p class="text-sm text-blue-800 flex-1 min-w-0">
+                Laporan dinyatakan selesai {{ $laporan->diselesaikan_at?->translatedFormat('d F Y H:i') }} WITA
+                tetapi belum dikirim. Kirim ke pimpinan untuk dikonfirmasi dan ditandatangani — itu syarat pelunasan pembayaran.
+            </p>
+            <form method="POST" action="{{ route('dokumen.laporan.kirim', $usulan->no_usulan) }}" class="shrink-0">
+                @csrf @method('PUT')
+                <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition">
+                    Kirim ke Pimpinan
+                </button>
+            </form>
+            <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
+               class="px-4 py-2 border border-blue-200 bg-white text-blue-800 text-xs font-bold rounded-xl hover:bg-blue-50 transition shrink-0">
+                Unduh Dokumen
+            </a>
             <form method="POST" action="{{ route('dokumen.laporan.buka', $usulan->no_usulan) }}" class="shrink-0">
                 @csrf @method('PUT')
-                <button type="submit" class="px-4 py-2 border border-emerald-300 bg-white text-emerald-800 text-xs font-bold rounded-xl hover:bg-emerald-50 transition">
-                    Buka Kembali untuk Diperbaiki
+                <button type="submit" class="px-4 py-2 border border-blue-200 bg-white text-blue-800 text-xs font-bold rounded-xl hover:bg-blue-50 transition">
+                    Buka Kembali
                 </button>
             </form>
         </div>
@@ -59,6 +110,7 @@
 
     <form method="POST" action="{{ route('dokumen.laporan.update', $usulan->no_usulan) }}"
           x-data="{
+            konfirmasiKirim: false,
             tindak: {{ Js::from($laporan->tindakLanjut->map(fn ($t) => [
                 'uraian' => $t->uraian,
                 'penanggung_jawab' => $t->penanggung_jawab ?? '',
@@ -77,8 +129,8 @@
                     <div class="px-6 py-4 border-b border-slate-100">
                         <h3 class="font-bold text-slate-800 text-sm">Uraian Kegiatan per Hari</h3>
                         <p class="text-xs text-slate-400">
-                            Satu baris untuk tiap hari perjalanan dinas. Hari yang tidak ada
-                            kegiatannya boleh dikosongkan.
+                            Satu baris untuk tiap hari perjalanan dinas: tempat kegiatan dan uraiannya.
+                            Hari yang tidak ada kegiatannya boleh dikosongkan.
                         </p>
                     </div>
 
@@ -92,6 +144,10 @@
                                     </span>
                                     {{ $hari['tanggal']->translatedFormat('l, d F Y') }}
                                 </label>
+                                <input type="text" name="tempat[{{ $kunci }}]" @disabled($terkunci)
+                                       value="{{ old("tempat.{$kunci}", $hari['tempat']) }}"
+                                       placeholder="Tempat kegiatan — cth: Dinas Kesehatan Provinsi, Manado"
+                                       class="w-full mb-2 px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                                 <textarea name="kegiatan[{{ $kunci }}]" rows="2" @disabled($terkunci)
                                           placeholder="cth: Mengikuti rapat koordinasi program di Direktorat…"
                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">{{ old("kegiatan.{$kunci}", $hari['uraian']) }}</textarea>
@@ -211,43 +267,63 @@
                     <h3 class="font-bold text-slate-800 text-sm mb-1">Tindakan</h3>
 
                     @unless ($terkunci)
-                        <button type="submit"
-                                class="w-full px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">
-                            Simpan Isi Laporan
+                        {{-- Menyimpan dan mengirim satu langkah, ditanya ulang sekali:
+                             sejak dikirim laporan terkunci dan pimpinan langsung menerimanya. --}}
+                        <button type="button" @click="konfirmasiKirim = true"
+                                class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                            Simpan &amp; Kirim ke Pimpinan
                         </button>
+
+                        <button type="submit" name="action" value="draft"
+                                class="w-full px-5 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
+                            Simpan Draf
+                        </button>
+
+                        <div x-show="konfirmasiKirim" x-cloak
+                             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+                             @keydown.escape.window="konfirmasiKirim = false">
+                            <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-left"
+                                 @click.outside="konfirmasiKirim = false">
+                                <h3 class="font-bold text-slate-800 text-sm mb-2">Simpan dan kirim laporan ke pimpinan?</h3>
+
+                                <p class="text-xs text-slate-600 leading-relaxed">
+                                    Isi laporan disimpan, dinyatakan selesai, lalu langsung dikirim ke pimpinan
+                                    untuk dikonfirmasi dan ditandatangani. Periksa kembali uraian kegiatan,
+                                    rencana tindak lanjut, dan status hasilnya sebelum melanjutkan.
+                                </p>
+
+                                <p class="mt-3 text-xs bg-amber-50 text-amber-800 border border-amber-100 rounded-lg px-3 py-2">
+                                    Setelah dikirim, laporan terkunci sampai pimpinan memutuskan. Tanda tangan Anda
+                                    terbit sebagai QR pada dokumen.
+                                </p>
+
+                                <div class="flex justify-end gap-2 mt-5">
+                                    <button type="button" @click="konfirmasiKirim = false"
+                                            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition">
+                                        Periksa Lagi
+                                    </button>
+                                    <button type="submit" name="action" value="kirim"
+                                            class="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold rounded-lg transition">
+                                        Ya, Kirim ke Pimpinan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     @endunless
 
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Simpan dulu isinya. Laporan baru terbit sebagai dokumen setelah
-                        dinyatakan selesai.
+                        <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim. <strong>Simpan &amp; Kirim</strong>
+                        perlu sedikitnya satu uraian kegiatan, satu rencana tindak lanjut, dan status hasil yang dipilih;
+                        setelah itu laporan terkunci dan pelunasan menunggu konfirmasi pimpinan.
                     </p>
                 </div>
-
-                @unless ($terkunci)
-                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <h3 class="font-bold text-slate-800 text-sm mb-2">Selesaikan Laporan</h3>
-                        <p class="text-xs text-slate-500 leading-relaxed mb-3">
-                            Perlu sedikitnya satu uraian kegiatan, satu rencana tindak lanjut, dan status hasil yang dipilih.
-                            Setelah diselesaikan, laporan terhitung sebagai berkas pertanggungjawaban
-                            yang lengkap — dan masih bisa dibuka kembali bila ada yang perlu diperbaiki.
-                        </p>
-                    </div>
-                @endunless
             </div>
         </div>
     </form>
 
-    @unless ($terkunci)
-        {{-- Form tersendiri: menyelesaikan laporan adalah tindakan lain dari
-             menyimpan isinya, dan tidak boleh ikut terkirim tanpa disengaja. --}}
-        <form method="POST" action="{{ route('dokumen.laporan.selesaikan', $usulan->no_usulan) }}" class="mt-5">
-            @csrf @method('PUT')
-            <button type="submit"
-                    class="px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold rounded-xl transition">
-                Nyatakan Laporan Selesai
-            </button>
-        </form>
-    @endunless
 </div>
 
 @endsection

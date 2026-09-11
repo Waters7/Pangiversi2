@@ -79,6 +79,7 @@ class Usulan extends Model
         'id_kegiatan',
         'id_kategori_perjadin',
         'id_spd',
+        'no_spd',
         'id_tahun_anggaran',
         'id_lokasi',
         'kode_rombongan',
@@ -293,6 +294,25 @@ class Usulan extends Model
     public function getJenisPengajuanLabelAttribute(): string
     {
         return $this->isKelompok() ? 'Bagian dari rombongan' : 'Personal';
+    }
+
+    /**
+     * Berkas SPD bertanda tangan yang diunggah pengusul, bila ada.
+     */
+    public function berkasSpdBertandaTangan(): ?string
+    {
+        $berkas = $this->dokumen()->latest('id')->value('spd_ditandatangani');
+
+        return filled($berkas) ? $berkas : null;
+    }
+
+    /**
+     * Usulan sudah membawa SPD yang ditandatangani beserta nomor resminya —
+     * dasar persetujuan PPK, jadi tanpa keduanya usulan tidak boleh berjalan.
+     */
+    public function punyaSpdBertandaTangan(): bool
+    {
+        return filled($this->no_spd) && $this->berkasSpdBertandaTangan() !== null;
     }
 
     /**

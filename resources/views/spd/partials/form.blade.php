@@ -45,15 +45,32 @@
                            class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Tanggal Dikeluarkan</label>
+                    <label for="tanggal_surat" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Tanggal Dikeluarkan
+                        @can('mengubah-tanggal-spd') <span class="text-red-500">*</span> @endcan
+                    </label>
                     @php $tanggalTerbit = $ubah ? $spd->tanggal_surat : now(); @endphp
-                    {{-- Mengikuti tanggal pembuatan SPD, jadi tidak disunting
-                         agar tanggal pada dokumen tidak berselisih dengan
-                         kapan surat itu benar-benar terbit. --}}
-                    <input type="text" readonly
-                           value="{{ $tanggalTerbit?->translatedFormat('d F Y') }}"
-                           class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 bg-slate-100 text-slate-600">
-                    <p class="text-xs text-slate-400 mt-1">Mengikuti tanggal pembuatan SPD.</p>
+
+                    {{-- Bagi peran lain tanggalnya mengikuti tanggal pembuatan
+                         agar tidak berselisih dengan kapan surat benar-benar
+                         terbit. Pimpinan dan administrator boleh
+                         menyesuaikannya dengan buku agenda. --}}
+                    @can('mengubah-tanggal-spd')
+                        <input type="date" name="tanggal_surat" id="tanggal_surat" required
+                               value="{{ old('tanggal_surat', $tanggalTerbit?->toDateString()) }}"
+                               class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        @error('tanggal_surat')
+                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-slate-400 mt-1">
+                            Dapat disesuaikan dengan buku agenda. Tanggal ini yang tercetak pada SPD.
+                        </p>
+                    @else
+                        <input type="text" readonly
+                               value="{{ $tanggalTerbit?->translatedFormat('d F Y') }}"
+                               class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 bg-slate-100 text-slate-600">
+                        <p class="text-xs text-slate-400 mt-1">Mengikuti tanggal pembuatan SPD.</p>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -78,24 +95,21 @@
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {{-- Yang diketik hanya nomor urutnya. Awalan arsip dan
-                                 tahun surat ditampilkan sebagai teks tetap supaya
-                                 formatnya tidak bisa keliru. --}}
+                            {{-- Nomor surat tidak lagi diketik: nomor resmi datang
+                                 dari SRIKANDI lewat penanda ${nomor_naskah} pada dokumen,
+                                 sedangkan nomor internalnya terbit sendiri berpola sama
+                                 dengan nomor perjadin. --}}
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                    Nomor Surat <span class="text-red-500">*</span>
-                                </label>
-                                <div class="flex items-stretch rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
-                                    <span class="px-3 py-2.5 text-sm font-mono text-slate-500 bg-slate-50 border-r border-slate-200 whitespace-nowrap">{{ $awalanNomor }}</span>
-                                    <input type="text" required x-model="orang.nomor_surat"
-                                           :name="`pelaksana[${i}][nomor_surat]`"
-                                           inputmode="numeric" maxlength="20" placeholder="1557"
-                                           class="flex-1 min-w-0 px-3 py-2.5 text-sm font-mono border-0 focus:ring-0 focus:outline-none">
-                                    <span class="px-3 py-2.5 text-sm font-mono text-slate-500 bg-slate-50 border-l border-slate-200 whitespace-nowrap">/{{ $tahunSurat }}</span>
+                                <div class="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
+                                    <svg class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                                    </svg>
+                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                        <strong>Nomor surat terbit sendiri</strong> dengan pola yang sama seperti
+                                        nomor perjadin. Nomor resmi pada dokumen cetak diisi SRIKANDI saat surat
+                                        diregistrasi, jadi tidak perlu diketik di sini.
+                                    </p>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-1">
-                                    Cukup nomor urut buku agenda. Tahun surat mengikuti tanggal SPD diterbitkan.
-                                </p>
                             </div>
 
                             {{-- Pelaksana pertama terkunci ke akun yang sedang masuk. --}}
@@ -249,6 +263,9 @@
         </div>
 
         {{-- ── Pengikut ── --}}
+        {{-- Pengikut ikut berangkat tanpa mengajukan usulan sendiri, jadi
+             pencantumannya keputusan pimpinan — bukan pilihan pengusul. --}}
+        @can('mengisi-pengikut-spd')
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
                 <h3 class="font-bold text-slate-800 text-sm">Pengikut</h3>
@@ -284,6 +301,7 @@
                 </div>
             </div>
         </div>
+        @endcan
 
         {{-- ── Pembebanan ── --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

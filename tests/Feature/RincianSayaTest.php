@@ -264,4 +264,92 @@ class RincianSayaTest extends TestCase
         $this->assertSame(0, $this->jumlahTampil($this->actingAs(User::factory()->create())
             ->get(route('rincian-saya.daftar-riil'))->assertOk()));
     }
+
+    // ── Tanda tangan pelaksana tidak kedaluwarsa ──
+
+    /**
+     * Masa sanggah yang lewat menutup sanggahan, bukan tanda tangan: dulu
+     * tombolnya ikut hilang, sehingga pelaksana yang terlambat membuka tidak
+     * pernah dapat menandatangani dan QR-nya tidak pernah terbit.
+     */
+    public function test_tombol_tanda_tangan_tetap_ada_setelah_masa_sanggah_lewat(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $this->daftar()->update(['batas_sanggah' => today()->subDay()]);
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Setuju &amp; Tandatangani', false)
+            ->assertDontSee('Sanggah Nominal')
+            ->assertSee('Anda tetap dapat menandatangani dokumen ini');
+
+        // Masih tergolong perlu tanggapan, bukan tersembunyi di "Lainnya".
+        $this->assertSame(1, $halaman->viewData('jumlah')['perlu-tanggapan']);
+    }
+
+    public function test_pelaksana_dapat_menandatangani_setelah_masa_sanggah_lewat(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $this->daftar()->update(['batas_sanggah' => today()->subDay()]);
+
+        $this->setujui('rincian')->assertSessionHas('success');
+
+        $this->assertNotNull($this->daftar()->rincian_disetujui_at);
+    }
+
+    public function test_sanggahan_tertutup_setelah_masa_sanggah_lewat(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $this->daftar()->update(['batas_sanggah' => today()->subDay()]);
+
+        $this->sanggah('rincian', 'Uang harian dihitung empat hari, seharusnya tiga.')
+            ->assertForbidden();
+    }
+
+    // ── Sudah dicek tim keuangan, belum dikirim ──
+
+    /**
+     * Berkas yang nominalnya sudah diperiksa tim keuangan tetapi belum
+     * dikirim dulu tidak terlihat sama sekali dari sisi pelaksana — ia
+     * mengira rinciannya belum disentuh siapa pun.
+     */
+    public function test_rincian_yang_sudah_dicek_tampil_sebelum_dikirim(): void
+    {
+        $this->lengkapiPertanggungjawaban($this->usulan);
+        app(SinkronBiayaDokumen::class)->selaraskan($this->usulan->fresh());
+        $this->validasiSeluruhNominal($this->usulan, $this->timKeuangan);
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Sudah Dicek Tim Keuangan')
+            ->assertSee('Sudah dicek tim keuangan')
+            ->assertSee('Dicek Tim Keuangan');
+
+        $this->assertSame(1, $this->jumlahTampil($halaman));
+    }
+
+    public function test_rincian_yang_belum_dicek_belum_tampil(): void
+    {
+        $this->lengkapiPertanggungjawaban($this->usulan);
+        app(SinkronBiayaDokumen::class)->selaraskan($this->usulan->fresh());
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk();
+
+        $this->assertSame(0, $this->jumlahTampil($halaman));
+    }
+
+    public function test_status_dicek_berganti_setelah_dikirim(): void
+    {
+        $this->berkasSampaiKePelaksana();
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Menunggu Tanggapan Pelaksana')
+            ->assertDontSee('Sudah Dicek Tim Keuangan');
+    }
 }

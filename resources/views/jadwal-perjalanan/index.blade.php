@@ -33,7 +33,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                Ekspor Rekap
+                Export Rekap
             </button>
         </form>
     </div>
@@ -117,7 +117,7 @@
                         <option value="{{ $nilai }}" @selected($bulan === $nilai)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Cari</button>
+                <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Search</button>
                 @if ($search || $bulan)
                     <a href="{{ route('jadwal-perjalanan') }}" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">Reset</a>
                 @endif

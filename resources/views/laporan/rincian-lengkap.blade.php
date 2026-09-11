@@ -11,9 +11,8 @@
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-800">Rincian Biaya Lengkap Tanda Tangan</h1>
         <p class="text-xs text-slate-400 mt-0.5">
-            Rincian biaya perjalanan dinas yang sudah ditandatangani pelaksana dan PPK, serta
-            daftar nominatifnya sudah diterima tim keuangan. Sejak itu dokumennya sah sebagai
-            dasar pembayaran dan tidak berubah lagi.
+            Rincian biaya perjalanan dinas yang sudah ditandatangani pelaksana dan PPK.
+            Sejak itu dokumennya terkunci dan tidak berubah lagi, siap dicetak untuk lampiran.
         </p>
     </div>
 
@@ -58,7 +57,7 @@
             <input type="text" name="cari" value="{{ $cari }}"
                    placeholder="Cari no. perjadin, no. surat tugas, atau nama pelaksana..."
                    class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Cari</button>
+            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Search</button>
             @if ($cari)
                 <a href="{{ route('laporan.rincian-lengkap', ['tahun' => $tahun, 'bulan' => $bulan]) }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">Reset</a>
@@ -143,8 +142,8 @@
                             <td colspan="6" class="px-5 py-14 text-center">
                                 <p class="text-sm font-semibold text-slate-500">Belum ada rincian biaya yang lengkap tanda tangannya</p>
                                 <p class="text-xs text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
-                                    Berkas muncul di sini setelah pelaksana dan PPK menandatangani kedua dokumennya,
-                                    dan daftar nominatif surat tugasnya sudah diterima tim keuangan.
+                                    Berkas muncul di sini setelah pelaksana dan PPK menandatangani kedua
+                                    dokumennya — rincian biaya dan daftar pengeluaran riil.
                                 </p>
                             </td>
                         </tr>

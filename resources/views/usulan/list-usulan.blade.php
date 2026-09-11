@@ -166,7 +166,8 @@
                             <td class="px-4 py-4 text-center text-xs font-semibold text-slate-400">{{ $loop->iteration }}</td>
                             <td class="px-4 py-4">
                                 <p class="font-bold text-slate-800 text-xs whitespace-nowrap">{{ $item->no_usulan }}</p>
-                                <p class="text-xs text-slate-400 mt-0.5 whitespace-nowrap">12 Jan 2025</p>
+                                {{-- Tanggal nomor perjadin ini dibuat. --}}
+                                <p class="text-xs text-slate-400 mt-0.5 whitespace-nowrap">{{ $item->created_at?->translatedFormat('d M Y') ?? '—' }}</p>
                             </td>
                             @if(auth()->user()->isAdmin())
                                 <td class="px-4 py-4">
@@ -258,14 +259,6 @@
                                 <div class="flex items-center justify-center gap-1">
                                     <a href="{{ route('usulan.show', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 flex items-center justify-center transition" title="Lihat Detail">
                                         <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    </a>
-                                    {{-- Perjalanan dinas banyak berulang; menyalin usulan lama
-                                         menghemat mengetik ulang isian yang sama. Tanggal dan
-                                         SPD-nya tidak ikut — keduanya harus baru. --}}
-                                    <a href="{{ route('usulan.create', ['salin' => $item->no_usulan]) }}"
-                                       class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-sky-100 text-slate-600 hover:text-sky-700 flex items-center justify-center transition"
-                                       title="Salin jadi usulan baru">
-                                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
                                     </a>
                                     @if(in_array($item->status, ['draft', 'ditolak']) || auth()->user()->isAdmin())
                                         <a href="{{ route('usulan.edit', $item) }}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 flex items-center justify-center transition" title="Edit">

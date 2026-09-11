@@ -66,7 +66,8 @@
                             $selesai = $laporan?->sudahSelesai() === true;
                             // Terkunci setelah perjalanannya ditutup; sejak itu
                             // berkasnya sudah divalidasi dan dibayarkan.
-                            $bolehUbah = $item->status !== 'selesai';
+                            $bolehUbah = $laporan ? $laporan->bolehDisunting() : $item->status !== 'selesai';
+                            $statusLaporan = $laporan?->status() ?? \App\Enums\StatusLaporanPerjadin::Draf;
                         @endphp
 
                         <tr class="hover:bg-slate-50/60 transition">
@@ -85,13 +86,9 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3.5 text-center">
-                                @if ($selesai)
-                                    <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">Selesai</span>
-                                @elseif ($laporan?->kegiatan()->exists())
-                                    <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">Draf</span>
-                                @else
-                                    <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">Belum diisi</span>
-                                @endif
+                                <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap {{ $statusLaporan->badge() }}">
+                                    {{ $statusLaporan->label() }}
+                                </span>
                             </td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-3">
@@ -104,7 +101,7 @@
                                         <a href="{{ route('dokumen.laporan.edit', $item->no_usulan) }}"
                                            class="text-xs font-bold text-teal-600 hover:text-teal-700">Edit</a>
                                     @else
-                                        <span class="text-xs text-slate-300" title="Perjalanan sudah ditutup">Terkunci</span>
+                                        <span class="text-xs text-slate-300" title="{{ $statusLaporan->keterangan() }}">Terkunci</span>
                                     @endif
 
                                     @if ($selesai)

@@ -146,6 +146,18 @@ class User extends Authenticatable
         return $this->isSuperAdmin();
     }
 
+    /**
+     * Direktur Poltekkes Kemenkes Manado — bukan wakil direktur.
+     *
+     * Laporan perjalanan dinas hanya ditandatangani Direktur, jadi konfirmasi
+     * laporan diperiksa terhadap jabatan ini, bukan sekadar peran pimpinan.
+     */
+    public function isDirektur(): bool
+    {
+        return $this->peran === PeranPengguna::Pimpinan
+            && mb_strtolower(trim((string) $this->jabatan)) === 'direktur';
+    }
+
     public function isPPK(): bool
     {
         return $this->peran === PeranPengguna::Ppk;

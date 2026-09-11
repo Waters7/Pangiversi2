@@ -37,6 +37,15 @@
         @endforeach
     </div>
 
+    {{-- Saringan periode: berkas dikelompokkan per bulan keberangkatan. --}}
+    <x-saring-periode
+        :aksi="route('persetujuan.daftar-riil')"
+        :tahun="$tahun"
+        :bulan="$bulan"
+        :tahun-tersedia="$tahunTersedia"
+        :jumlah-bulan="$jumlahBulan"
+        :ekstra="['status' => $status, 'cari' => $cari]" />
+
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -51,7 +60,14 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @forelse ($daftar as $item)
+                    @forelse ($daftar as $periode => $kelompokPeriode)
+                        <tr class="bg-slate-100/70">
+                            <td colspan="6" class="px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                {{ $periode }}
+                                <span class="ml-1.5 font-semibold text-slate-400 normal-case tracking-normal">{{ $kelompokPeriode->count() }} berkas</span>
+                            </td>
+                        </tr>
+                    @foreach ($kelompokPeriode as $item)
                         @php $usulan = $item->usulan; @endphp
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-4 py-3.5">
@@ -97,6 +113,7 @@
                                 </div>
                             </td>
                         </tr>
+                    @endforeach
                     @empty
                         <tr>
                             <td colspan="6" class="px-4 py-14 text-center">

@@ -75,6 +75,7 @@ class ValidasiNominalDokumenTest extends TestCase
             'kode_booking' => 'XY7QW2',
             'harga' => $harga,
             'boarding_pass' => UploadedFile::fake()->create('bp.pdf', 50, 'application/pdf'),
+            'invoice' => UploadedFile::fake()->create('invoice.pdf', 50, 'application/pdf'),
         ]);
     }
 
@@ -206,5 +207,83 @@ class ValidasiNominalDokumenTest extends TestCase
         $this->rincian()->update(['divalidasi_at' => now()]);
 
         $this->assertTrue($sinkron->seluruhnyaTervalidasi($this->usulan->fresh('keuangan')));
+    }
+    // ── Berkas berjalan sendiri begitu pemeriksaan rampung ──
+
+    /**
+     * Dulu tim keuangan harus menekan tombol kirim terpisah setelah semua
+     * divalidasi; berkas kerap berhenti di "sudah dicek" dan tombol tanda
+     * tangan pelaksana tidak pernah muncul.
+     */
+    public function test_validasi_terakhir_langsung_mengirim_berkas_ke_pelaksana(): void
+    {
+        $this->isiNominal();
+        $this->siapkanDaftarRiil();
+
+        // Transport lokal sudah diperiksa lebih dulu; rincian inilah yang terakhir.
+        DaftarRiil::where('id_usulan', $this->usulan->id)
+            ->update(['divalidasi_at' => now(), 'id_validator' => $this->timKeuangan->id]);
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $this->rincian()]))
+            ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, 'dikirim ke pelaksana'));
+
+        $daftar = $this->usulan->daftarRiil()->first();
+
+        $this->assertNotNull($daftar->dikirim_ke_pegawai_at);
+        $this->assertNotNull($daftar->batas_sanggah);
+        $this->assertDatabaseHas('notifikasi', [
+            'id_user' => $this->pelaksana->id,
+            'judul' => 'Berkas pertanggungjawaban menunggu tanda tangan Anda',
+        ]);
+    }
+
+    public function test_validasi_transport_terakhir_juga_mengirim_berkas(): void
+    {
+        $this->isiNominal();
+        $this->siapkanDaftarRiil();
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $this->rincian()]));
+
+        $this->assertNull($this->usulan->daftarRiil()->first()->dikirim_ke_pegawai_at);
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('daftar-riil.validasi', [$this->usulan, $this->peserta]))
+            ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, 'dikirim ke'));
+
+        $this->assertNotNull($this->usulan->daftarRiil()->first()->dikirim_ke_pegawai_at);
+    }
+
+    /** Validasi yang belum menuntaskan semuanya tidak mengirim apa pun. */
+    public function test_validasi_sebagian_belum_mengirim(): void
+    {
+        $this->isiNominal();
+        $this->siapkanDaftarRiil();
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $this->rincian()]))
+            ->assertSessionHas('success', fn (string $pesan) => ! str_contains($pesan, 'dikirim'));
+
+        $this->assertNull($this->usulan->daftarRiil()->first()->dikirim_ke_pegawai_at);
+    }
+
+    /** Berkas yang sudah di meja pelaksana tidak dikirim ulang diam-diam saat divalidasi lagi. */
+    public function test_validasi_ulang_tidak_mengirim_ulang(): void
+    {
+        $this->isiNominal();
+        $this->siapkanDaftarRiil();
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $this->rincian()]));
+        $this->kirimKePelaksana();
+
+        $dikirim = $this->usulan->daftarRiil()->first()->dikirim_ke_pegawai_at;
+
+        $this->rincian()->update(['divalidasi_at' => null]);
+        $this->travel(1)->hours();
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $this->rincian()]));
+
+        $this->assertEquals($dikirim, $this->usulan->daftarRiil()->first()->dikirim_ke_pegawai_at);
     }
 }

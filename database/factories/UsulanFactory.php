@@ -32,6 +32,7 @@ class UsulanFactory extends Factory
         return [
             'no_usulan' => $this->faker->unique()->numerify('USL-2025-###'),
             'no_tugas' => $this->faker->unique()->numerify('TGS-2025-###'),
+            'no_spd' => $this->faker->unique()->numerify('KU.02.04/F.XXX.8/###/2026'),
             'status' => $this->faker->numberBetween(1, 100) <= 40
                             ? StatusUsulan::Disetujui->value
                             : $this->faker->randomElement([

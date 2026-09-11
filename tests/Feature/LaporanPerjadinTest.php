@@ -9,6 +9,7 @@ use App\Models\LaporanPerjadin;
 use App\Models\StatusHasil;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\FormatLaporanPerjadin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -309,5 +310,61 @@ class LaporanPerjadinTest extends TestCase
             ->get(route('dokumen.show', $this->usulan))
             ->assertOk()
             ->assertViewHas('berkasKurang', fn (array $kurang) => ! in_array('Laporan perjalanan dinas', $kurang, true));
+    }
+    // ── Tempat kegiatan per hari ──
+
+    public function test_tempat_kegiatan_tersimpan_per_hari(): void
+    {
+        $this->isiLaporan([
+            'tempat' => [
+                $this->hari(0) => 'Kantor Dinas Kesehatan Provinsi',
+                $this->hari(1) => 'Puskesmas Tuminting',
+            ],
+        ]);
+
+        $tempat = LaporanPerjadin::firstOrFail()->kegiatan->pluck('tempat', 'urutan');
+
+        $this->assertSame('Kantor Dinas Kesehatan Provinsi', $tempat[1]);
+        $this->assertSame('Puskesmas Tuminting', $tempat[2]);
+    }
+
+    public function test_formulir_menawarkan_kolom_tempat_tiap_hari(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.laporan.edit', $this->usulan))
+            ->assertOk()
+            ->assertSee('name="tempat['.$this->hari(0).']"', false)
+            ->assertSee('Tempat kegiatan');
+    }
+
+    /** Hari yang belum diisi tempatnya diawali dari instansi dan lokasi usulan. */
+    public function test_tempat_bawaan_dari_usulan(): void
+    {
+        $this->usulan->update(['instansi' => 'Kemenkes RI', 'lokasi' => 'Jakarta']);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.laporan.edit', $this->usulan))
+            ->assertOk()
+            ->assertSee('value="Kemenkes RI — Jakarta"', false);
+    }
+
+    public function test_tempat_tercetak_pada_tiap_baris_dokumen(): void
+    {
+        $this->isiLaporan([
+            'tempat' => [
+                $this->hari(0) => 'Kantor Dinas Kesehatan Provinsi',
+                $this->hari(1) => 'Puskesmas Tuminting',
+            ],
+        ]);
+
+        $laporan = LaporanPerjadin::firstOrFail()->load('kegiatan', 'tindakLanjut', 'pimpinan');
+        $html = view('dokumen.laporan-cetak', app(FormatLaporanPerjadin::class)->data($this->usulan->fresh()) + [
+            'laporan' => $laporan,
+            'qrPelaksana' => null,
+            'qrPimpinan' => null,
+        ])->render();
+
+        $this->assertStringContainsString('Kantor Dinas Kesehatan Provinsi', $html);
+        $this->assertStringContainsString('Puskesmas Tuminting', $html);
     }
 }

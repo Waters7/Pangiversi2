@@ -75,9 +75,14 @@
                             </dd>
                         </div>
 
-                        <div class="sm:col-span-2">
+                        <div>
                             <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Nomor Surat Tugas</dt>
                             <dd class="text-sm text-slate-800">{{ $usulan->no_tugas ?: '—' }}</dd>
+                        </div>
+
+                        <div>
+                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Nomor SPD Bertanda Tangan</dt>
+                            <dd class="text-sm text-slate-800">{{ $usulan->no_spd ?: '—' }}</dd>
                         </div>
 
                         <div>
@@ -408,6 +413,7 @@
                     @php
                         $files = [
                             'Surat Tugas'       => $dokumen->surat_tugas,
+                            'SPD Bertanda Tangan' => $dokumen->spd_ditandatangani,
                             'Rundown Kegiatan'  => $dokumen->rundown,
                             'Dokumen Pendukung' => $dokumen->dokumen_pendukung,
                         ];
@@ -612,8 +618,14 @@
                             Konfirmasi kesediaan Anda lebih dulu pada daftar usulan, baru usulan ini dapat dikirim ke PPK.
                         </p>
                     @elseif($usulan->id_user === auth()->id())
+                        @unless ($usulan->punyaSpdBertandaTangan())
+                            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 leading-relaxed">
+                                Lengkapi nomor dan berkas SPD yang sudah ditandatangani lewat <strong>Edit Usulan</strong>
+                                lebih dulu; pengajuan belum dapat dikirim tanpa keduanya.
+                            </p>
+                        @endunless
                         <form method="POST" action="{{ route('usulan.ajukan', $usulan) }}"
-                              onsubmit="return confirm('Kirim usulan ini untuk diverifikasi PPK?')">
+                              onsubmit="return confirm('Kirim pengajuan perjadin ini? Pengajuan langsung berlaku setelah dikirim.')">
                             @csrf
                             @method('PUT')
                             <button type="submit"
@@ -621,7 +633,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                                 </svg>
-                                Ajukan Usulan Perjadin
+                                Kirim Pengajuan Perjadin
                             </button>
                         </form>
                     @endif

@@ -64,13 +64,22 @@ class PersetujuanBerjenjangTest extends TestCase
         $this->assertTrue($this->workflow()->antrianUntuk($this->ppk)->isEmpty());
     }
 
-    public function test_pengajuan_tidak_merekam_keputusan_maupun_menagih_ppk(): void
+    /**
+     * PPK tidak ditagih keputusan di aplikasi — ia sudah menandatangani SPD
+     * di SRIKANDI — tetapi persetujuannya tetap terekam dari SPD bertanda
+     * tangan itu, supaya rantai persetujuan dan jejak audit tidak kosong.
+     */
+    public function test_pengajuan_merekam_persetujuan_ppk_dari_spd_tanpa_menagihnya(): void
     {
         $usulan = $this->usulanBaru();
 
         $this->workflow()->ajukan($usulan);
 
-        $this->assertSame(0, $usulan->persetujuan()->count());
+        $persetujuan = $usulan->persetujuan()->first();
+
+        $this->assertNotNull($persetujuan);
+        $this->assertSame($this->ppk->id, $persetujuan->id_approver);
+        $this->assertStringContainsString('SPD bertanda tangan', $persetujuan->catatan);
         $this->assertDatabaseMissing('notifikasi', ['id_user' => $this->ppk->id]);
     }
 

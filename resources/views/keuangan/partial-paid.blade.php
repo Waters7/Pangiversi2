@@ -95,6 +95,27 @@
                     <p class="text-xl font-bold text-slate-800">Rp {{ number_format($usulan->keuangan->total, 0, ',', '.') }}</p>
                 </div>
             </div>
+            {{-- Syarat pelunasan yang dijaga di penyimpanan ditampilkan juga di
+                 sini, supaya bendahara tahu sebelum mengunggah bukti transfer. --}}
+            @php $laporanPerjadin = $usulan->laporan; @endphp
+            @if ($laporanPerjadin?->sudahDikonfirmasi())
+                <div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
+                    Laporan perjalanan dinas sudah ditandatangani pelaksana dan dikonfirmasi
+                    <strong>{{ $laporanPerjadin->pimpinan?->nama }}</strong>
+                    pada {{ $laporanPerjadin->dikonfirmasi_at->translatedFormat('d F Y H:i') }} WITA
+                    (kode {{ $laporanPerjadin->kode_pimpinan }}).
+                </div>
+            @else
+                <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    <strong>Pelunasan belum dapat dibayarkan:</strong>
+                    @if ($laporanPerjadin?->sudahDikirim())
+                        laporan perjalanan dinas sudah dikirim pelaksana dan masih menunggu konfirmasi pimpinan.
+                    @else
+                        laporan perjalanan dinas belum ditandatangani pelaksana dan pimpinan lewat QR konfirmasi.
+                    @endif
+                </div>
+            @endif
+
             {{-- Bukti pelunasan hanya untuk bendahara --}}
             @cannot('mencatat-pembayaran')
                 <p class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">

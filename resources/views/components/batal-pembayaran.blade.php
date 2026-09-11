@@ -3,6 +3,8 @@
     'nama',
     'judul' => 'Batalkan pembayaran ini?',
     'ringkas' => null,
+    'metode' => 'PUT',
+    'tombol' => 'Batalkan Pembayaran',
 ])
 
 {{-- Pembatalan pembayaran wajib beralasan: yang dicabut adalah angka uang,
@@ -15,7 +17,7 @@
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>
         </svg>
-        Batalkan Pembayaran
+        {{ $tombol }}
     </button>
 
     <div x-show="batal" x-cloak
@@ -31,7 +33,7 @@
             @endif
 
             <form method="POST" action="{{ $aksi }}">
-                @csrf @method('PUT')
+                @csrf @method($metode)
 
                 <label class="block text-xs font-semibold text-slate-600 mb-1.5">
                     Alasan pembatalan <span class="text-red-500">*</span>

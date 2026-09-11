@@ -22,6 +22,7 @@ class TiketPerjadin extends Model
         'kode_booking',
         'harga',
         'boarding_pass',
+        'invoice',
     ];
 
     /**
@@ -55,7 +56,8 @@ class TiketPerjadin extends Model
             && filled($this->nomor_tiket)
             && filled($this->kode_booking)
             && $this->harga > 0
-            && filled($this->boarding_pass);
+            && filled($this->boarding_pass)
+            && filled($this->invoice);
     }
 
     public function rute(): string

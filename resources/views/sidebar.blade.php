@@ -137,6 +137,65 @@
           </div>
       </div>
 
+      {{-- Meja pimpinan: laporan perjalanan dinas yang dikirim pelaksana,
+           dikonfirmasi dan ditandatangani di sini atau dikembalikan untuk
+           direvisi. Konfirmasinya salah satu syarat pelunasan pembayaran. --}}
+      @can('mengonfirmasi-laporan-perjadin')
+      <div x-data="{ laporanPimpinanOpen: {{ request()->routeIs('laporan-perjadin.*') ? 'true' : 'false' }} }">
+          <button
+            type="button"
+            @click.stop="laporanPimpinanOpen = !laporanPimpinanOpen"
+            class="nav-item w-full {{ request()->routeIs('laporan-perjadin.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 12l2 2 4-4"/>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Laporan Perjadin
+            <x-lencana-antrean posisi="inline" :jumlah="$antrean['laporan-pimpinan'] ?? 0" />
+            <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+                :class="laporanPimpinanOpen ? 'rotate-180' : ''"
+                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+
+          <div x-show="laporanPimpinanOpen" x-transition
+               class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+
+            <a href="{{ route('laporan-perjadin.index') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('laporan-perjadin.index', 'laporan-perjadin.show') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 10h16M4 14h10"/>
+              </svg>
+              Daftar Laporan Perjadin
+              <x-lencana-antrean :jumlah="$antrean['laporan-pimpinan'] ?? 0" />
+            </a>
+
+            <a href="{{ route('laporan-perjadin.status') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('laporan-perjadin.status') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>
+              </svg>
+              Status Konfirmasi Laporan
+            </a>
+
+            <a href="{{ route('laporan-perjadin.tindak-lanjut') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('laporan-perjadin.tindak-lanjut') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+              </svg>
+              Tindak Lanjut
+            </a>
+
+          </div>
+      </div>
+      @endcan
+
       {{-- Persetujuan PPK. Bukan lagi validasi usulan — penugasan sudah
            disahkan lewat SPD — melainkan berkas keuangan yang menunggu
            keputusan dan tanda tangan PPK. --}}

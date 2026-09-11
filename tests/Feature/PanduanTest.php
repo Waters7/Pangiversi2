@@ -36,11 +36,14 @@ class PanduanTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('panduan'))
             ->assertOk()
+            ->assertSee('Menerbitkan SPD')
             ->assertSee('Mengajukan Perjadin')
-            ->assertSee('Pengajuan Kelompok')
-            ->assertSee('Konfirmasi Usulan')
-            ->assertSee('Setelah Perjalanan')
-            ->assertSee('Rincian &amp; Tanda Tangan', false);
+            ->assertSee('Berkas &amp; Laporan', false)
+            // Pengajuan berkelompok sudah dihapus: tiap orang mengunggah SPD-nya sendiri.
+            ->assertDontSee('Pengajuan Rombongan')
+            ->assertDontSee('Konfirmasi Usulan')
+            ->assertSee('Memeriksa &amp; Menandatangani', false)
+            ->assertSee('Melapor Kendala');
     }
 
     public function test_masa_sanggah_dijelaskan_sesuai_ketentuan_yang_berlaku(): void

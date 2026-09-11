@@ -105,11 +105,11 @@
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-6 py-4">
                                 <p class="font-bold text-slate-800 text-xs">{{ $item->no_usulan }}</p>
-                                <p class="text-xs text-slate-400">12 Jan 2025</p>
+                                <p class="text-xs text-slate-400">{{ $item->created_at?->translatedFormat('d M Y') ?? '—' }}</p>
                             </td>
 
                             <td class="px-4 py-4">
-                                <p class="text-sm font-semibold text-slate-700">{{ $item->user->nama ?? 'John Doe' }}</p>
+                                <p class="text-sm font-semibold text-slate-700">{{ $item->user?->nama ?? '—' }}</p>
                             </td>
 
                             <td class="px-4 py-4">

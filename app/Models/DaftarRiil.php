@@ -193,6 +193,20 @@ class DaftarRiil extends Model
         ]);
     }
 
+    /**
+     * Cabut catatan penggantian yang keliru. Bukti transfernya tetap
+     * tersimpan pada riwayat pembayaran; di sini hanya penandanya yang
+     * dikosongkan supaya dapat dicatat ulang.
+     */
+    public function batalkanBayarTransport(): void
+    {
+        $this->update([
+            'dibayar_at' => null,
+            'bukti_bayar' => null,
+            'id_pembayar' => null,
+        ]);
+    }
+
     public function sedangDikembalikan(): bool
     {
         return $this->dikembalikan_at !== null && ! $this->sudah_ditandatangani;

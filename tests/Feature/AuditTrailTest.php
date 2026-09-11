@@ -44,8 +44,9 @@ class AuditTrailTest extends TestCase
             'tanggal_mulai' => '2026-09-01',
             'tanggal_selesai' => '2026-09-03',
             'uraian' => 'Rapat koordinasi program',
-            'jenis_pengajuan' => 'personal',
             'surat_tugas' => UploadedFile::fake()->create('surat-tugas.pdf', 100, 'application/pdf'),
+            'no_spd' => 'KU.02.04/F.XXX.8/1234/2026',
+            'spd_ditandatangani' => UploadedFile::fake()->create('spd.pdf', 100, 'application/pdf'),
         ], $ubahan);
     }
 

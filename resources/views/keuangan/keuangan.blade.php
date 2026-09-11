@@ -95,7 +95,7 @@
                             </td>
 
                             <td class="px-4 py-4">
-                                <p class="text-sm font-semibold text-slate-700">{{ $item->user->nama ?? 'John Doe' }}</p>
+                                <p class="text-sm font-semibold text-slate-700">{{ $item->user?->nama ?? '—' }}</p>
                             </td>
 
                             <td class="px-4 py-4">

@@ -234,7 +234,8 @@ class SinkronBiayaDokumen
         $dokumen = $usulan->dokumen->last();
 
         if ($dokumen && $dokumen->bill_hotel_nominal > 0) {
-            $nama = 'Biaya Hotel';
+            // Sebutan resmi pada dokumen rincian: uang penginapan, bukan biaya hotel.
+            $nama = 'Uang Penginapan';
 
             if ($dokumen->bill_hotel_no_transaksi) {
                 $nama .= ' (No. Transaksi '.$dokumen->bill_hotel_no_transaksi.')';

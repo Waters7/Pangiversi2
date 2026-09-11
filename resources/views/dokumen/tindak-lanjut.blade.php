@@ -49,7 +49,7 @@
                     <option value="{{ $nilai }}" @selected($status === $nilai)>{{ $label }}</option>
                 @endforeach
             </select>
-            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Saring</button>
+            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Filter</button>
             @if ($status)
                 <a href="{{ route('dokumen.tindak-lanjut') }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition text-center">Reset</a>

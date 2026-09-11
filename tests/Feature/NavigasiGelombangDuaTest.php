@@ -95,6 +95,41 @@ class NavigasiGelombangDuaTest extends TestCase
 
     // ── N-04 · Langkah berikutnya pada daftar usulan ──
 
+    /**
+     * Kolom No. / Tanggal pernah memuat tanggal mati "12 Jan 2025" sisa
+     * templat; yang tercetak harus tanggal nomor perjadin itu dibuat.
+     */
+    public function test_daftar_usulan_mencetak_tanggal_usulan_dibuat(): void
+    {
+        $usulan = $this->usulan();
+        $usulan->forceFill(['created_at' => '2026-03-15 08:30:00'])->save();
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('usulan.list'))
+            ->assertOk()
+            ->assertSee('15 Mar 2026')
+            ->assertDontSee('12 Jan 2025');
+    }
+
+    /**
+     * Tombol kendali daftar memakai nama bakunya — Search, Filter, Export,
+     * Reset — bukan terjemahan yang berbeda-beda antarhalaman.
+     */
+    public function test_tombol_kendali_daftar_memakai_nama_baku(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.tindak-lanjut'))
+            ->assertOk()
+            ->assertSee('>Filter<', false)
+            ->assertDontSee('>Saring<', false);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.laporan.index'))
+            ->assertOk()
+            ->assertSee('Search')
+            ->assertDontSee('>Cari<', false);
+    }
+
     public function test_daftar_usulan_menyebutkan_langkah_berikutnya(): void
     {
         $this->usulan();
@@ -103,7 +138,7 @@ class NavigasiGelombangDuaTest extends TestCase
             ->get(route('usulan.list'))
             ->assertOk()
             ->assertSee('Menunggu:')
-            ->assertSee('Disetujui PPK');
+            ->assertSee('Uang muka dibayarkan');
     }
 
     /**
@@ -207,73 +242,6 @@ class NavigasiGelombangDuaTest extends TestCase
             ->assertDontSee('Yogyakarta');
     }
 
-    // ── F-03 · Salin dari usulan sebelumnya ──
-
-    public function test_formulir_terisi_dari_usulan_yang_disalin(): void
-    {
-        $this->terbitkanSpd($this->pelaksana);
-
-        $asal = $this->usulan([
-            'lokasi' => 'Bandung',
-            'instansi' => 'Kementerian Kesehatan',
-            'uraian' => 'Rapat penyusunan kurikulum.',
-        ]);
-
-        $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create', ['salin' => $asal->no_usulan]))
-            ->assertOk()
-            ->assertSee('Isian disalin dari usulan')
-            ->assertSee($asal->no_usulan)
-            ->assertSee('Bandung')
-            ->assertSee('Kementerian Kesehatan')
-            ->assertSee('Rapat penyusunan kurikulum.');
-    }
-
-    /** Tanggal dan SPD harus baru; menyalinnya justru menyesatkan. */
-    public function test_tanggal_perjalanan_tidak_ikut_disalin(): void
-    {
-        $this->terbitkanSpd($this->pelaksana);
-
-        $asal = $this->usulan([
-            'tanggal_mulai' => today()->subDays(30)->toDateString(),
-            'tanggal_selesai' => today()->subDays(28)->toDateString(),
-        ]);
-
-        $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create', ['salin' => $asal->no_usulan]))
-            ->assertOk()
-            ->assertDontSee('value="'.today()->subDays(30)->toDateString().'"', escape: false);
-    }
-
-    public function test_usulan_orang_lain_tidak_dapat_disalin(): void
-    {
-        $this->terbitkanSpd($this->pelaksana);
-
-        $oranglain = User::factory()->create(['role' => PeranPengguna::DosenTendik->value]);
-
-        $asal = Usulan::factory()->create([
-            'id_user' => $oranglain->id,
-            'lokasi' => 'Rahasia Denpasar',
-            'id_kategori_perjadin' => KategoriPerjadin::value('id'),
-        ]);
-
-        $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create', ['salin' => $asal->no_usulan]))
-            ->assertOk()
-            ->assertDontSee('Isian disalin dari usulan')
-            ->assertDontSee('Rahasia Denpasar');
-    }
-
-    public function test_nomor_salinan_yang_tidak_ada_diabaikan(): void
-    {
-        $this->terbitkanSpd($this->pelaksana);
-
-        $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create', ['salin' => 'TIDAK/ADA/2026']))
-            ->assertOk()
-            ->assertDontSee('Isian disalin dari usulan');
-    }
-
     // ── F-02 · Simpan draf otomatis ──
 
     public function test_formulir_usulan_memasang_penyimpan_draf(): void
@@ -284,21 +252,6 @@ class NavigasiGelombangDuaTest extends TestCase
             ->get(route('usulan.create'))
             ->assertOk()
             ->assertSee('pangi-draf-usulan');
-    }
-
-    /** Draf tidak boleh menimpa isian yang sedang disalin dari usulan lama. */
-    public function test_draf_tidak_dipulihkan_saat_menyalin(): void
-    {
-        $this->terbitkanSpd($this->pelaksana);
-
-        $asal = $this->usulan();
-
-        $isi = $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create', ['salin' => $asal->no_usulan]))
-            ->assertOk()
-            ->getContent();
-
-        $this->assertStringContainsString('bolehPulihkan: false', $isi);
     }
 
     // ── N-03 · Nama menu tidak lagi bertabrakan ──

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SpdPelaksana;
 use App\Models\User;
 use App\Models\Usulan;
 use Carbon\Carbon;
@@ -29,17 +30,49 @@ class PenomoranPerjadin
      */
     public function nomorPerjadin(?User $pemilik, ?string $tanggalMulai = null): string
     {
-        $kodeUnit = $this->kodeUnit($pemilik);
-        $bulanUsulan = $tanggalMulai ? Carbon::parse($tanggalMulai) : now();
-
-        $awalan = sprintf(
-            'PJ-%s-%s-%s-',
-            $kodeUnit,
-            now()->format('Y'),
-            $bulanUsulan->format('m'),
-        );
+        $awalan = $this->awalan($pemilik, $tanggalMulai);
 
         return $awalan.str_pad((string) $this->urutanBerikutnya($awalan), 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Nomor Surat Perjalanan Dinas, berpola sama dengan nomor perjadin.
+     *
+     * Satu SPD berlaku untuk satu usulan perjalanan dinas, sehingga keduanya
+     * memakai pola yang sama agar mudah dipasangkan saat penelusuran berkas.
+     * Deretnya dihitung sendiri dari nomor SPD yang sudah terbit, bukan dari
+     * nomor usulan — SPD terbit lebih dulu, dan usulannya belum tentu ada.
+     *
+     * Nomor resmi yang tercetak pada dokumen tidak lagi berasal dari sini:
+     * SRIKANDI yang memberikannya lewat penanda ${nomor_naskah}. Nomor ini
+     * dipakai sebagai penanda internal dan rujukan pencarian.
+     */
+    public function nomorSpd(?User $pemilik, ?string $tanggalMulai = null): string
+    {
+        $awalan = $this->awalan($pemilik, $tanggalMulai);
+
+        $terakhir = SpdPelaksana::where('nomor_surat', 'like', $awalan.'%')
+            ->orderByDesc('nomor_surat')
+            ->value('nomor_surat');
+
+        $urut = $terakhir ? ((int) mb_substr($terakhir, mb_strlen($awalan))) + 1 : 1;
+
+        return $awalan.str_pad((string) $urut, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Awalan bersama kedua penomoran: PJ-KodeUnit-Tahun-Bulan-.
+     */
+    private function awalan(?User $pemilik, ?string $tanggalMulai = null): string
+    {
+        $bulan = $tanggalMulai ? Carbon::parse($tanggalMulai) : now();
+
+        return sprintf(
+            'PJ-%s-%s-%s-',
+            $this->kodeUnit($pemilik),
+            now()->format('Y'),
+            $bulan->format('m'),
+        );
     }
 
     /**

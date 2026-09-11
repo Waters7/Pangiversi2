@@ -59,6 +59,15 @@
             'sudah' => ['label' => 'Sudah Ditandatangani', 'jumlah' => $jumlahSudah, 'badge' => 'bg-emerald-100 text-emerald-700'],
         ]" />
 
+    {{-- Saringan periode: surat tugas dikelompokkan per bulan tanggal tugasnya. --}}
+    <x-saring-periode
+        :aksi="route('persetujuan.nominatif')"
+        :tahun="$tahun"
+        :bulan="$bulan"
+        :tahun-tersedia="$tahunTersedia"
+        :jumlah-bulan="$jumlahBulan"
+        :ekstra="['tanda-tangan' => $tandaTangan, 'cari' => $cari]" />
+
     @php
         $kelompok = collect([
             [
@@ -86,10 +95,16 @@
             <span class="text-xs font-bold px-2.5 py-1 rounded-full {{ $grup['warna'] }}">{{ $grup['jumlah'] }}</span>
         </div>
 
-        @forelse ($grup['isi'] as $entri)
+        @forelse ($grup['isi'] as $periode => $entriPeriode)
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 {{ $loop->first ? '' : 'mt-5' }}">
+                {{ $periode }}
+                <span class="ml-1.5 font-semibold text-slate-400 normal-case tracking-normal">{{ $entriPeriode->count() }} surat tugas</span>
+            </p>
+        @foreach ($entriPeriode as $entri)
             @php
                 $nominatif = $entri['daftar'];
                 $baris = $entri['baris'];
+                $menunggu = $entri['menunggu'];
             @endphp
 
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-4">
@@ -150,8 +165,10 @@
 
                 <div class="p-4">
                     <x-tabel-nominatif :baris="$baris" />
+                    <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
                 </div>
             </div>
+        @endforeach
         @empty
             {{-- Pesan kosongnya diambil dari $grup, bukan dari $loop induk:
                  di dalam @empty, Blade tidak menyediakan loop bersarang. --}}

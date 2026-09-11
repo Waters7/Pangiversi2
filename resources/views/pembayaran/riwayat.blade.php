@@ -69,7 +69,7 @@
             <input type="text" name="search" value="{{ $search }}"
                    placeholder="Cari no. usulan atau nama pelaksana..."
                    class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Cari</button>
+            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Search</button>
             @if ($search)
                 <a href="{{ route('pembayaran.riwayat', ['jenis' => $jenis, 'tahun' => $tahun, 'bulan' => $bulan]) }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">Reset</a>

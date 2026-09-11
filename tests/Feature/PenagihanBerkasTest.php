@@ -69,15 +69,28 @@ class PenagihanBerkasTest extends TestCase
             'sppd' => 'dokumen/sppd/a.pdf',
         ]);
 
-        $usulan->notaTransport()->create(['urutan' => 1, 'nominal' => 120_000]);
+        $usulan->notaTransport()->create(['urutan' => 1, 'nominal' => 120_000, 'bukti' => 'dokumen/nota/1.pdf']);
         $usulan = $usulan->fresh(['dokumen', 'notaTransport']);
 
         $kurang = $this->penagih->berkasKurang($usulan);
 
         $this->assertNotContains('SPPD bertanda tangan', $kurang);
         $this->assertNotContains('Nota/biaya transportasi lokal', $kurang);
-        $this->assertContains('Tiket Pergi', $kurang);
+        // Tiket disebut beserta bagian yang kurang, supaya pelaksana tahu apa yang ditagih.
+        $this->assertContains('Tiket Pergi (data tiket)', $kurang);
         $this->assertContains('Laporan perjalanan dinas', $kurang);
+    }
+
+    public function test_ruas_bernominal_tanpa_nota_ikut_ditagih(): void
+    {
+        $usulan = $this->lampirkan($this->usulanSelesai(), ['sppd' => 'dokumen/sppd/a.pdf']);
+
+        $usulan->notaTransport()->create(['urutan' => 1, 'nominal' => 120_000, 'bukti' => 'dokumen/nota/1.pdf']);
+        $usulan->notaTransport()->create(['urutan' => 3, 'nominal' => 80_000]);
+
+        $kurang = $this->penagih->berkasKurang($usulan->fresh(['dokumen', 'notaTransport']));
+
+        $this->assertContains('Nota transportasi lokal untuk ruas 3', $kurang);
     }
 
     public function test_berkas_lengkap_menutup_penagihan(): void

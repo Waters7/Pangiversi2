@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Notifikasi;
 use App\Models\Usulan;
 use App\Services\AuditService;
+use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\WorkflowUsulan;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -84,7 +85,8 @@ class PersetujuanController extends Controller
     {
         $usulan->load('user', 'kegiatan', 'dokumen', 'peserta');
 
-        $pdf = Pdf::loadView('persetujuan.export-usulan', compact('usulan'));
+        $pdf = Pdf::loadView('persetujuan.export-usulan', compact('usulan'))
+            ->setPaper(KertasCetak::UKURAN);
 
         return $pdf->download("Usulan_{$usulan->no_usulan}.pdf");
     }

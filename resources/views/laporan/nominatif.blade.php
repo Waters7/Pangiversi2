@@ -70,6 +70,7 @@
         @php
             $nominatif = $entri['nominatif'];
             $baris = $entri['baris'];
+            $menunggu = $entri['menunggu'];
         @endphp
 
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
@@ -156,6 +157,7 @@
 
             <div class="p-4">
                 <x-tabel-nominatif :baris="$baris" />
+                <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
             </div>
         </div>
         @endforeach

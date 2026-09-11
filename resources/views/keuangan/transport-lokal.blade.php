@@ -48,7 +48,7 @@
                    class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
             <button type="submit"
                     class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition">
-                Cari
+                Search
             </button>
             @if ($cari)
                 <a href="{{ route('keuangan.transport-lokal') }}"
@@ -134,24 +134,27 @@
                                             Sudah divalidasi
                                         </span>
                                         @can('mengelola-biaya')
-                                            <form method="POST" action="{{ route('daftar-riil.batal-validasi', [$item->usulan, $item->peserta]) }}">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="text-[11px] font-semibold text-slate-400 hover:text-amber-600 transition">
-                                                    Cabut
-                                                </button>
-                                            </form>
+                                            {{-- Mencabut validasi menahan berkas lagi, jadi ditanya ulang sekali. --}}
+                                            <x-konfirmasi-validasi
+                                                :nama="'validasi-transport-'.$item->id"
+                                                :aksi="route('daftar-riil.batal-validasi', [$item->usulan, $item->peserta])"
+                                                metode="DELETE"
+                                                :tervalidasi="true"
+                                                :komponen="'Transport lokal '.($item->peserta?->nama ?? '')"
+                                                :nominal="(float) $item->total_riil" />
                                         @endcan
                                     </div>
                                 @else
                                     @can('mengelola-biaya')
-                                        <form method="POST" action="{{ route('daftar-riil.validasi', [$item->usulan, $item->peserta]) }}">
-                                            @csrf @method('PUT')
-                                            <button type="submit"
-                                                    class="w-8 h-8 inline-flex items-center justify-center rounded-lg bg-slate-100 hover:bg-emerald-500 text-slate-400 hover:text-white transition"
-                                                    title="Validasi transport lokal ini">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                                            </button>
-                                        </form>
+                                        {{-- Validasi menyatakan notanya sudah diperiksa dan dapat
+                                             menggerakkan berkas ke pelaksana, jadi ditanya ulang sekali. --}}
+                                        <x-konfirmasi-validasi
+                                            :nama="'validasi-transport-'.$item->id"
+                                            :aksi="route('daftar-riil.validasi', [$item->usulan, $item->peserta])"
+                                            metode="PUT"
+                                            :tervalidasi="false"
+                                            :komponen="'Transport lokal '.($item->peserta?->nama ?? '')"
+                                            :nominal="(float) $item->total_riil" />
                                     @else
                                         <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
                                             Belum diperiksa

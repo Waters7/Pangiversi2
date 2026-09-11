@@ -89,6 +89,11 @@
                             <p class="text-slate-500">Dasar Penugasan</p>
                             <p class="font-semibold">{{ $usulan->no_tugas }}</p>
                         </div>
+
+                        <div>
+                            <p class="text-slate-500">Nomor SPD Bertanda Tangan</p>
+                            <p class="font-semibold">{{ $usulan->no_spd ?: '—' }}</p>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -146,6 +151,15 @@
                         <span>Surat Tugas</span>
                         @if ($dokumen && $dokumen->surat_tugas)
                             <a href="{{ route('persetujuan.dokumen', $dokumen->surat_tugas) }}" class="text-blue-600 font-semibold">Lihat</a>
+                        @else
+                            <span class="text-slate-400 italic">Tidak ada</span>
+                        @endif
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span>SPD Bertanda Tangan</span>
+                        @if ($dokumen && $dokumen->spd_ditandatangani)
+                            <a href="{{ route('persetujuan.dokumen', $dokumen->spd_ditandatangani) }}" class="text-blue-600 font-semibold">Lihat</a>
                         @else
                             <span class="text-slate-400 italic">Tidak ada</span>
                         @endif

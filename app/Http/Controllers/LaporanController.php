@@ -11,6 +11,7 @@ use App\Models\PesertaUsulan;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\EkspresiTanggal;
+use App\Services\KertasCetak;
 use App\Services\PenulisNominatifXlsx;
 use App\Services\PenyusunNominatif;
 use App\Services\QrCodeService;
@@ -126,11 +127,13 @@ class LaporanController extends Controller
     /**
      * Rincian biaya yang sudah lengkap tanda tangannya.
      *
-     * "Lengkap" berarti ketiga tanda tangan sudah dibubuhkan: pelaksana
-     * menyetujui angkanya, PPK mengesahkan dokumennya, dan daftar
-     * nominatifnya sudah diterima tim keuangan. Sejak itu dokumennya sah
-     * sebagai dasar pembayaran dan tidak berubah lagi — jadi inilah berkas
-     * yang layak diarsipkan dan dicetak untuk lampiran.
+     * "Lengkap" berarti pelaksana sudah menyetujui angkanya dan PPK sudah
+     * mengesahkan kedua dokumennya — rincian biaya maupun daftar riil.
+     * Sejak itu dokumennya terkunci dan tidak berubah lagi, jadi inilah
+     * berkas yang layak diarsipkan dan dicetak untuk lampiran. Daftar
+     * nominatif tidak ditunggu: ia terbit per surat tugas dan dapat
+     * menyusul belakangan, sedangkan rincian yang sudah disahkan PPK tidak
+     * lagi bergantung padanya.
      */
     public function rincianLengkap(Request $request)
     {
@@ -138,12 +141,10 @@ class LaporanController extends Controller
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
 
-        $nominatifDikirim = DaftarNominatifModel::whereNotNull('dikirim_at')->pluck('no_tugas');
-
         $semua = DaftarRiil::with('usulan.user', 'usulan.keuangan.rincianBiaya', 'peserta', 'ppk')
             ->whereNotNull('ditandatangani_at')
             ->whereNotNull('rincian_ditandatangani_at')
-            ->whereHas('usulan', fn ($q) => $q->whereIn('no_tugas', $nominatifDikirim))
+            ->whereHas('usulan')
             ->when($cari, fn ($q) => $q->whereHas(
                 'usulan',
                 fn ($u) => $u->where('no_usulan', 'like', "%{$cari}%")
@@ -312,11 +313,13 @@ class LaporanController extends Controller
         // Barisnya dimuat sekali untuk seluruh surat tugas yang tampil, bukan
         // satu rangkaian kueri per daftar.
         $baris = $penyusun->barisBanyak($tampil->pluck('no_tugas'));
+        $menunggu = $penyusun->menungguBanyak($tampil->pluck('no_tugas'));
 
         $daftar = $tampil
             ->map(fn (DaftarNominatifModel $item) => [
                 'nominatif' => $item,
                 'baris' => $baris->get($item->no_tugas) ?? collect(),
+                'menunggu' => $menunggu->get($item->no_tugas) ?? collect(),
                 'periode' => $item->dikirim_at?->translatedFormat('F Y') ?? 'Tanpa Tanggal',
             ])
             ->values()
@@ -364,7 +367,7 @@ class LaporanController extends Controller
             'qr' => $nominatif->urlVerifikasi()
                 ? $qrCode->dataUri($nominatif->urlVerifikasi(), 180)
                 : null,
-        ])->setPaper('a4', 'landscape');
+        ])->setPaper(KertasCetak::UKURAN, KertasCetak::MENDATAR);
 
         return $pdf->download('Daftar-Nominatif_'.Str::slug($nominatif->no_tugas).'.pdf');
     }

@@ -58,6 +58,32 @@ enum Kemampuan: string
 
     case MelihatPembayaran = 'melihat-pembayaran';
 
+    /**
+     * Menyunting tanggal terbit Surat Perjalanan Dinas.
+     *
+     * Tanggal ini biasanya mengikuti tanggal pembuatan dan tidak diutak-atik,
+     * sebab ia menyatakan kapan surat benar-benar terbit. Hanya pimpinan dan
+     * administrator yang boleh menyesuaikannya, misalnya ketika nomor surat
+     * sudah tercatat di buku agenda pada tanggal yang berbeda.
+     */
+    case MengubahTanggalSpd = 'mengubah-tanggal-spd';
+
+    /**
+     * Mengisi kolom pengikut pada Surat Perjalanan Dinas.
+     *
+     * Pengikut ikut berangkat tanpa menjadi pelaksana dan tidak mengajukan
+     * usulan sendiri, sehingga pencantumannya menjadi keputusan pimpinan —
+     * bukan pilihan pengusul.
+     */
+    case MengisiPengikutSpd = 'mengisi-pengikut-spd';
+
+    /**
+     * Mengonfirmasi dan menandatangani laporan perjalanan dinas, atau
+     * mengembalikannya kepada pelaksana untuk direvisi. Konfirmasi inilah
+     * salah satu syarat pelunasan pembayaran.
+     */
+    case MengonfirmasiLaporanPerjadin = 'mengonfirmasi-laporan-perjadin';
+
     public function label(): string
     {
         return match ($this) {
@@ -70,6 +96,9 @@ enum Kemampuan: string
             self::MemvalidasiBiaya => 'Memvalidasi nominal biaya',
             self::MencatatPembayaran => 'Mencatat pembayaran dan bukti bayar',
             self::MelihatPembayaran => 'Membuka menu pembayaran bendahara',
+            self::MengubahTanggalSpd => 'Mengubah tanggal terbit SPD',
+            self::MengisiPengikutSpd => 'Mengisi pengikut pada SPD',
+            self::MengonfirmasiLaporanPerjadin => 'Mengonfirmasi laporan perjalanan dinas',
             self::MenandatanganiDaftarRiil => 'Menandatangani daftar pengeluaran riil',
             self::MelihatJadwalPerjalanan => 'Melihat jadwal keberangkatan',
             self::MelihatDashboardEksekutif => 'Melihat dashboard eksekutif',

@@ -23,7 +23,7 @@
                class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
         <button type="submit"
                 class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition">
-            Cari
+            Search
         </button>
         @if (filled($nilai))
             <a href="{{ $rute }}"

@@ -321,6 +321,27 @@ class TransportDaftarRiilTest extends TestCase
             ->assertSee($this->usulan->no_usulan);
     }
 
+    public function test_verifikasi_daftar_riil_dikelompokkan_per_bulan(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-05-04', 'tanggal_selesai' => '2026-05-06']);
+        $this->isiNota([1 => 75_000]);
+
+        $ppk = User::factory()->ppk()->create();
+
+        $this->actingAs($ppk)
+            ->get(route('persetujuan.daftar-riil', ['status' => 'menunggu-keuangan']))
+            ->assertOk()
+            ->assertSee('Mei 2026')
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->keys()->first() === 'Mei 2026')
+            ->assertViewHas('jumlahBulan', fn ($bulan) => ($bulan[5] ?? 0) === 1);
+
+        // Saringan periode mempertahankan tab yang sedang dibuka.
+        $this->actingAs($ppk)
+            ->get(route('persetujuan.daftar-riil', ['status' => 'menunggu-keuangan', 'tahun' => 2026, 'bulan' => 6]))
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->isEmpty());
+    }
+
     public function test_menu_persetujuan_tertutup_bagi_peran_lain(): void
     {
         $this->actingAs($this->timKeuangan)

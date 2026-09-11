@@ -45,9 +45,28 @@ class NotaTransport extends Model
         return RuasTransport::dari($this->urutan);
     }
 
+    /**
+     * Uraian pada daftar pengeluaran riil. Ruas dalam kota hanya satu, jadi
+     * keterangan pelaksana ikut disebut supaya barisnya tetap bercerita.
+     */
     public function getLabelAttribute(): string
     {
-        return $this->ruas?->label() ?? 'Ruas '.$this->urutan;
+        $label = $this->ruas?->label() ?? 'Ruas '.$this->urutan;
+
+        if ($this->ruas?->dalamKota() && filled($this->keterangan)) {
+            return "{$label} — {$this->keterangan}";
+        }
+
+        return $label;
+    }
+
+    /**
+     * Sebutan singkat pada checklist kelengkapan: "Ruas 1" untuk luar kota,
+     * "Transport lokal" untuk dalam kota.
+     */
+    public function getNamaRuasAttribute(): string
+    {
+        return $this->ruas?->dalamKota() ? $this->ruas->label() : 'Ruas '.$this->urutan;
     }
 
     public function terisi(): bool

@@ -395,18 +395,35 @@ class AlurPertanggungjawabanTest extends TestCase
 
     // ── Tahap 6: pelunasan ──
 
-    public function test_pelunasan_tertahan_sebelum_nominatif_dikirim(): void
+    /**
+     * Sisa boleh dibayarkan sebelum maupun sesudah tanda tangan: pengesahan
+     * pelaksana, PPK, dan daftar nominatif tidak menahan pelunasan. Yang
+     * ditunggu hanya konfirmasi laporan oleh pimpinan.
+     */
+    public function test_pelunasan_boleh_keluar_sebelum_ditandatangani(): void
+    {
+        $this->pelaksanaMengisiDokumen();
+        $this->timKeuanganMemvalidasi();
+        $this->konfirmasiLaporan($this->usulan);
+
+        $this->lunasi()->assertSessionMissing('error');
+
+        $this->assertSame(Keuangan::STATUS_LUNAS, $this->usulan->fresh('keuangan')->keuangan->status);
+    }
+
+    public function test_pelunasan_boleh_keluar_sebelum_nominatif_dikirim(): void
     {
         $this->pelaksanaMengisiDokumen();
         $this->timKeuanganMemvalidasi();
         $this->tandatanganiBerkas($this->usulan->fresh(), $this->ppk);
+        $this->konfirmasiLaporan($this->usulan);
 
         // Nominatif terbit tapi belum dikirim PPK ke tim keuangan.
         app(PenyusunNominatif::class)->terbitkan(self::NO_TUGAS);
 
-        $this->lunasi()->assertSessionHas('error');
+        $this->lunasi()->assertSessionMissing('error');
 
-        $this->assertNotSame(Keuangan::STATUS_LUNAS, $this->usulan->fresh('keuangan')->keuangan->status);
+        $this->assertSame(Keuangan::STATUS_LUNAS, $this->usulan->fresh('keuangan')->keuangan->status);
     }
 
     public function test_pelunasan_keluar_setelah_nominatif_diterima_tim_keuangan(): void
@@ -415,6 +432,7 @@ class AlurPertanggungjawabanTest extends TestCase
         $this->timKeuanganMemvalidasi();
         $this->tandatanganiBerkas($this->usulan->fresh(), $this->ppk);
         $this->terbitkanNominatif($this->usulan, $this->ppk);
+        $this->konfirmasiLaporan($this->usulan);
 
         $this->lunasi();
 

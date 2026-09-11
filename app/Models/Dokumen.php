@@ -15,6 +15,7 @@ class Dokumen extends Model
 
     protected $fillable = [
         'surat_tugas',
+        'spd_ditandatangani',
         'rundown',
         'dokumen_pendukung',
         'sppd',

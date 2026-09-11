@@ -11,6 +11,7 @@ use App\Models\Keuangan;
 use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\PenagihDokumen;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -68,6 +69,7 @@ class PertanggungjawabanPerjadinTest extends TestCase
             'kode_booking' => 'XY7QW2',
             'harga' => 2_450_000,
             'boarding_pass' => $this->berkas('bp.pdf'),
+            'invoice' => $this->berkas('invoice.pdf'),
         ], $ubahan));
     }
 
@@ -78,8 +80,13 @@ class PertanggungjawabanPerjadinTest extends TestCase
     {
         $ruas = [];
 
+        // Ruas yang bernominal wajib bernota, jadi buktinya ikut dikirim.
         foreach (RuasTransport::urutan() as $satu) {
             $ruas[$satu->value] = ['nominal' => $nominal[$satu->value] ?? null];
+
+            if (($nominal[$satu->value] ?? 0) > 0) {
+                $ruas[$satu->value]['bukti'] = $this->berkas("nota-{$satu->value}.pdf");
+            }
         }
 
         return $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
@@ -194,7 +201,6 @@ class PertanggungjawabanPerjadinTest extends TestCase
             'bill_hotel_no_transaksi' => 'TRX-88192',
             'bill_hotel_nominal' => 1_200_000,
             'kwintasi' => $this->berkas('kwitansi.pdf'),
-            'faktur' => $this->berkas('faktur.pdf'),
         ])->assertRedirect();
 
         $dokumen = $this->usulan->fresh('dokumen')->dokumen->last();
@@ -374,5 +380,192 @@ class PertanggungjawabanPerjadinTest extends TestCase
             ->assertOk()
             ->assertSee('Tiket Pergi')
             ->assertSee('Laporan perjalanan dinas');
+    }
+    // ── Seksi akomodasi tidak menagih kolom yang tidak ada di formulir ──
+
+    /**
+     * Formulir akomodasi tidak memuat kolom faktur — satuan kerja tidak
+     * menerbitkannya — tetapi aturannya sempat tertinggal sehingga seksi ini
+     * menolak dengan "The faktur field is required" tanpa kolom yang bisa diisi.
+     */
+    public function test_akomodasi_tersimpan_tanpa_faktur(): void
+    {
+        $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'akomodasi',
+            'bill_hotel' => $this->berkas('bill.pdf'),
+            'bill_hotel_no_transaksi' => 'TRX-1',
+            'bill_hotel_nominal' => 500_000,
+            'kwintasi' => $this->berkas('kwitansi.pdf'),
+        ])->assertSessionDoesntHaveErrors()->assertRedirect();
+
+        $this->assertNotNull($this->usulan->dokumen()->latest('id')->value('bill_hotel'));
+    }
+
+    public function test_formulir_akomodasi_tidak_memuat_kolom_faktur(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $this->usulan))
+            ->assertOk()
+            ->assertDontSee('name="faktur"', false);
+    }
+
+    // ── Invoice tiket per arah ──
+
+    public function test_tiap_tiket_meminta_invoice_pembeliannya(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('Invoice tiket pergi')
+            ->assertSee('Invoice tiket pulang');
+    }
+
+    public function test_tiket_tanpa_invoice_ditolak(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi, ['invoice' => null])
+            ->assertSessionHasErrors('invoice');
+
+        $this->assertSame(0, $this->usulan->tiket()->count());
+    }
+
+    public function test_invoice_tersimpan_per_arah(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+        $this->simpanTiket(ArahTiket::Pulang);
+
+        $invoice = $this->usulan->tiket()->pluck('invoice');
+
+        $this->assertCount(2, $invoice->filter());
+        $invoice->each(fn (string $berkas) => Storage::disk('public')->assertExists($berkas));
+    }
+
+    /** Invoice yang sudah tersimpan tidak ditagih lagi saat tiket dikirim ulang. */
+    public function test_invoice_tersimpan_tidak_ditagih_ulang(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+
+        $this->simpanTiket(ArahTiket::Pergi, ['invoice' => null, 'boarding_pass' => null, 'harga' => 2_600_000])
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(2_600_000.0, (float) $this->usulan->tiket()->value('harga'));
+    }
+
+    public function test_tiket_belum_lengkap_tanpa_invoice(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+        $this->usulan->tiket()->update(['invoice' => null]);
+
+        $this->assertFalse($this->usulan->tiket()->first()->lengkap());
+    }
+
+    // ── Nota transportasi hanya wajib bila bernominal ──
+
+    public function test_ruas_bernominal_wajib_bernota(): void
+    {
+        $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'nota',
+            'ruas' => [
+                1 => ['nominal' => 100_000],
+                2 => ['nominal' => null],
+                3 => ['nominal' => null],
+                4 => ['nominal' => null],
+            ],
+        ])->assertSessionHasErrors('ruas.1.bukti');
+
+        $this->assertSame(0, $this->usulan->notaTransport()->count());
+    }
+
+    public function test_ruas_tanpa_nominal_tidak_wajib_bernota(): void
+    {
+        $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'nota',
+            'ruas' => [
+                1 => ['nominal' => 100_000, 'bukti' => $this->berkas('nota-1.pdf')],
+                2 => ['nominal' => null],
+                3 => ['nominal' => null],
+                4 => ['nominal' => null],
+            ],
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(100_000.0, (float) $this->usulan->notaTransport()->sum('nominal'));
+    }
+
+    /** Nota yang sudah pernah diunggah tidak ditagih lagi saat nominalnya diubah. */
+    public function test_nota_tersimpan_tidak_ditagih_ulang(): void
+    {
+        $this->simpanNota([1 => 100_000]);
+
+        $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'nota',
+            'ruas' => [
+                1 => ['nominal' => 125_000],
+                2 => ['nominal' => null],
+                3 => ['nominal' => null],
+                4 => ['nominal' => null],
+            ],
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(125_000.0, (float) $this->usulan->notaTransport()->sum('nominal'));
+    }
+
+    // ── Checklist kelengkapan mengikuti isi formulir ──
+
+    public function test_checklist_tiket_membawa_boarding_pass_dan_invoice(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+
+        $baris = collect(app(PenagihDokumen::class)->checklist($this->usulan->fresh()))
+            ->firstWhere('label', 'Tiket Pergi');
+
+        $this->assertTrue($baris['terpenuhi']);
+        $this->assertSame(['Boarding pass', 'Invoice'], array_column($baris['berkas'], 'label'));
+        $this->assertSame('Kode booking XY7QW2', $baris['catatan']);
+    }
+
+    public function test_checklist_tiket_menyebut_bagian_yang_kurang(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+        $this->usulan->tiket()->update(['invoice' => null]);
+
+        $baris = collect(app(PenagihDokumen::class)->checklist($this->usulan->fresh()))
+            ->firstWhere('label', 'Tiket Pergi');
+
+        $this->assertFalse($baris['terpenuhi']);
+        $this->assertSame('Belum ada invoice', $baris['catatan']);
+    }
+
+    public function test_checklist_nota_membawa_bukti_tiap_ruas(): void
+    {
+        $this->simpanNota([1 => 100_000, 3 => 50_000]);
+
+        $baris = collect(app(PenagihDokumen::class)->checklist($this->usulan->fresh()))
+            ->firstWhere('label', 'Nota Transportasi Lokal');
+
+        $this->assertTrue($baris['terpenuhi']);
+        $this->assertSame(['Ruas 1', 'Ruas 3'], array_column($baris['berkas'], 'label'));
+    }
+
+    public function test_checklist_nota_menandai_ruas_bernominal_tanpa_bukti(): void
+    {
+        $this->simpanNota([1 => 100_000]);
+        $this->usulan->notaTransport()->update(['bukti' => null]);
+
+        $baris = collect(app(PenagihDokumen::class)->checklist($this->usulan->fresh()))
+            ->firstWhere('label', 'Nota Transportasi Lokal');
+
+        $this->assertFalse($baris['terpenuhi']);
+        $this->assertStringContainsString('ruas 1', $baris['catatan']);
+    }
+
+    public function test_checklist_keuangan_menautkan_tiap_berkas_tiket(): void
+    {
+        $this->simpanTiket(ArahTiket::Pergi);
+        $tiket = $this->usulan->tiket()->first();
+
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertSee(Storage::url($tiket->boarding_pass))
+            ->assertSee(Storage::url($tiket->invoice));
     }
 }

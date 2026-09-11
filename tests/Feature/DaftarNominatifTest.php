@@ -10,13 +10,16 @@ use App\Models\Usulan;
 use App\Services\PenyusunNominatif;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Daftar nominatif mengesahkan pembayaran seluruh pelaksana di bawah satu
- * surat tugas sekaligus. Karena itu ia terbit per surat tugas, bukan per
- * usulan, dan baru setelah semua pelaksananya menyelesaikan dokumen.
+ * Daftar nominatif terbit per surat tugas, bukan per usulan. Ia terbit
+ * begitu satu pelaksana menyelesaikan dokumennya dan hanya memuat yang
+ * sudah tuntas; kawan seperjalanan yang menyusul bertambah ke daftar yang
+ * sama, bukan menahan daftarnya.
  */
 class DaftarNominatifTest extends TestCase
 {
@@ -68,7 +71,7 @@ class DaftarNominatifTest extends TestCase
 
     // ── Syarat terbit ──
 
-    public function test_terbit_ketika_seluruh_pelaksana_menyelesaikan_dokumen(): void
+    public function test_terbit_ketika_pelaksana_menyelesaikan_dokumen(): void
     {
         $this->usulanLengkap();
 
@@ -76,19 +79,160 @@ class DaftarNominatifTest extends TestCase
     }
 
     /**
-     * Satu pelaksana yang belum lengkap menahan seluruh daftar: nominatif
-     * mengesahkan pembayaran mereka sekaligus, bukan satu per satu.
+     * Pelaksana lain yang belum lengkap — bahkan yang usulannya masih draf —
+     * tidak menahan daftar: yang sudah tuntas tidak perlu menunggu kawan
+     * seperjalanannya untuk dibayar.
      */
-    public function test_belum_terbit_bila_satu_pelaksana_belum_lengkap(): void
+    public function test_tetap_terbit_meski_pelaksana_lain_belum_lengkap(): void
     {
         $this->usulanLengkap();
 
+        Usulan::factory()->create([
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Draft->value,
+        ]);
+
+        $this->assertTrue($this->penyusun()->siapTerbit(self::NO_TUGAS));
+        $this->assertContains(self::NO_TUGAS, $this->penyusun()->suratTugasSiap()->all());
+    }
+
+    public function test_belum_terbit_bila_belum_ada_yang_lengkap(): void
+    {
         Usulan::factory()->create([
             'no_tugas' => self::NO_TUGAS,
             'status' => StatusUsulan::Disetujui->value,
         ]);
 
         $this->assertFalse($this->penyusun()->siapTerbit(self::NO_TUGAS));
+        $this->assertNotContains(self::NO_TUGAS, $this->penyusun()->suratTugasSiap()->all());
+    }
+
+    /**
+     * Yang belum tuntas belum tercantum — angkanya belum disahkan PPK —
+     * tapi namanya disebut supaya PPK tahu daftarnya masih akan bertambah.
+     */
+    public function test_pelaksana_yang_belum_lengkap_tidak_tercantum(): void
+    {
+        $this->usulanLengkap();
+
+        $menyusul = User::factory()->create(['nama' => 'Pingkan Umboh']);
+        Usulan::factory()->create([
+            'id_user' => $menyusul->id,
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Draft->value,
+        ]);
+
+        $baris = $this->penyusun()->baris(self::NO_TUGAS);
+
+        $this->assertCount(1, $baris);
+        $this->assertNotContains('Pingkan Umboh', $baris->pluck('nama')->all());
+        $this->assertSame(['Pingkan Umboh'], $this->penyusun()->menunggu(self::NO_TUGAS)->all());
+    }
+
+    public function test_usulan_ditolak_tidak_dihitung_menunggu(): void
+    {
+        $this->usulanLengkap();
+
+        Usulan::factory()->create([
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Ditolak->value,
+        ]);
+
+        $this->assertTrue($this->penyusun()->menunggu(self::NO_TUGAS)->isEmpty());
+    }
+
+    /**
+     * Kawan seperjalanan yang menyusul bertambah ke daftar yang sama —
+     * tidak lahir daftar kedua untuk surat tugas yang sama.
+     */
+    public function test_pelaksana_yang_menyusul_bertambah_ke_daftar_yang_sama(): void
+    {
+        $this->usulanLengkap();
+        $this->penyusun()->terbitkanYangSiap();
+
+        $menyusul = User::factory()->create(['nama' => 'Pingkan Umboh']);
+        $usulanMenyusul = Usulan::factory()->create([
+            'id_user' => $menyusul->id,
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Disetujui->value,
+        ]);
+
+        $this->assertCount(1, $this->penyusun()->baris(self::NO_TUGAS));
+
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $usulanMenyusul->id]);
+        $usulanMenyusul = $this->lengkapiPertanggungjawaban($usulanMenyusul);
+        app(SinkronBiayaDokumen::class)->selaraskan($usulanMenyusul);
+        $this->tandatanganiBerkas($usulanMenyusul->fresh(), $this->ppk);
+
+        $this->penyusun()->terbitkanYangSiap();
+
+        $baris = $this->penyusun()->baris(self::NO_TUGAS);
+
+        $this->assertSame(1, DaftarNominatif::where('no_tugas', self::NO_TUGAS)->count());
+        $this->assertCount(2, $baris);
+        $this->assertSame([1, 2], $baris->pluck('nomor')->all());
+        $this->assertContains('Pingkan Umboh', $baris->pluck('nama')->all());
+        $this->assertTrue($this->penyusun()->menunggu(self::NO_TUGAS)->isEmpty());
+    }
+
+    /**
+     * Pelunasan tidak menunggu daftar nominatif — kawan seperjalanan yang
+     * belum tercantum tetap boleh dilunasi selama laporannya sudah
+     * dikonfirmasi pimpinan.
+     */
+    public function test_pelunasan_tidak_menunggu_pencantuman_pada_nominatif(): void
+    {
+        Storage::fake('public');
+
+        $this->usulanLengkap();
+        $this->penyusun()->terbitkan(self::NO_TUGAS);
+
+        $menyusul = Usulan::factory()->create([
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Disetujui->value,
+        ]);
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $menyusul->id]);
+        $this->konfirmasiLaporan($menyusul);
+
+        $bendahara = User::factory()->create(['role' => User::ROLE_BENDAHARA]);
+
+        $this->actingAs($bendahara)->post(route('keuangan.bayar-uang-muka', $menyusul), [
+            'tanggal_transfer' => today()->subDays(3)->toDateString(),
+            'bukti_transfer' => UploadedFile::fake()->create('um.pdf', 40, 'application/pdf'),
+        ]);
+
+        $this->actingAs($bendahara)
+            ->post(route('keuangan.bayar-sisa', $menyusul), [
+                'tanggal_pelunasan' => today()->toDateString(),
+                'bukti_pelunasan' => UploadedFile::fake()->create('lunas.pdf', 40, 'application/pdf'),
+            ])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(Keuangan::STATUS_LUNAS, $menyusul->fresh('keuangan')->keuangan->status);
+    }
+
+    public function test_ppk_diberi_tahu_pelaksana_yang_belum_tercantum(): void
+    {
+        $this->usulanLengkap();
+
+        Usulan::factory()->create([
+            'id_user' => User::factory()->create(['nama' => 'Pingkan Umboh'])->id,
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Draft->value,
+        ]);
+
+        $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
+
+        $this->actingAs($this->ppk)
+            ->get(route('persetujuan.nominatif'))
+            ->assertOk()
+            ->assertSee('1 pelaksana lain pada surat tugas ini belum tercantum')
+            ->assertSee('Pingkan Umboh');
+
+        $this->actingAs($this->ppk)
+            ->get(route('persetujuan.nominatif.detail', $daftar))
+            ->assertOk()
+            ->assertSee('Pingkan Umboh');
     }
 
     public function test_surat_tugas_tanpa_usulan_tidak_terbit(): void
@@ -175,6 +319,27 @@ class DaftarNominatifTest extends TestCase
             ->assertOk()
             ->assertSee(self::NO_TUGAS)
             ->assertSee('Menunggu Tanda Tangan PPK');
+    }
+
+    public function test_verifikasi_nominatif_dikelompokkan_per_bulan_surat_tugas(): void
+    {
+        $this->usulanLengkap();
+        $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
+        $daftar->update(['tanggal_tugas' => '2026-07-14']);
+
+        $this->actingAs($this->ppk)
+            ->get(route('persetujuan.nominatif'))
+            ->assertOk()
+            ->assertSee('Juli 2026')
+            ->assertViewHas('belum', fn ($belum) => $belum->keys()->first() === 'Juli 2026')
+            ->assertViewHas('tahunTersedia', fn ($tahun) => $tahun->contains(2026));
+
+        $this->actingAs($this->ppk)
+            ->get(route('persetujuan.nominatif', ['tahun' => 2026, 'bulan' => 8]))
+            ->assertOk()
+            // Daftar lompat tetap memuat seluruh surat tugas; yang disaring isinya.
+            ->assertViewHas('belum', fn ($belum) => $belum->isEmpty())
+            ->assertViewHas('sudah', fn ($sudah) => $sudah->isEmpty());
     }
 
     public function test_menu_nominatif_tertutup_bagi_peran_lain(): void

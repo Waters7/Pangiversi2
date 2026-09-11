@@ -84,6 +84,58 @@
                         <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin"
                                                    :terpilih="$usulan->id_kategori_perjadin" />
 
+                        @php $dokumen = $usulan->dokumen->first(); @endphp
+
+                        {{-- SPD bertanda tangan beserta nomor resminya — dasar
+                             persetujuan PPK, wajib sebelum pengajuan dikirim. --}}
+                        <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-4">
+                            <div>
+                                <label for="spd_ditandatangani" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Berkas SPD Bertanda Tangan
+                                    @if ($dokumen?->spd_ditandatangani)
+                                        <span class="text-xs font-normal text-slate-400 ml-1">(kosongkan jika tidak diganti)</span>
+                                    @else
+                                        <span class="text-red-500">*</span>
+                                    @endif
+                                </label>
+                                @if ($dokumen?->spd_ditandatangani)
+                                    <div class="flex items-center justify-between px-3 py-2 mb-2 bg-white border border-indigo-100 rounded-xl">
+                                        <div class="flex items-center gap-2 text-xs text-slate-600">
+                                            <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <span class="font-semibold text-slate-700">File saat ini:</span>
+                                            <span class="text-slate-500 truncate max-w-40">{{ basename($dokumen->spd_ditandatangani) }}</span>
+                                        </div>
+                                        <a href="{{ asset('storage/' . $dokumen->spd_ditandatangani) }}" target="_blank"
+                                           class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline shrink-0">Lihat</a>
+                                    </div>
+                                @endif
+                                <input type="file" name="spd_ditandatangani" id="spd_ditandatangani"
+                                       accept=".pdf,.jpg,.jpeg,.png"
+                                       data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
+                                       @unless ($dokumen?->spd_ditandatangani) required @endunless
+                                       class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('spd_ditandatangani') ? 'border-red-500' : 'border-slate-200' }}">
+                                <p class="text-xs text-slate-400 mt-1">SPD yang sudah ditandatangani PPK dan Direktur — PDF, JPG, PNG, maks. 5 MB</p>
+                                <p class="file-error hidden text-red-500 text-xs mt-1"></p>
+                                @error('spd_ditandatangani')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="no_spd" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Nomor Surat Perjalanan Dinas <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="no_spd" id="no_spd" required
+                                       class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('no_spd') ? 'border-red-500' : 'border-slate-200' }}"
+                                       placeholder="cth: KU.02.04/F.XXX.8/1234/2026"
+                                       value="{{ old('no_spd', $usulan->no_spd) }}">
+                                <p class="text-xs text-slate-400 mt-1">Nomor naskah dari SRIKANDI, disalin persis seperti pada dokumen</p>
+                                @error('no_spd')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
                         {{-- Nomor Surat Tugas --}}
                         <div>
                             <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -192,7 +244,6 @@
 
                     <div class="p-6 space-y-5">
 
-                        @php $dokumen = $usulan->dokumen->first(); @endphp
 
                         {{-- Surat Tugas --}}
                         <div>
@@ -308,7 +359,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                             </svg>
-                            Simpan & Kirim Verifikasi PPK
+                            Simpan & Kirim Pengajuan Perjadin
                         </button>
 
                         <button type="submit" name="action" value="draft"

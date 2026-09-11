@@ -87,6 +87,41 @@ class RincianBiayaPpkTest extends TestCase
         ]);
     }
 
+    // ── Pengelompokan per bulan dan tahun ──
+
+    public function test_daftar_dikelompokkan_per_bulan_keberangkatan(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-03-09', 'tanggal_selesai' => '2026-03-11']);
+
+        $this->bukaRincian()
+            ->assertSee('Maret 2026')
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->keys()->first() === 'Maret 2026');
+    }
+
+    public function test_saringan_bulan_dan_tahun_tersedia(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-03-09', 'tanggal_selesai' => '2026-03-11']);
+
+        $this->bukaRincian()
+            ->assertViewHas('tahunTersedia', fn ($tahun) => $tahun->contains(2026))
+            ->assertViewHas('jumlahBulan', fn ($bulan) => ($bulan[3] ?? 0) === 1);
+    }
+
+    public function test_saringan_periode_membatasi_daftarnya(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-03-09', 'tanggal_selesai' => '2026-03-11']);
+
+        $this->actingAs(User::factory()->ppk()->create())
+            ->get(route('persetujuan.rincian-biaya', ['tahun' => 2026, 'bulan' => 4]))
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->isEmpty());
+
+        $this->actingAs(User::factory()->ppk()->create())
+            ->get(route('persetujuan.rincian-biaya', ['tahun' => 2026, 'bulan' => 3]))
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->flatten(1)->count() === 1);
+    }
+
     // ── Menu tersendiri ──
 
     public function test_menu_rincian_biaya_terbuka_bagi_ppk(): void

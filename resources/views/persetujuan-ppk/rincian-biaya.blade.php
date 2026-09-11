@@ -24,7 +24,7 @@
                    class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
             <button type="submit"
                     class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition">
-                Cari
+                Search
             </button>
             @if ($cari)
                 <a href="{{ route('persetujuan.rincian-biaya') }}"
@@ -45,6 +45,15 @@
             'ditandatangani' => ['label' => 'Ditandatangani', 'jumlah' => $jumlah['ditandatangani'], 'badge' => 'bg-emerald-100 text-emerald-700'],
         ]" />
 
+    {{-- Saringan periode: berkas dikelompokkan per bulan keberangkatan. --}}
+    <x-saring-periode
+        :aksi="route('persetujuan.rincian-biaya')"
+        :tahun="$tahun"
+        :bulan="$bulan"
+        :tahun-tersedia="$tahunTersedia"
+        :jumlah-bulan="$jumlahBulan"
+        :ekstra="['status' => $status, 'cari' => $cari]" />
+
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -59,7 +68,14 @@
                 </thead>
 
                 <tbody class="divide-y divide-slate-100">
-                    @forelse ($daftar as $baris)
+                    @forelse ($daftar as $periode => $kelompokPeriode)
+                        <tr class="bg-slate-100/70">
+                            <td colspan="5" class="px-5 py-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
+                                {{ $periode }}
+                                <span class="ml-1.5 font-semibold text-slate-400 normal-case tracking-normal">{{ $kelompokPeriode->count() }} berkas</span>
+                            </td>
+                        </tr>
+                    @foreach ($kelompokPeriode as $baris)
                         @php
                             $usulan = $baris['usulan'];
                             $berkas = $baris['berkas'];
@@ -128,6 +144,7 @@
                                 </div>
                             </td>
                         </tr>
+                    @endforeach
                     @empty
                         <tr>
                             <td colspan="5" class="px-5 py-14 text-center">

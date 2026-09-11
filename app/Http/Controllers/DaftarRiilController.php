@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\KategoriBiaya;
 use App\Models\AuditLog;
 use App\Models\DaftarRiil;
 use App\Models\Notifikasi;
@@ -11,10 +10,11 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\JalurPersetujuan;
+use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
+use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
-use App\Services\SinkronBiayaDokumen;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,8 +27,8 @@ class DaftarRiilController extends Controller
         private AuditService $audit,
         private NotifikasiService $notifikasi,
         private QrCodeService $qrCode,
-        private SinkronBiayaDokumen $sinkron,
         private PenguncianBerkas $kunci,
+        private PengirimanBerkas $pengiriman,
     ) {}
 
     public function show(Usulan $usulan): View
@@ -100,57 +100,11 @@ class DaftarRiilController extends Controller
             'Berkas sudah ditandatangani PPK. Mintalah PPK mencabut tanda tangannya lebih dulu.'
         );
 
-        $total = $this->totalRincian($usulan);
-
-        if ($total <= 0 && $daftar->total_riil <= 0) {
-            return back()->with('error', 'Belum ada nominal yang dapat dikirim. Periksa rincian biayanya lebih dulu.');
+        if ($alasan = $this->pengiriman->alasanBelumSiap($usulan, $daftar)) {
+            return back()->with('error', $alasan);
         }
 
-        // Seluruh nominal dari dokumen pelaksana harus sudah diperiksa. Tanpa
-        // penjagaan ini, pelaksana diminta menandatangani angka yang belum
-        // tentu benar.
-        $menunggu = $this->sinkron->menungguValidasi($usulan);
-
-        if ($menunggu->isNotEmpty()) {
-            return back()->with(
-                'error',
-                "Masih ada {$menunggu->count()} nominal yang belum divalidasi. "
-                .'Periksa rincian biayanya lebih dulu sebelum dikirim ke pelaksana.',
-            );
-        }
-
-        // Transport lokal diperiksa terpisah: ia tidak masuk rincian biaya,
-        // jadi tidak ikut terhitung pada penjagaan di atas.
-        if (! $daftar->sudahDivalidasi()) {
-            return back()->with(
-                'error',
-                'Transport lokal belum divalidasi. Periksa notanya pada menu Keuangan → Transport Lokal.',
-            );
-        }
-
-        $daftar->kirimKePegawai();
-
-        $this->audit->catat(
-            AuditLog::AKSI_DOKUMEN,
-            "Berkas pertanggungjawaban {$peserta->nama} pada usulan {$usulan->no_usulan} dikirim untuk diperiksa. Masa sanggah sampai {$daftar->batas_sanggah->translatedFormat('d F Y')}.",
-            ['usulan' => $usulan],
-        );
-
-        if ($peserta->user) {
-            $this->notifikasi->kirim(
-                $peserta->user,
-                'Berkas pertanggungjawaban menunggu tanda tangan Anda',
-                'Rincian biaya (Rp '.number_format($total, 0, ',', '.').') dan daftar pengeluaran riil (Rp '
-                    .number_format($daftar->total_riil, 0, ',', '.').') perjalanan dinas '.$usulan->no_usulan
-                    .' menunggu persetujuan Anda. Bila nominalnya tidak sesuai, ajukan sanggahan paling lambat '
-                    .$daftar->batas_sanggah->translatedFormat('d F Y').'.',
-                [
-                    'usulan' => $usulan,
-                    'tipe' => Notifikasi::TIPE_PERINGATAN,
-                    'url' => route('rincian-saya.daftar-riil'),
-                ],
-            );
-        }
+        $this->pengiriman->kirim($usulan, $peserta, $daftar);
 
         return back()->with('success', "Berkas dikirim ke {$peserta->nama}. Masa sanggah ".DaftarRiil::HARI_MASA_SANGGAH.' hari.');
     }
@@ -183,6 +137,11 @@ class DaftarRiilController extends Controller
             ['usulan' => $usulan],
         );
 
+        // Bila ini pemeriksaan terakhir, berkas langsung berjalan ke pelaksana.
+        if ($this->pengiriman->kirimBilaSiap($usulan->fresh())) {
+            return back()->with('success', "Transport lokal divalidasi. Seluruh nominal sudah diperiksa, berkas dikirim ke {$peserta->nama} — masa sanggah ".DaftarRiil::HARI_MASA_SANGGAH.' hari.');
+        }
+
         return back()->with('success', 'Transport lokal divalidasi.');
     }
 
@@ -195,6 +154,14 @@ class DaftarRiilController extends Controller
         abort_if($daftar->sudah_ditandatangani, 403, 'Berkas sudah ditandatangani PPK.');
 
         $daftar->update(['divalidasi_at' => null, 'id_validator' => null]);
+
+        // Dicatat supaya dapat ditelusuri: pencabutan menahan berkas ke pelaksana,
+        // dan tanpa jejak ini tidak ada yang tahu mengapa berkas tidak berjalan.
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Validasi transport lokal pada usulan {$usulan->no_usulan} dicabut oleh {$request->user()->nama}.",
+            ['usulan' => $usulan],
+        );
 
         return back()->with('success', 'Validasi dicabut, nominalnya kembali menunggu pemeriksaan.');
     }
@@ -248,13 +215,6 @@ class DaftarRiilController extends Controller
      * Jumlah rincian biaya tanpa transport lokal — transport lokal
      * dipertanggungjawabkan lewat daftar riil.
      */
-    private function totalRincian(Usulan $usulan): float
-    {
-        return (float) ($usulan->keuangan?->rincianBiaya ?? collect())
-            ->reject(fn ($baris) => $baris->kategori === KategoriBiaya::TransportLokal)
-            ->sum('jumlah');
-    }
-
     /**
      * Pelaksana menyetujui nominal yang disusun tim keuangan.
      */
@@ -264,13 +224,13 @@ class DaftarRiilController extends Controller
         $jalur = $daftar->jalur(JalurPersetujuan::kenali($jenis));
 
         abort_unless(
-            $jalur->masaSanggahBerjalan(),
+            $jalur->bolehDitandatanganiPelaksana(),
             403,
             $jalur->sudahDitandatangani()
                 ? "{$jalur->nama()} sudah ditandatangani PPK."
                 : ($jalur->sudahDisetujui()
                     ? "Anda sudah menandatangani {$jalur->nama()}."
-                    : 'Masa sanggah dokumen ini sudah berakhir.')
+                    : 'Dokumen ini belum dapat ditandatangani.')
         );
 
         $jalur->setujui();
@@ -315,6 +275,8 @@ class DaftarRiilController extends Controller
         $daftar = $this->pastikanPelaksanaSendiri($request, $usulan, $peserta);
         $jalur = $daftar->jalur(JalurPersetujuan::kenali($jenis));
 
+        // Sanggahan hanya selama masa sanggah berjalan — berbeda dari tanda
+        // tangan, yang tetap terbuka sampai PPK mengesahkan.
         abort_unless(
             $jalur->masaSanggahBerjalan(),
             403,
@@ -428,7 +390,7 @@ class DaftarRiilController extends Controller
 
         $pdf = Pdf::loadView('daftar-riil.cetak', compact(
             'usulan', 'peserta', 'daftar', 'qr', 'qrPelaksana',
-        ));
+        ))->setPaper(KertasCetak::UKURAN);
 
         return $pdf->download("Daftar-Riil_{$usulan->no_usulan}_{$peserta->nama}.pdf");
     }

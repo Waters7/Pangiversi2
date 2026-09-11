@@ -13,6 +13,7 @@ use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\SinkronBiayaDokumen;
+use App\Services\Terbilang;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -79,7 +80,7 @@ class FormatDokumenCetakTest extends TestCase
             ->first(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::Penginapan);
 
         $this->assertNotNull($hotel);
-        $this->assertStringStartsWith('Biaya Hotel', $hotel->komponen);
+        $this->assertStringStartsWith('Uang Penginapan', $hotel->komponen);
         $this->assertStringContainsString('No. Transaksi', $hotel->komponen);
     }
 
@@ -108,6 +109,144 @@ class FormatDokumenCetakTest extends TestCase
             (float) $daftar->rincian->sum('nominal'),
             (float) $daftar->total_riil,
         );
+    }
+
+    // ── Transport lokal tercantum pada rincian biaya ──
+
+    /**
+     * Baris rincian tetap tanpa transport lokal (nominalnya dibayar terpisah
+     * lewat daftar riil), tetapi dokumen rincian biaya harus memuat seluruh
+     * biaya perjalanan — jadi transport lokal dicantumkan sebagai kelompoknya
+     * sendiri, dan jumlah akhirnya ikut menghitungnya.
+     */
+    public function test_cetakan_rincian_mencantumkan_transport_lokal(): void
+    {
+        $html = $this->htmlRincian();
+
+        $this->assertStringContainsString('Transportasi Lokal', $html);
+        $this->assertStringContainsString($this->daftar()->rincian->first()->uraian, $html);
+        $this->assertStringContainsString('Subtotal transportasi lokal', $html);
+    }
+
+    public function test_jumlah_pada_cetakan_rincian_menghitung_transport_lokal(): void
+    {
+        $rincian = (float) $this->rincian()->sum('jumlah');
+        $transport = (float) $this->daftar()->total_riil;
+
+        $this->assertGreaterThan(0, $transport);
+
+        $keseluruhan = number_format($rincian + $transport, 0, ',', '.');
+
+        $this->assertStringContainsString('JUMLAH', $this->htmlRincian());
+        $this->assertStringContainsString("Ditetapkan sejumlah</td><td>: Rp {$keseluruhan}", $this->htmlRincian());
+    }
+
+    /**
+     * Susunan resmi dokumen: transportasi (pesawat/kereta/bus), uang harian,
+     * transportasi lokal, biaya akomodasi — transport lokal disisipkan pada
+     * urutannya, bukan ditempel di paling bawah.
+     */
+    public function test_cetakan_rincian_menyusun_kelompok_sesuai_urutan_resmi(): void
+    {
+        $html = $this->htmlRincian();
+
+        $posisi = array_map(
+            fn (string $judul) => strpos($html, $judul),
+            ['Transportasi (Pesawat / Kereta / Bus)', 'Transportasi Lokal', 'Biaya Akomodasi'],
+        );
+
+        $this->assertNotContains(false, $posisi);
+        $this->assertTrue($posisi[0] < $posisi[1] && $posisi[1] < $posisi[2]);
+    }
+
+    /** Di atas "Telah menerima jumlah uang" tercetak tempat dan tanggal pelaksana menyetujui. */
+    public function test_cetakan_rincian_mencantumkan_tanggal_tanda_tangan_pelaksana(): void
+    {
+        $this->daftar()->update(['rincian_disetujui_at' => '2026-08-20 10:00:00']);
+
+        $html = $this->htmlRincian();
+
+        $this->assertStringContainsString('Manado, 20 Agustus 2026', $html);
+        $this->assertTrue(
+            strpos($html, 'Manado, 20 Agustus 2026') < strpos($html, 'Telah menerima jumlah uang'),
+        );
+    }
+
+    public function test_tanggal_tanda_tangan_pelaksana_bertitik_sebelum_disetujui(): void
+    {
+        $this->assertStringContainsString('Manado, ……………………', $this->htmlRincian());
+    }
+
+    /** Baris lama yang tersimpan sebagai "Biaya Hotel" tetap tercetak sebagai Uang Penginapan. */
+    public function test_cetakan_menyebut_uang_penginapan_untuk_baris_hotel_lama(): void
+    {
+        $this->rincian()->first(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::Penginapan)
+            ->update(['komponen' => 'Biaya Hotel (No. Transaksi TRX-0001)']);
+
+        $html = $this->htmlRincian();
+
+        $this->assertStringContainsString('Uang Penginapan (No. Transaksi TRX-0001)', $html);
+        $this->assertStringNotContainsString('Biaya Hotel', $html);
+    }
+
+    public function test_halaman_rincian_keuangan_menampilkan_transport_lokal(): void
+    {
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertSee('Total Transport Lokal')
+            ->assertSee('Total Biaya Perjalanan (rincian + transport lokal)')
+            ->assertSee($this->daftar()->rincian->first()->uraian);
+    }
+
+    /**
+     * HTML dokumen rincian, dirender dengan data yang sama seperti cetak PDF.
+     */
+    private function htmlRincian(): string
+    {
+        $balasan = $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.cetak-rincian', $this->usulan->no_usulan))
+            ->assertOk();
+
+        // Teks di dalam PDF terkompresi, jadi templatnya dirender ulang
+        // sebagai HTML dari data yang identik dengan yang dipakai cetakan.
+        return view('keuangan.cetak-rincian', $this->dataCetakRincian())->render();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dataCetakRincian(): array
+    {
+        $usulan = $this->usulan->fresh(['user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta']);
+        $rincian = $usulan->keuangan->rincianBiaya
+            ->reject(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::TransportLokal)
+            ->values();
+        $daftar = $this->daftar()->load('rincian');
+        $total = (float) $rincian->sum('jumlah');
+        $totalTransport = (float) $daftar->total_riil;
+
+        return [
+            'usulan' => $usulan,
+            'peserta' => $this->peserta,
+            'rincianPerKategori' => $rincian
+                ->groupBy(fn (RincianBiaya $b) => $b->kategori->value)
+                ->sortBy(fn ($baris, $kategori) => KategoriBiaya::dari($kategori)->urutan()),
+            'total' => $total,
+            'transportLokal' => $daftar->rincian,
+            'tanggalPelaksana' => $daftar->rincian_disetujui_at ?? $daftar->disetujui_pegawai_at,
+            'totalTransportLokal' => $totalTransport,
+            'totalKeseluruhan' => $total + $totalTransport,
+            'dibayarkan' => 0.0,
+            'terbilang' => app(Terbilang::class)->konversi($total + $totalTransport),
+            'bendahara' => null,
+            'ppk' => $this->ppk,
+            'daftarRiil' => null,
+            'keuangan' => $usulan->keuangan,
+            'qrPelaksana' => null,
+            'qrPpk' => null,
+            'qrBendahara' => null,
+        ];
     }
 
     public function test_cetakan_kedua_dokumen_terbentuk(): void

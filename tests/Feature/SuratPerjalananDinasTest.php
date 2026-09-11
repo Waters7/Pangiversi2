@@ -6,6 +6,7 @@ use App\Models\LokasiTujuan;
 use App\Models\SpdPelaksana;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
+use App\Services\KertasCetak;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -52,6 +53,12 @@ class SuratPerjalananDinasTest extends TestCase
             'nama' => 'Wakil Direktur I',
             'jabatan' => 'Wakil Direktur I',
         ]);
+    }
+
+    /** Pengikut hanya boleh dicantumkan pimpinan, jadi ujinya perlu akun itu. */
+    private function pimpinan(): User
+    {
+        return User::where('role', User::ROLE_PIMPINAN)->firstOrFail();
     }
 
     /**
@@ -104,7 +111,6 @@ class SuratPerjalananDinasTest extends TestCase
             ->assertSee('Identitas Surat')
             ->assertSee('Pelaksana Perjalanan Dinas')
             ->assertSee('Rencana Perjalanan')
-            ->assertSee('Pengikut')
             ->assertSee('Pembebanan Anggaran', false)
             ->assertSee('Pratinjau')
             ->assertSee('Maksud Perjalanan Dinas');
@@ -160,7 +166,7 @@ class SuratPerjalananDinasTest extends TestCase
         $this->assertSame('Jakarta', $spd->tempat_tujuan);
         $this->assertSame('Angkutan Udara', $spd->alat_angkut);
         $this->assertCount(1, $spd->pelaksana);
-        $this->assertSame('KU.02.04/F.XXX.8/123/'.now()->year, $spd->pelaksana->first()->nomor_surat);
+        $this->assertStringStartsWith('PJ-', $spd->pelaksana->first()->nomor_surat);
     }
 
     public function test_lama_perjalanan_dihitung_inklusif(): void
@@ -219,7 +225,7 @@ class SuratPerjalananDinasTest extends TestCase
 
     public function test_pengikut_tersimpan_dan_baris_kosong_diabaikan(): void
     {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian([
+        $this->actingAs($this->pimpinan())->post(route('spd.store'), $this->isian([
             'pengikut' => [
                 ['nama' => 'Anak Pertama', 'tanggal_lahir' => '2015-05-05', 'keterangan' => 'Anak'],
                 ['nama' => '', 'tanggal_lahir' => null, 'keterangan' => ''],
@@ -242,14 +248,20 @@ class SuratPerjalananDinasTest extends TestCase
             ->assertSessionHasErrors('tanggal_kembali');
     }
 
-    public function test_nomor_surat_wajib_diisi(): void
+    /** Nomor surat terbit sendiri, jadi surat tanpa nomor kiriman tetap sah. */
+    public function test_surat_tersimpan_tanpa_nomor_pada_kiriman(): void
     {
         $isian = $this->isian();
-        $isian['pelaksana'][0]['nomor_surat'] = '';
+        unset($isian['pelaksana'][0]['nomor_surat']);
 
         $this->actingAs($this->pengguna)
             ->post(route('spd.store'), $isian)
-            ->assertSessionHasErrors('pelaksana.0.nomor_surat');
+            ->assertSessionHasNoErrors();
+
+        $this->assertStringStartsWith(
+            'PJ-',
+            SuratPerjalananDinas::first()->pelaksana->first()->nomor_surat,
+        );
     }
 
     // ── Dokumen ──
@@ -318,194 +330,86 @@ class SuratPerjalananDinasTest extends TestCase
         $this->get(route('spd.create'))->assertRedirect(route('login'));
     }
 
-    // ── Nomor surat wajib unik ──
-
-    public function test_nomor_yang_sudah_terpakai_ditolak(): void
-    {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
-
-        $this->actingAs($this->pengguna)
-            ->post(route('spd.store'), $this->isian())
-            ->assertSessionHasErrors('pelaksana.0.nomor_surat');
-
-        // Surat kedua tidak ikut tersimpan.
-        $this->assertSame(1, SuratPerjalananDinas::count());
-    }
-
-    public function test_pesan_penolakan_menyebut_nomor_dan_pemakainya(): void
-    {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
-
-        $galat = $this->actingAs($this->pengguna)
-            ->post(route('spd.store'), $this->isian())
-            ->assertSessionHasErrors()
-            ->getSession()
-            ->get('errors')
-            ->first('pelaksana.0.nomor_surat');
-
-        $this->assertStringContainsString('KU.02.04/F.XXX.8/123/', $galat);
-        $this->assertStringContainsString($this->pengguna->nama, $galat);
-    }
+    // ── Penomoran otomatis ──
 
     /**
-     * Satu formulir dapat memuat banyak pelaksana; nomornya pun tidak boleh
-     * terketik dua kali di sana.
+     * Nomor SPD terbit sendiri dengan pola yang sama seperti nomor perjadin.
+     *
+     * Nomor resmi pada dokumen cetak datang dari SRIKANDI lewat penanda
+     * nomor naskah; yang tersimpan di sini penanda internalnya, dipakai
+     * memasangkan SPD dengan usulan perjalanan dinasnya.
      */
-    public function test_nomor_kembar_dalam_satu_surat_ditolak(): void
-    {
-        $orang = [
-            'nomor_surat' => '200',
-            'nama' => 'Pelaksana Pertama',
-            'nip' => '199001012020121001',
-        ];
-
-        $this->actingAs($this->pengguna)
-            ->post(route('spd.store'), $this->isian([
-                'pelaksana' => [
-                    $orang,
-                    array_merge($orang, ['nama' => 'Pelaksana Kedua', 'nip' => '199001012020121002']),
-                ],
-            ]))
-            ->assertSessionHasErrors('pelaksana.1.nomor_surat');
-
-        $this->assertSame(0, SuratPerjalananDinas::count());
-    }
-
-    public function test_nomor_urut_sama_pada_tahun_berbeda_tetap_boleh(): void
+    public function test_nomor_terbit_sendiri_berpola_perjadin(): void
     {
         $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
 
-        // Surat pertama dipindahkan ke tahun lalu, sehingga nomor lengkapnya
-        // berbeda meski nomor urutnya sama.
-        SuratPerjalananDinas::first()->pelaksana()->update([
-            'nomor_surat' => 'KU.02.04/F.XXX.8/123/'.(now()->year - 1),
-        ]);
-
-        $this->actingAs($this->pengguna)
-            ->post(route('spd.store'), $this->isian())
-            ->assertSessionHasNoErrors();
-
-        $this->assertSame(2, SuratPerjalananDinas::count());
-    }
-
-    /**
-     * Menyunting surat tanpa mengubah nomornya tidak boleh dianggap bentrok
-     * dengan dirinya sendiri.
-     */
-    public function test_menyunting_surat_tidak_bentrok_dengan_nomornya_sendiri(): void
-    {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
-        $spd = SuratPerjalananDinas::first();
-
-        $this->actingAs($this->pengguna)
-            ->put(route('spd.update', $spd), $this->isian(['tempat_tujuan' => 'Surabaya']))
-            ->assertSessionHasNoErrors();
-
-        $this->assertSame('Surabaya', $spd->fresh()->tempat_tujuan);
-    }
-
-    public function test_menyunting_ke_nomor_milik_surat_lain_ditolak(): void
-    {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian([
-            'pelaksana' => [['nomor_surat' => '124']],
-        ]));
-
-        $kedua = SuratPerjalananDinas::latest('id')->first();
-
-        $this->actingAs($this->pengguna)
-            ->put(route('spd.update', $kedua), $this->isian())
-            ->assertSessionHasErrors('pelaksana.0.nomor_surat');
-    }
-    // ── Format nomor surat ──
-
-    /**
-     * Pelaksana hanya mengetik nomor urutnya. Awalan arsip dan tahun surat
-     * tampil sebagai teks tetap, jadi formatnya tidak dapat keliru.
-     */
-    public function test_formulir_hanya_meminta_nomor_urut(): void
-    {
-        $isi = $this->actingAs($this->pengguna)->get(route('spd.create'))->assertOk()->getContent();
-        $polos = str_replace('\\/', '/', $isi);
-
-        $this->assertStringContainsString('KU.02.04/F.XXX.8/', $polos);
-        $this->assertStringContainsString('/'.now()->year, $polos);
-        $this->assertStringContainsString('Cukup nomor urut buku agenda', $polos);
-    }
-
-    public function test_nomor_lengkap_dirakit_sistem_bukan_diketik(): void
-    {
-        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian([
-            'pelaksana' => [['nomor_surat' => '1557']],
-        ]));
-
-        $this->assertSame(
-            'KU.02.04/F.XXX.8/1557/'.now()->year,
-            SuratPerjalananDinas::first()->pelaksana->first()->nomor_surat
+        $this->assertMatchesRegularExpression(
+            '/^PJ-[A-Z]+-'.now()->format('Y').'-\d{2}-\d{3}$/',
+            SuratPerjalananDinas::first()->pelaksana->first()->nomor_surat,
         );
     }
 
-    /**
-     * Tahun mengikuti tanggal surat diterbitkan. Kalau diambil dari tahun
-     * berjalan, SPD tahun lalu yang disunting akan berpindah tahun dan
-     * nomornya tidak lagi cocok dengan buku agenda.
-     */
-    public function test_tahun_mengikuti_tanggal_surat_bukan_tahun_berjalan(): void
+    public function test_nomor_berikutnya_melanjutkan_deret(): void
     {
-        $spd = $this->buatSpd();
-        $spd->update(['tanggal_surat' => '2024-03-05']);
+        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
+        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
 
-        $this->actingAs($this->pengguna)->put(route('spd.update', $spd), $this->isian([
-            'pelaksana' => [['nomor_surat' => '77']],
+        $nomor = SpdPelaksana::orderBy('nomor_surat')->pluck('nomor_surat')->all();
+
+        $this->assertCount(2, $nomor);
+        $this->assertStringEndsWith('-001', $nomor[0]);
+        $this->assertStringEndsWith('-002', $nomor[1]);
+    }
+
+    /** Bulan pada nomor mengikuti keberangkatan, bukan bulan surat dibuat. */
+    public function test_bulan_mengikuti_tanggal_berangkat(): void
+    {
+        $berangkat = now()->addMonths(2)->startOfMonth();
+
+        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian([
+            'tanggal_berangkat' => $berangkat->toDateString(),
+            'tanggal_kembali' => $berangkat->copy()->addDays(2)->toDateString(),
         ]));
 
-        $this->assertSame(
-            'KU.02.04/F.XXX.8/77/2024',
-            $spd->fresh()->pelaksana->first()->nomor_surat
+        $this->assertStringContainsString(
+            '-'.$berangkat->format('m').'-',
+            SuratPerjalananDinas::first()->pelaksana->first()->nomor_surat,
         );
     }
 
-    public function test_nomor_bergaris_miring_ditolak(): void
+    public function test_nomor_tidak_pernah_kembar(): void
     {
-        $this->actingAs($this->pengguna)
-            ->post(route('spd.store'), $this->isian([
-                'pelaksana' => [['nomor_surat' => 'KU.02.04/F.XXX.8/1557/2026']],
-            ]))
-            ->assertSessionHasErrors('pelaksana.0.nomor_surat');
+        foreach (range(1, 3) as $ke) {
+            $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian());
+        }
 
-        $this->assertSame(0, SuratPerjalananDinas::count());
+        $nomor = SpdPelaksana::pluck('nomor_surat');
+
+        $this->assertCount(3, $nomor);
+        $this->assertSame($nomor->count(), $nomor->unique()->count());
     }
 
-    /**
-     * Surat lama terbit dengan awalan F.XXX.8 tanpa ".1". Saat disunting,
-     * nomor urutnya harus terbaca kembali — bukan ikut terhapus karena
-     * awalannya tidak lagi sama.
-     */
-    public function test_nomor_urut_surat_lama_terbaca_saat_disunting(): void
+    /** Formulir tidak lagi meminta nomor surat diketik. */
+    public function test_formulir_tidak_meminta_nomor_surat(): void
     {
-        $spd = $this->buatSpd();
-        $spd->pelaksana->first()->update(['nomor_surat' => 'KU.02.04/F.XXX.8/321/2025']);
-
-        $isi = $this->actingAs($this->pengguna)
-            ->get(route('spd.edit', $spd))
+        $this->actingAs($this->pengguna)
+            ->get(route('spd.create'))
             ->assertOk()
-            ->getContent();
-
-        // @js menyandikan tanda kutip menjadi \u0022; dibandingkan
-        // setelah sandinya dipulihkan.
-        $polos = str_replace('\u0022', '"', $isi);
-
-        $this->assertStringContainsString('"nomor_surat":"321"', $polos);
+            ->assertDontSee('nomor_surat')
+            ->assertSee('Nomor surat terbit sendiri');
     }
 
-    public function test_pengurai_nomor_mengenali_awalan_lama_maupun_baru(): void
+    /** Nomor kiriman dari luar formulir tidak dipakai. */
+    public function test_nomor_kiriman_diabaikan(): void
     {
-        $this->assertSame('321', SpdPelaksana::nomorUrut('KU.02.04/F.XXX.8/321/2025'));
-        $this->assertSame('1557', SpdPelaksana::nomorUrut('KU.02.04/F.XXX.8/1557/2026'));
+        $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isian([
+            'pelaksana' => [['nomor_surat' => 'KU.02.04/PALSU/999/2026']],
+        ]));
 
-        // Nomor lama yang bagian urutnya memang kosong tetap terbaca kosong.
-        $this->assertSame('', SpdPelaksana::nomorUrut('KU.02.04/F.XXX.8/   /2026'));
-        $this->assertSame('', SpdPelaksana::nomorUrut(null));
+        $this->assertStringStartsWith(
+            'PJ-',
+            SuratPerjalananDinas::first()->pelaksana->first()->nomor_surat,
+        );
     }
 
     // ── Penyuntingan ──
@@ -728,7 +632,7 @@ class SuratPerjalananDinasTest extends TestCase
             'pengikut' => $spd->pengikut,
             'ppk' => User::firstWhere('role', User::ROLE_PPK),
             'direktur' => User::firstWhere('jabatan', 'Direktur'),
-        ])->setPaper('a4');
+        ])->setPaper(KertasCetak::UKURAN);
 
         $this->assertSame(2, preg_match_all('#/Type\s*/Page[^s]#', $pdf->output()));
     }
@@ -932,13 +836,47 @@ class SuratPerjalananDinasTest extends TestCase
     }
 
     /**
-     * Contoh SPD resmi menutup halaman depan dengan logo akreditasi saja,
-     * tanpa kotak imbauan gratifikasi.
+     * Halaman depan ditutup kotak imbauan antigratifikasi di kiri dan logo
+     * akreditasi di kanan, mengikuti berkas cetakan baku yang berlaku.
      */
-    public function test_halaman_depan_ditutup_logo_akreditasi(): void
+    public function test_halaman_depan_ditutup_kotak_gratifikasi_dan_logo(): void
     {
-        $this->assertStringContainsString('logo-akreditasi.jpg', $this->htmlDokumen());
+        $html = $this->htmlDokumen();
+
+        $this->assertStringContainsString('logo-akreditasi.jpg', $html);
         $this->assertFileExists(public_path('images/logo-akreditasi.jpg'));
+
+        $this->assertStringContainsString(
+            'Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun.',
+            $html,
+        );
+        $this->assertStringContainsString('HALO KEMENKES', $html);
+        $this->assertStringContainsString('https://wbs.kemkes.go.id', $html);
+        $this->assertStringContainsString('https://tte.kominfo.go.id/verifyPDF', $html);
+    }
+
+    /**
+     * Butir 8 menyusun pengikut bertumpuk: "Pengikut :" lalu "Nama 1.", "2.",
+     * "3." di bawahnya, dengan Tanggal Lahir dan Keterangan sebagai judul
+     * kolom yang berdiri sekali di baris teratas.
+     */
+    public function test_butir_pengikut_bertumpuk_dengan_judul_kolom(): void
+    {
+        $html = $this->htmlDokumen();
+
+        $this->assertMatchesRegularExpression(
+            '/Pengikut&nbsp;\s*:.*?Tanggal Lahir.*?Keterangan.*?Nama\s+1\..*?2\..*?3\./s',
+            $html,
+        );
+    }
+
+    /** Lamanya perjalanan dinas dihitung dalam hari, bukan nominal uang. */
+    public function test_lama_perjalanan_tidak_berakhiran_rupiah(): void
+    {
+        $html = $this->htmlDokumen();
+
+        $this->assertMatchesRegularExpression('/\(\w+\) hari/', $html);
+        $this->assertStringNotContainsString('rupiah', $html);
     }
 
     // ── Menu ──

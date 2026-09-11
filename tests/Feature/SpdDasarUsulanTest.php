@@ -49,8 +49,9 @@ class SpdDasarUsulanTest extends TestCase
             'instansi' => 'Kementerian Kesehatan',
             'tanggal_mulai' => '2026-10-05',
             'tanggal_selesai' => '2026-10-07',
-            'jenis_pengajuan' => 'personal',
             'surat_tugas' => UploadedFile::fake()->create('st.pdf', 100, 'application/pdf'),
+            'no_spd' => 'KU.02.04/F.XXX.8/1234/2026',
+            'spd_ditandatangani' => UploadedFile::fake()->create('spd.pdf', 100, 'application/pdf'),
         ], $ubahan);
     }
 
@@ -152,7 +153,11 @@ class SpdDasarUsulanTest extends TestCase
         $this->assertSame(0, Usulan::count());
     }
 
-    public function test_seluruh_usulan_serombongan_menunjuk_spd_yang_sama(): void
+    /**
+     * Rekan sepelaksana pada SPD yang sama mengajukan usulannya sendiri dengan
+     * SPD bertanda tangannya; kiriman "anggota" tidak lagi membuatkan usulan.
+     */
+    public function test_rekan_pada_spd_yang_sama_tidak_dibuatkan_usulan(): void
     {
         $rekan = User::factory()->create();
 
@@ -161,8 +166,9 @@ class SpdDasarUsulanTest extends TestCase
             'anggota' => [$rekan->id],
         ]));
 
-        $this->assertSame(2, Usulan::count());
-        $this->assertSame([$this->spd->id, $this->spd->id], Usulan::orderBy('id')->pluck('id_spd')->all());
+        $this->assertSame(1, Usulan::count());
+        $this->assertSame($this->pengusul->id, Usulan::first()->id_user);
+        $this->assertSame($this->spd->id, Usulan::first()->id_spd);
     }
 
     public function test_menghapus_spd_tidak_ikut_menghapus_usulannya(): void

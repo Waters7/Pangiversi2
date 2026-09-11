@@ -90,10 +90,11 @@ abstract class TestCase extends BaseTestCase
                 'kode_booking' => 'ABC123',
                 'harga' => 2_500_000,
                 'boarding_pass' => 'dokumen/boarding-pass.pdf',
+                'invoice' => 'dokumen/invoice-tiket.pdf',
             ]);
         }
 
-        $usulan->notaTransport()->updateOrCreate(['urutan' => 1], ['nominal' => 150_000]);
+        $usulan->notaTransport()->updateOrCreate(['urutan' => 1], ['nominal' => 150_000, 'bukti' => 'dokumen/nota-1.pdf']);
 
         $laporan = LaporanPerjadin::firstOrCreate(['id_usulan' => $usulan->id]);
         $laporan->kegiatan()->firstOrCreate(['urutan' => 1], [
@@ -167,8 +168,32 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Laporan perjalanan dinas dikirim pelaksana dan dikonfirmasi pimpinan —
+     * satu-satunya syarat pelunasan; daftar nominatif tidak menahannya.
+     */
+    protected function konfirmasiLaporan(Usulan $usulan, ?User $pimpinan = null): LaporanPerjadin
+    {
+        $laporan = LaporanPerjadin::firstOrCreate(['id_usulan' => $usulan->id]);
+
+        if (! $laporan->sudahSelesai()) {
+            $laporan->update(['diselesaikan_at' => now()]);
+        }
+
+        $laporan->kirim();
+        $laporan->konfirmasi($pimpinan ?? User::factory()->create([
+            'role' => User::ROLE_PIMPINAN,
+            'jabatan' => 'Direktur',
+        ]));
+
+        return $laporan->fresh();
+    }
+
+    /**
      * Terbitkan daftar nominatif surat tugas sebuah usulan, tandatangani,
-     * lalu kirimkan ke tim keuangan — syarat pelunasan dapat dibayarkan.
+     * lalu kirimkan ke tim keuangan.
+     *
+     * Daftarnya hanya memuat pelaksana yang berkasnya sudah disahkan PPK,
+     * jadi berkas usulan ini ikut ditandatangani bila belum.
      */
     protected function terbitkanNominatif(Usulan $usulan, ?User $ppk = null): ?DaftarNominatif
     {
@@ -176,10 +201,18 @@ abstract class TestCase extends BaseTestCase
             return null;
         }
 
+        $penandatangan = $ppk ?? User::factory()->ppk()->create();
+
+        $daftar = DaftarRiil::firstWhere('id_usulan', $usulan->id);
+
+        if (! $daftar?->sudah_ditandatangani || ! $daftar->jalurRincian()->sudahDitandatangani()) {
+            $this->tandatanganiBerkas($usulan, $penandatangan);
+        }
+
         return DaftarNominatif::updateOrCreate(
             ['no_tugas' => $usulan->no_tugas],
             [
-                'id_ppk' => ($ppk ?? User::factory()->ppk()->create())->id,
+                'id_ppk' => $penandatangan->id,
                 'ditandatangani_at' => now(),
                 'dikirim_at' => now(),
             ],

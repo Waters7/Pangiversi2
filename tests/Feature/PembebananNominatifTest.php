@@ -6,6 +6,7 @@ use App\Enums\StatusUsulan;
 use App\Models\AkunPembiayaan;
 use App\Models\DaftarNominatif;
 use App\Models\KategoriPembiayaan;
+use App\Models\Keuangan;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\PenyusunNominatif;
@@ -193,6 +194,11 @@ class PembebananNominatifTest extends TestCase
             'tanggal_mulai' => '2026-04-06',
             'tanggal_selesai' => '2026-04-08',
         ]);
+
+        // Baris hanya tersusun bagi pelaksana yang berkasnya sudah tuntas.
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $usulan->id]);
+        $this->lengkapiPertanggungjawaban($usulan);
+        $this->tandatanganiBerkas($usulan->fresh());
 
         $baris = app(PenyusunNominatif::class)->baris(self::NO_TUGAS)->first();
 

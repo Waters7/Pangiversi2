@@ -34,6 +34,7 @@
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
         <x-tabel-nominatif :baris="$baris" :total="$total" />
+        <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5">

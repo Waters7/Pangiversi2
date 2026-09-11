@@ -34,6 +34,8 @@ class DokumenFactory extends Factory
 
         return [
             'surat_tugas' => $makeFile('surat-tugas'),
+            // SPD bertanda tangan wajib sejak pengajuan, jadi selalu ada.
+            'spd_ditandatangani' => $makeFile('spd'),
             'rundown' => $optional('rundown'),
             'dokumen_pendukung' => $optional('dokumen-pendukung'),
             'sppd' => $optional('sppd'),

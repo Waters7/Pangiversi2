@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
+use App\Models\LaporanPerjadin;
 use Illuminate\View\View;
 
 /**
@@ -17,12 +18,26 @@ use Illuminate\View\View;
  * Ada tiga jenis kode yang dikenali:
  * PPK-  tanda tangan Pejabat Pembuat Komitmen pada daftar pengeluaran riil,
  * PLK-  konfirmasi pelaksana atas nominal yang dibayarkan,
- * BND-  konfirmasi bendahara bahwa pembayaran sudah lunas.
+ * BND-  konfirmasi bendahara bahwa pembayaran sudah lunas,
+ * LPK-  tanda tangan pelaksana pada laporan perjalanan dinas,
+ * PIM-  konfirmasi pimpinan atas laporan perjalanan dinas.
  */
 class VerifikasiController extends Controller
 {
     public function __invoke(string $kode): View
     {
+        // Laporan perjalanan dinas punya halaman sendiri: isinya berbeda dari
+        // dokumen keuangan — nomor surat, tanggal perjalanan, dan siapa yang
+        // menandatangani di tiap sisi.
+        if ($laporan = $this->laporanPerjadin($kode)) {
+            return view('verifikasi.laporan', [
+                'laporan' => $laporan,
+                'usulan' => $laporan->usulan,
+                'sisi' => $laporan->kode_pimpinan === $kode ? 'pimpinan' : 'pelaksana',
+                'kode' => $kode,
+            ]);
+        }
+
         if ($nominatif = $this->tandaTanganNominatif($kode)) {
             return view('verifikasi.tampil', [
                 'daftar' => null,
@@ -96,6 +111,20 @@ class VerifikasiController extends Controller
         return DaftarRiil::with(['usulan:id,no_usulan,created_at', 'peserta:id,nama,nip'])
             ->where('kode_konfirmasi', $kode)
             ->whereNotNull('disetujui_pegawai_at')
+            ->first();
+    }
+
+    /**
+     * Tanda tangan pada laporan perjalanan dinas: kode pelaksana hanya sah
+     * selama laporannya masih di meja pimpinan atau sudah dikonfirmasi,
+     * kode pimpinan hanya sah selama konfirmasinya belum dicabut.
+     */
+    private function laporanPerjadin(string $kode): ?LaporanPerjadin
+    {
+        return LaporanPerjadin::with(['usulan.user:id,nama,nip', 'usulan.spd', 'pimpinan:id,nama,nip,jabatan'])
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('kode_pelaksana', $kode)->whereNotNull('dikirim_at'))
+                ->orWhere(fn ($w) => $w->where('kode_pimpinan', $kode)->whereNotNull('dikonfirmasi_at')))
             ->first();
     }
 

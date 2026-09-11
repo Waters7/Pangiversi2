@@ -153,15 +153,15 @@ class HakAksesPeranTest extends TestCase
     {
         $disetujui = Usulan::factory()->create([
             'status' => StatusUsulan::Disetujui->value,
-            'tanggal_mulai' => today()->startOfMonth()->toDateString(),
-            'tanggal_selesai' => today()->startOfMonth()->addDay()->toDateString(),
+            'tanggal_mulai' => today()->toDateString(),
+            'tanggal_selesai' => today()->addDay()->toDateString(),
         ]);
         PesertaUsulan::factory()->create(['id_usulan' => $disetujui->id, 'nama' => 'Pegawai Berangkat']);
 
         $masihDiajukan = Usulan::factory()->create([
             'status' => StatusUsulan::MenungguPpk->value,
-            'tanggal_mulai' => today()->startOfMonth()->addDays(2)->toDateString(),
-            'tanggal_selesai' => today()->startOfMonth()->addDays(3)->toDateString(),
+            'tanggal_mulai' => today()->addDays(2)->toDateString(),
+            'tanggal_selesai' => today()->addDays(3)->toDateString(),
         ]);
         PesertaUsulan::factory()->create(['id_usulan' => $masihDiajukan->id, 'nama' => 'Pegawai Menunggu']);
 
@@ -178,15 +178,15 @@ class HakAksesPeranTest extends TestCase
     {
         $disetujui = Usulan::factory()->create([
             'status' => StatusUsulan::Disetujui->value,
-            'tanggal_mulai' => today()->startOfMonth()->toDateString(),
-            'tanggal_selesai' => today()->startOfMonth()->addDay()->toDateString(),
+            'tanggal_mulai' => today()->toDateString(),
+            'tanggal_selesai' => today()->addDay()->toDateString(),
         ]);
         PesertaUsulan::factory()->create(['id_usulan' => $disetujui->id, 'nama' => 'Pegawai Berangkat']);
 
         $masihDiajukan = Usulan::factory()->create([
             'status' => StatusUsulan::MenungguPpk->value,
-            'tanggal_mulai' => today()->startOfMonth()->addDays(2)->toDateString(),
-            'tanggal_selesai' => today()->startOfMonth()->addDays(3)->toDateString(),
+            'tanggal_mulai' => today()->addDays(2)->toDateString(),
+            'tanggal_selesai' => today()->addDays(3)->toDateString(),
         ]);
         PesertaUsulan::factory()->create(['id_usulan' => $masihDiajukan->id, 'nama' => 'Pegawai Menunggu']);
 

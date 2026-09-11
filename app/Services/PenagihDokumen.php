@@ -67,15 +67,17 @@ class PenagihDokumen
     }
 
     /**
-     * Checklist kelengkapan untuk ditampilkan, satu baris per berkas yang
-     * memang diunggah pelaksana.
+     * Checklist kelengkapan untuk ditampilkan, satu baris per seksi formulir
+     * dokumen — persis yang diminta formulir itu kepada pelaksana.
      *
      * Diturunkan dari aturan yang sama dengan berkasKurang() agar layar dan
      * penagihan tidak pernah berbeda: dulu checklist punya daftarnya sendiri,
      * sehingga sempat menyatakan "Boarding Pass lengkap" padahal yang wajib
-     * adalah boarding pass per tiket.
+     * adalah boarding pass per tiket. Tiap baris membawa seluruh berkasnya —
+     * tiket punya boarding pass dan invoice, nota punya bukti per ruas —
+     * supaya tim keuangan membuka semuanya dari satu tempat.
      *
-     * @return list<array{label: string, terpenuhi: bool, berkas: ?string, catatan: ?string}>
+     * @return list<array{label: string, terpenuhi: bool, berkas: list<array{label: string, path: string}>, catatan: ?string}>
      */
     public function checklist(Usulan $usulan): array
     {
@@ -83,43 +85,65 @@ class PenagihDokumen
         $dokumen = $usulan->dokumen->last();
         $dalamKota = $usulan->dalamKota();
 
+        // Seksi 1 — penugasan.
         $baris = [
             $this->barisChecklist('SPPD Bertanda Tangan', $dokumen?->sppd, 'Hardcopy dikumpulkan ke tim keuangan'),
         ];
 
-        // Tiket beserta boarding pass-nya, satu baris per arah. Dalam kota
-        // tidak memakai tiket sama sekali, jadi barisnya pun tidak muncul.
-        $tersimpan = $usulan->tiket->keyBy(fn ($tiket) => $tiket->arah->value);
-
+        // Seksi 2 — tiket pergi dan pulang, masing-masing dengan boarding pass
+        // dan invoice-nya. Dalam kota tidak memakai tiket sama sekali.
         if (! $dalamKota) {
+            $tersimpan = $usulan->tiket->keyBy(fn ($tiket) => $tiket->arah->value);
+
             foreach (ArahTiket::urutan() as $arah) {
                 $tiket = $tersimpan->get($arah->value);
+                $kurang = $this->kekuranganTiket($tiket);
 
                 $baris[] = [
                     'label' => $arah->label(),
-                    'terpenuhi' => $tiket?->lengkap() === true,
-                    'berkas' => $tiket?->boarding_pass,
-                    'catatan' => $tiket?->kode_booking ? 'Kode booking '.$tiket->kode_booking : null,
+                    'terpenuhi' => $kurang === [],
+                    'berkas' => array_values(array_filter([
+                        filled($tiket?->boarding_pass) ? ['label' => 'Boarding pass', 'path' => $tiket->boarding_pass] : null,
+                        filled($tiket?->invoice) ? ['label' => 'Invoice', 'path' => $tiket->invoice] : null,
+                    ])),
+                    'catatan' => $kurang !== []
+                        ? 'Belum ada '.implode(', ', $kurang)
+                        : 'Kode booking '.$tiket->kode_booking,
                 ];
             }
         }
 
-        $nota = $usulan->notaTransport->first(fn ($item) => $item->terisi());
+        // Seksi 3 — nota transportasi lokal, bukti per ruas.
+        $ruasKurang = $this->ruasTanpaBukti($usulan);
+        $adaNota = $usulan->notaTransport->contains(fn ($item) => $item->terisi());
 
         $baris[] = [
             'label' => 'Nota Transportasi Lokal',
-            'terpenuhi' => $nota !== null,
-            'berkas' => $usulan->notaTransport->firstWhere(fn ($item) => filled($item->bukti))?->bukti,
-            'catatan' => 'Tanpa nota, biaya transportasi tidak diganti',
+            'terpenuhi' => $adaNota && $ruasKurang === [],
+            'berkas' => $usulan->notaTransport
+                ->filter(fn ($item) => filled($item->bukti))
+                ->sortBy('urutan')
+                ->map(fn ($item) => [
+                    'label' => $item->nama_ruas,
+                    'path' => $item->bukti,
+                ])
+                ->values()
+                ->all(),
+            'catatan' => match (true) {
+                ! $adaNota => 'Tanpa nota, biaya transportasi tidak diganti',
+                $ruasKurang !== [] => 'Bernominal tapi belum ada notanya: '.implode(', ', $ruasKurang),
+                default => 'Ruas terisi: '.$usulan->notaTransport->filter(fn ($item) => $item->terisi())->count(),
+            },
         ];
 
+        // Seksi 4 — akomodasi dan bukti biaya.
         if (! $dalamKota) {
             $baris[] = [
                 'label' => 'Bill Hotel',
                 'terpenuhi' => filled($dokumen?->bill_hotel)
                     && filled($dokumen?->bill_hotel_no_transaksi)
                     && $dokumen?->bill_hotel_nominal > 0,
-                'berkas' => $dokumen?->bill_hotel,
+                'berkas' => filled($dokumen?->bill_hotel) ? [['label' => 'Bill hotel', 'path' => $dokumen->bill_hotel]] : [],
                 'catatan' => $dokumen?->bill_hotel_no_transaksi
                     ? 'No. transaksi '.$dokumen->bill_hotel_no_transaksi
                     : 'Nomor transaksi dan nominalnya wajib diisi',
@@ -129,31 +153,77 @@ class PenagihDokumen
         }
 
         // Laporan perjadin diisi langsung di aplikasi, bukan diunggah.
+        $laporan = $usulan->laporan;
+
         $baris[] = [
             'label' => 'Laporan Perjalanan Dinas',
-            'terpenuhi' => $usulan->laporan?->sudahSelesai() === true,
-            'berkas' => null,
-            'catatan' => 'Diisi pada menu Dokumen, tidak diunggah',
+            'terpenuhi' => $laporan?->sudahSelesai() === true,
+            'berkas' => [],
+            'catatan' => $laporan
+                ? $laporan->status()->label()
+                : 'Diisi pada menu Dokumen, tidak diunggah',
         ];
 
         return $baris;
     }
 
     /**
-     * @return array{label: string, terpenuhi: bool, berkas: ?string, catatan: ?string}
+     * @return array{label: string, terpenuhi: bool, berkas: list<array{label: string, path: string}>, catatan: ?string}
      */
     private function barisChecklist(string $label, ?string $berkas, ?string $catatan = null): array
     {
         return [
             'label' => $label,
             'terpenuhi' => filled($berkas),
-            'berkas' => $berkas,
+            'berkas' => filled($berkas) ? [['label' => $label, 'path' => $berkas]] : [],
             'catatan' => $catatan,
         ];
     }
 
     /**
-     * Tiket pergi dan pulang, masing-masing lengkap dengan boarding pass-nya.
+     * Bagian tiket yang belum terisi, dengan sebutan yang dipahami pelaksana.
+     *
+     * @return list<string>
+     */
+    private function kekuranganTiket(mixed $tiket): array
+    {
+        if (! $tiket) {
+            return ['data tiket'];
+        }
+
+        return array_values(array_filter([
+            filled($tiket->kota_asal) && filled($tiket->kota_tujuan) ? null : 'rute',
+            filled($tiket->nomor_tiket) ? null : 'nomor tiket',
+            filled($tiket->kode_booking) ? null : 'kode booking',
+            $tiket->harga > 0 ? null : 'harga',
+            filled($tiket->boarding_pass) ? null : 'boarding pass',
+            filled($tiket->invoice) ? null : 'invoice',
+        ]));
+    }
+
+    /**
+     * Ruas yang diisi nominalnya tetapi belum diunggah notanya.
+     *
+     * Nota hanya wajib untuk ruas yang bernominal: ruas yang kosong memang
+     * tidak dilalui, dan ruas bernominal tanpa bukti tidak boleh diganti.
+     *
+     * @return list<string>
+     */
+    private function ruasTanpaBukti(Usulan $usulan): array
+    {
+        $usulan->loadMissing('notaTransport');
+
+        return $usulan->notaTransport
+            ->filter(fn ($item) => $item->terisi() && blank($item->bukti))
+            ->sortBy('urutan')
+            ->map(fn ($item) => lcfirst($item->nama_ruas))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Tiket pergi dan pulang, masing-masing lengkap dengan boarding pass dan
+     * invoice-nya; yang kurang disebut supaya pelaksana tahu apa yang ditagih.
      *
      * @return list<string>
      */
@@ -163,8 +233,9 @@ class PenagihDokumen
         $tersimpan = $usulan->tiket->keyBy(fn ($tiket) => $tiket->arah->value);
 
         return collect(ArahTiket::urutan())
-            ->reject(fn (ArahTiket $arah) => $tersimpan->get($arah->value)?->lengkap() === true)
-            ->map(fn (ArahTiket $arah) => $arah->label())
+            ->map(fn (ArahTiket $arah) => [$arah, $this->kekuranganTiket($tersimpan->get($arah->value))])
+            ->reject(fn (array $pasangan) => $pasangan[1] === [])
+            ->map(fn (array $pasangan) => $pasangan[0]->label().' ('.implode(', ', $pasangan[1]).')')
             ->values()
             ->all();
     }
@@ -182,9 +253,15 @@ class PenagihDokumen
     {
         $usulan->loadMissing('notaTransport');
 
-        return $usulan->notaTransport->contains(fn ($nota) => $nota->terisi())
+        if (! $usulan->notaTransport->contains(fn ($nota) => $nota->terisi())) {
+            return ['Nota/biaya transportasi lokal'];
+        }
+
+        $tanpaBukti = $this->ruasTanpaBukti($usulan);
+
+        return $tanpaBukti === []
             ? []
-            : ['Nota/biaya transportasi lokal'];
+            : ['Nota transportasi lokal untuk '.implode(', ', $tanpaBukti)];
     }
 
     /**

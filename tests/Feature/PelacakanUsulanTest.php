@@ -88,7 +88,79 @@ class PelacakanUsulanTest extends TestCase
 
         $this->assertNotNull($berikutnya);
         $this->assertFalse($berikutnya['selesai']);
-        $this->assertSame('Disetujui PPK', $berikutnya['judul']);
+        $this->assertSame('Uang muka dibayarkan', $berikutnya['judul']);
+    }
+
+    /**
+     * SPD terbit sebelum usulan ada dan persetujuan PPK melekat pada SPD yang
+     * ditandatanganinya, jadi keduanya bukan tahap yang perlu dilacak.
+     */
+    public function test_persetujuan_ppk_dan_terbitnya_spd_bukan_tonggak(): void
+    {
+        $judul = $this->pelacak()->tonggak($this->usulan)->pluck('judul');
+
+        $this->assertFalse($judul->contains('Disetujui PPK'));
+        $this->assertFalse($judul->contains('Surat Perjalanan Dinas terbit'));
+        $this->assertSame('Usulan dibuat', $judul->first());
+        $this->assertSame('Uang muka dibayarkan', $judul->get(1));
+    }
+
+    // ── Rentang hari antar tahap ──
+
+    public function test_tahap_pertama_tidak_punya_durasi(): void
+    {
+        $this->assertNull($this->tonggak('Usulan dibuat')['durasi']);
+    }
+
+    public function test_tahap_terlewati_menghitung_hari_dari_tahap_sebelumnya(): void
+    {
+        $this->usulan->forceFill(['created_at' => '2026-04-01 09:00:00'])->save();
+        $this->usulan->keuangan->update(['tanggal_transfer' => '2026-04-04']);
+
+        $langkah = $this->tonggak('Uang muka dibayarkan');
+
+        $this->assertSame(3, $langkah['durasi']);
+        $this->assertSame('3 hari dari tahap sebelumnya', $langkah['durasi_label']);
+    }
+
+    public function test_tahap_di_hari_yang_sama_disebut_demikian(): void
+    {
+        $this->usulan->forceFill(['created_at' => '2026-04-04 09:00:00'])->save();
+        $this->usulan->keuangan->update(['tanggal_transfer' => '2026-04-04']);
+
+        $this->assertSame('di hari yang sama dari tahap sebelumnya', $this->tonggak('Uang muka dibayarkan')['durasi_label']);
+    }
+
+    /** Tahap yang sedang menunggu dihitung sampai hari ini. */
+    public function test_tahap_yang_menunggu_menghitung_lamanya_tertahan(): void
+    {
+        $this->usulan->forceFill(['created_at' => today()->subDays(6)->setTime(9, 0)])->save();
+
+        $menunggu = $this->tonggak('Uang muka dibayarkan');
+        $sesudahnya = $this->tonggak('Pelunasan dibayarkan');
+
+        $this->assertSame(6, $menunggu['durasi']);
+        $this->assertSame('Sudah menunggu 6 hari', $menunggu['durasi_label']);
+        // Tahap yang menunggu di belakangnya belum bisa diukur.
+        $this->assertNull($sesudahnya['durasi_label']);
+    }
+
+    /** Dokumen bisa diunggah sebelum uang muka cair; selisih mundur tidak jadi angka minus. */
+    public function test_tahap_yang_terlewati_lebih_dulu_tidak_berdurasi_negatif(): void
+    {
+        $this->usulan->forceFill(['created_at' => '2026-04-01 09:00:00'])->save();
+        $this->usulan->keuangan->update(['tanggal_transfer' => '2026-04-10']);
+        $this->usulan->dokumen()->create(['surat_tugas' => 'dokumen/st.pdf']);
+        $this->usulan->dokumen()->latest('id')->first()->forceFill(['updated_at' => '2026-04-05 09:00:00'])->save();
+
+        $this->assertSame(0, $this->tonggak('Dokumen pertanggungjawaban diunggah')['durasi']);
+    }
+
+    public function test_lama_berjalan_dihitung_dari_tahap_pertama(): void
+    {
+        $this->usulan->forceFill(['created_at' => today()->subDays(10)->setTime(9, 0)])->save();
+
+        $this->assertSame(10, $this->pelacak()->lamaBerjalan($this->usulan->fresh()));
     }
 
     public function test_pembayaran_uang_muka_menutup_tahapnya(): void
@@ -132,6 +204,8 @@ class PelacakanUsulanTest extends TestCase
 
     public function test_tonggak_nominatif_mengikuti_pengesahan_dan_pengirimannya(): void
     {
+        $this->tandatanganiBerkas($this->usulan, $this->ppk);
+
         $nominatif = DaftarNominatif::create([
             'no_tugas' => $this->usulan->no_tugas,
             'tanggal_tugas' => now()->toDateString(),
@@ -146,6 +220,30 @@ class PelacakanUsulanTest extends TestCase
 
         $nominatif->update(['dikirim_at' => now()]);
 
+        $this->assertTrue($this->tonggak('Nominatif diterima tim keuangan')['selesai']);
+    }
+
+    /**
+     * Daftar nominatif terbit per surat tugas begitu satu pelaksana tuntas.
+     * Bagi kawan seperjalanan yang berkasnya belum ditandatangani PPK,
+     * daftar itu belum memuat dirinya — tonggaknya belum terlewati.
+     */
+    public function test_tonggak_nominatif_belum_terlewati_bila_usulan_ini_belum_tercantum(): void
+    {
+        DaftarNominatif::create([
+            'no_tugas' => $this->usulan->no_tugas,
+            'tanggal_tugas' => now()->toDateString(),
+            'id_ppk' => $this->ppk->id,
+            'ditandatangani_at' => now(),
+            'dikirim_at' => now(),
+        ]);
+
+        $this->assertFalse($this->tonggak('Daftar nominatif diverifikasi PPK')['selesai']);
+        $this->assertFalse($this->tonggak('Nominatif diterima tim keuangan')['selesai']);
+
+        $this->tandatanganiBerkas($this->usulan, $this->ppk);
+
+        $this->assertTrue($this->tonggak('Daftar nominatif diverifikasi PPK')['selesai']);
         $this->assertTrue($this->tonggak('Nominatif diterima tim keuangan')['selesai']);
     }
 
@@ -174,6 +272,21 @@ class PelacakanUsulanTest extends TestCase
             ->assertSee('Daftar nominatif diverifikasi PPK')
             ->assertSee('Nominatif diterima tim keuangan')
             ->assertSee('Pelunasan dibayarkan');
+    }
+
+    public function test_detail_usulan_menampilkan_rentang_hari_tiap_tahap(): void
+    {
+        $this->usulan->forceFill(['created_at' => today()->subDays(4)->setTime(9, 0)])->save();
+        $this->usulan->keuangan->update(['tanggal_transfer' => today()->subDays(2)->toDateString()]);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('usulan.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('2 hari dari tahap sebelumnya')
+            ->assertSee('Sudah menunggu 2 hari')
+            ->assertSee('berjalan 4 hari')
+            ->assertDontSee('Disetujui PPK')
+            ->assertDontSee('Surat Perjalanan Dinas terbit');
     }
 
     public function test_tahap_yang_belum_terjadi_ditandai_belum(): void

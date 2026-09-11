@@ -8,7 +8,6 @@
             'kunci' => $i,
             // Formulir hanya mengurus nomor urutnya; awalan dan tahun
             // disusun ulang oleh sistem saat disimpan.
-            'nomor_surat' => \App\Models\SpdPelaksana::nomorUrut($orang->nomor_surat),
             'id_user' => $orang->id_user,
             'nama' => $orang->nama,
             'nip' => $orang->nip ?? '',
@@ -18,7 +17,6 @@
         ])->all()
         : [[
             'kunci' => 0,
-            'nomor_surat' => '',
             'id_user' => $pengguna->id,
             'nama' => $pengguna->nama,
             'nip' => $pengguna->nip,
@@ -54,7 +52,6 @@
                 if (this.pelaksana.length >= {{ $maksPelaksana }}) return;
                 this.pelaksana.push({
                     kunci: ++this.urut,
-                    nomor_surat: '',
                     id_user: null,
                     nama: '', nip: '', pangkat_golongan: '', jabatan_instansi: '', tingkat_biaya: '',
                 });

@@ -26,6 +26,8 @@ class RiwayatPembayaran extends Model
 
     public const JENIS_BATAL_PELUNASAN = 'batal_pelunasan';
 
+    public const JENIS_BATAL_TRANSPORT_LOKAL = 'batal_transport_lokal';
+
     protected $fillable = [
         'id_keuangan',
         'id_usulan',
@@ -80,7 +82,11 @@ class RiwayatPembayaran extends Model
      */
     public function pembatalan(): bool
     {
-        return in_array($this->jenis, [self::JENIS_BATAL_UANG_MUKA, self::JENIS_BATAL_PELUNASAN], true);
+        return in_array($this->jenis, [
+            self::JENIS_BATAL_UANG_MUKA,
+            self::JENIS_BATAL_PELUNASAN,
+            self::JENIS_BATAL_TRANSPORT_LOKAL,
+        ], true);
     }
 
     public function nilaiArus(): float
@@ -96,6 +102,7 @@ class RiwayatPembayaran extends Model
             self::JENIS_TRANSPORT_LOKAL => 'Transport Lokal',
             self::JENIS_BATAL_UANG_MUKA => 'Pembatalan Uang Muka',
             self::JENIS_BATAL_PELUNASAN => 'Pembatalan Pelunasan',
+            self::JENIS_BATAL_TRANSPORT_LOKAL => 'Pembatalan Transport Lokal',
             default => $this->jenis,
         };
     }

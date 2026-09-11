@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\KategoriBiaya;
 use App\Models\AuditLog;
-use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\KomponenBiaya;
@@ -14,9 +13,11 @@ use App\Models\RiwayatPembayaran;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
+use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PenagihDokumen;
+use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
 use App\Services\SinkronBiayaDokumen;
@@ -39,6 +40,7 @@ class KeuanganController extends Controller
         private PemberitahuanBendahara $bendahara,
         private SinkronBiayaDokumen $sinkron,
         private PenguncianBerkas $kunci,
+        private PengirimanBerkas $pengiriman,
     ) {}
 
     public function index(Request $request)
@@ -122,7 +124,7 @@ class KeuanganController extends Controller
 
     public function show(Usulan $usulan)
     {
-        $usulan->load('user', 'kegiatan', 'dokumen', 'peserta', 'daftarRiil', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
+        $usulan->load('user', 'kegiatan', 'dokumen', 'peserta', 'daftarRiil.rincian', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
 
         if (! $usulan->keuangan) {
             $usulan->keuangan()->create([
@@ -131,7 +133,7 @@ class KeuanganController extends Controller
                 'sisa' => 0,
                 'status' => 'belum bayar',
             ]);
-            $usulan->load('peserta', 'daftarRiil', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
+            $usulan->load('peserta', 'daftarRiil.rincian', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
         }
 
         // Standar biaya dipakai untuk mengisi otomatis satuan dan harga di form rincian.
@@ -156,10 +158,10 @@ class KeuanganController extends Controller
     {
         $usulan->load('user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta');
 
-        // Transport lokal tidak ikut dicetak di sini: ia dipertanggungjawabkan
-        // lewat Daftar Pengeluaran Riil (Lampiran IX), dokumen yang berbeda.
-        // Disaring tegas, bukan mengandalkan kebiasaan pengisian, supaya baris
-        // warisan atau salah ketik pun tidak menyelinap ke dokumen ini.
+        // Baris rincian resmi. Transport lokal tidak tercatat sebagai baris di
+        // sini — ia dipertanggungjawabkan lewat Daftar Pengeluaran Riil — jadi
+        // disaring tegas agar baris warisan atau salah ketik tidak menyelinap;
+        // ia dicantumkan di bawah lewat daftar riilnya sendiri.
         $rincian = ($usulan->keuangan?->rincianBiaya ?? collect())
             ->reject(fn (RincianBiaya $item) => $item->kategori === KategoriBiaya::TransportLokal)
             ->values();
@@ -182,15 +184,39 @@ class KeuanganController extends Controller
             ? DaftarRiil::where('id_peserta', $peserta->id)->sudahDitandatangani()->first()
             : null;
 
+        // Transport lokal ikut tercetak sebagai kelompoknya sendiri, diambil
+        // dari daftar riil peserta ini apa pun tahapnya: dokumen rincian biaya
+        // harus memuat seluruh biaya perjalanan, dan transport lokal bagian
+        // darinya walau dibayarkan terpisah saat pelunasan.
+        $riilTransport = $peserta
+            ? DaftarRiil::with('rincian')->where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
+            : null;
+        $transportLokal = $riilTransport?->rincian ?? collect();
+        $totalTransportLokal = (float) ($riilTransport?->total_riil ?? $transportLokal->sum('nominal'));
+        $totalKeseluruhan = $total + $totalTransportLokal;
+
         $keuangan = $usulan->keuangan;
+
+        // Yang sudah dibayarkan mengikuti apa yang benar-benar keluar: uang
+        // muka, sisa saat pelunasan, dan transport lokal bila sudah diganti —
+        // entah lewat pelunasan atau lewat pembayaran transport tersendiri.
+        $dibayarkan = (float) ($keuangan?->uang_muka ?? 0)
+            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0)
+            + ($riilTransport?->sudahDibayar() ? $totalTransportLokal : 0);
 
         $pdf = Pdf::loadView('keuangan.cetak-rincian', [
             'usulan' => $usulan,
             'peserta' => $peserta,
             'rincianPerKategori' => $rincianPerKategori,
             'total' => $total,
-            'dibayarkan' => (float) ($keuangan?->uang_muka ?? 0) + (float) ($keuangan?->tanggal_pelunasan ? $keuangan->sisa : 0),
-            'terbilang' => $this->terbilang->konversi($total),
+            'transportLokal' => $transportLokal,
+            // Tanggal pelaksana menyetujui rincian ini — tercetak di atas tanda
+            // tangannya, dari daftar riil pada tahap mana pun.
+            'tanggalPelaksana' => $riilTransport?->rincian_disetujui_at ?? $riilTransport?->disetujui_pegawai_at,
+            'totalTransportLokal' => $totalTransportLokal,
+            'totalKeseluruhan' => $totalKeseluruhan,
+            'dibayarkan' => $dibayarkan,
+            'terbilang' => $this->terbilang->konversi($totalKeseluruhan),
             'bendahara' => User::where('role', User::ROLE_BENDAHARA)->first(),
             'ppk' => User::where('role', User::ROLE_PPK)->first(),
             'daftarRiil' => $daftarRiil,
@@ -204,7 +230,7 @@ class KeuanganController extends Controller
             'qrBendahara' => $keuangan?->urlKonfirmasiBayar()
                 ? $this->qrCode->dataUri($keuangan->urlKonfirmasiBayar(), 180)
                 : null,
-        ]);
+        ])->setPaper(KertasCetak::UKURAN);
 
         return $pdf->download("Rincian-Biaya_{$usulan->no_usulan}.pdf");
     }
@@ -396,32 +422,28 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Konfirmasi pelunasan sisa (bayar sebagian → lunas).
-     */
-    /**
-     * Alasan pelunasan belum boleh keluar, atau null bila sudah boleh.
+     * Pelunasan menunggu laporan perjalanan dinasnya dikonfirmasi dan
+     * ditandatangani pimpinan lewat QR — bukti bahwa hasil perjalanannya
+     * sudah diterima, bukan hanya biayanya yang dihitung.
      *
-     * Daftar nominatif adalah dasar pembayarannya: selama ia belum
-     * ditandatangani PPK dan diterima tim keuangan, tidak ada dokumen yang
-     * mengesahkan nilai yang dibayarkan.
+     * Itulah satu-satunya syaratnya. Tanda tangan pelaksana dan PPK pada
+     * rincian biaya, begitu pula daftar nominatifnya, boleh menyusul
+     * sebelum maupun sesudah sisa dibayarkan: pembayaran tidak ditahan oleh
+     * pengesahan yang masih berjalan.
      */
-    private function nominatifBelumSiap(Usulan $usulan): ?string
+    private function laporanBelumDikonfirmasi(Usulan $usulan): ?string
     {
-        if (! $usulan->no_tugas) {
+        $laporan = $usulan->laporan;
+
+        if ($laporan?->sudahDikonfirmasi()) {
             return null;
         }
 
-        $nominatif = DaftarNominatif::firstWhere('no_tugas', $usulan->no_tugas);
-
-        if (! $nominatif) {
-            return 'Daftar nominatif surat tugas ini belum terbit. Pelunasan menunggu daftar nominatif ditandatangani PPK.';
+        if ($laporan?->sudahDikirim()) {
+            return 'Laporan perjalanan dinas sudah dikirim pelaksana tetapi belum dikonfirmasi pimpinan, jadi pelunasan belum dapat dibayarkan.';
         }
 
-        if (! $nominatif->sudahDikirim()) {
-            return 'Daftar nominatif surat tugas ini belum dikirim PPK ke tim keuangan, jadi pelunasan belum dapat dibayarkan.';
-        }
-
-        return null;
+        return 'Laporan perjalanan dinas belum ditandatangani pelaksana dan pimpinan lewat QR konfirmasi, jadi pelunasan belum dapat dibayarkan.';
     }
 
     public function bayarSisa(Request $request, Usulan $usulan)
@@ -442,10 +464,7 @@ class KeuanganController extends Controller
                 .'. Batalkan pelunasannya lebih dulu bila keliru.');
         }
 
-        // Pelunasan baru boleh keluar setelah daftar nominatif surat tugasnya
-        // ditandatangani PPK dan diterima tim keuangan — daftar itulah dasar
-        // pembayarannya.
-        if ($alasan = $this->nominatifBelumSiap($usulan)) {
+        if ($alasan = $this->laporanBelumDikonfirmasi($usulan)) {
             return back()->with('error', $alasan);
         }
 
@@ -713,6 +732,11 @@ class KeuanganController extends Controller
             ['usulan' => $usulan],
         );
 
+        // Bila ini pemeriksaan terakhir, berkas langsung berjalan ke pelaksana.
+        if ($this->pengiriman->kirimBilaSiap($usulan->fresh())) {
+            return back()->with('success', "Nominal \"{$rincian->komponen}\" divalidasi. Seluruh nominal sudah diperiksa, berkas dikirim ke pelaksana — masa sanggah ".DaftarRiil::HARI_MASA_SANGGAH.' hari.');
+        }
+
         return back()->with('success', "Nominal \"{$rincian->komponen}\" divalidasi.");
     }
 
@@ -725,6 +749,12 @@ class KeuanganController extends Controller
         $this->pastikanRincianMilikUsulan($usulan, $rincian);
 
         $rincian->update(['divalidasi_at' => null, 'id_validator' => null]);
+
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Validasi nominal \"{$rincian->komponen}\" pada usulan {$usulan->no_usulan} dicabut oleh {$request->user()->nama}.",
+            ['usulan' => $usulan],
+        );
 
         return back()->with('success', 'Validasi dicabut, nominalnya kembali menunggu pemeriksaan.');
     }

@@ -279,6 +279,16 @@
                                 keterangan="PDF, JPG, atau PNG — maks. 2 MB."
                                 :terkunci="$terkunci" />
 
+                            {{-- Invoice pembelian tiket: bukti harga yang diganti bendahara,
+                                 satu per arah seperti boarding pass-nya. --}}
+                            <x-unggah-berkas
+                                nama="invoice"
+                                label="Invoice tiket {{ $arah === ArahTiket::Pergi ? 'pergi' : 'pulang' }}"
+                                :berkas="$data?->invoice"
+                                terima=".pdf,.jpg,.jpeg,.png"
+                                keterangan="Invoice atau e-ticket yang memuat harga — PDF, JPG, atau PNG, maks. 2 MB."
+                                :terkunci="$terkunci" />
+
                             @unless ($terkunci)
                                 <button type="submit" class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">
                                     Simpan {{ $arah->label() }}
@@ -302,7 +312,9 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">3. Nota / Bukti Biaya Transportasi</h3>
-                            <p class="text-xs text-slate-400">Empat ruas, dari rumah sampai kembali ke rumah</p>
+                            <p class="text-xs text-slate-400">
+                                {{ $dalamKota ? 'Biaya transport lokal selama perjalanan dinas dalam kota' : 'Empat ruas, dari rumah sampai kembali ke rumah' }}
+                            </p>
                         </div>
                     </div>
 
@@ -313,13 +325,30 @@
                             rupiah(n) { return 'Rp ' + new Intl.NumberFormat('id-ID').format(n || 0); }
                          }">
 
-                        @foreach (RuasTransport::urutan() as $ruas)
+                        {{-- Aturan pengisian dijelaskan di muka supaya pelaksana tidak
+                             mengarang angka untuk ruas yang tidak dilaluinya. --}}
+                        <div class="flex items-start gap-2.5 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <svg class="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                            <p class="text-xs text-indigo-900 leading-relaxed">
+                                @if ($dalamKota)
+                                    <strong>Catatan:</strong> bila tidak ada biaya transport, <strong>kosongkan</strong>
+                                    nominal dan buktinya. Bila ada, isi nominalnya dan <strong>lampirkan nota</strong>
+                                    — nominal tanpa nota tidak dapat disimpan dan tidak diganti.
+                                @else
+                                    <strong>Catatan:</strong> bila ruas tidak mengeluarkan biaya, <strong>kosongkan</strong>
+                                    nominal dan buktinya. Bila ada biaya, isi nominalnya dan <strong>lampirkan nota</strong>
+                                    pada ruas itu — nominal tanpa nota tidak dapat disimpan dan tidak diganti.
+                                @endif
+                            </p>
+                        </div>
+
+                        @foreach (RuasTransport::untuk($dalamKota) as $ruas)
                             @php $baris = $nota->get($ruas->value); @endphp
 
                             <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60">
                                 <div class="flex items-start justify-between gap-3 mb-3">
                                     <div class="min-w-0">
-                                        <p class="text-sm font-bold text-slate-700">{{ $ruas->value }}. {{ $ruas->label() }}</p>
+                                        <p class="text-sm font-bold text-slate-700">{{ $ruas->dalamKota() ? $ruas->label() : $ruas->value.'. '.$ruas->label() }}</p>
                                         <p class="text-xs text-slate-400">{{ $ruas->keterangan() }}</p>
                                     </div>
                                 </div>
@@ -339,13 +368,16 @@
                                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Keterangan</label>
                                         <input type="text" name="ruas[{{ $ruas->value }}][keterangan]" @disabled($terkunci)
                                                value="{{ old("ruas.{$ruas->value}.keterangan", $baris?->keterangan) }}"
-                                               placeholder="cth: taksi bandara"
+                                               placeholder="{{ $dalamKota ? 'cth: ojek/taksi PP ke lokasi kegiatan' : 'cth: taksi bandara' }}"
                                                class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                                     </div>
                                 </div>
 
                                 <div class="mt-3">
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Bukti / nota</label>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Bukti / nota
+                                        <span class="font-normal text-slate-400">— wajib bila nominalnya diisi</span>
+                                    </label>
                                     @if ($baris?->bukti)
                                         <a href="{{ Storage::url($baris->bukti) }}" target="_blank"
                                            class="inline-block mb-2 text-xs font-semibold text-teal-600 hover:underline">Lihat berkas tersimpan →</a>

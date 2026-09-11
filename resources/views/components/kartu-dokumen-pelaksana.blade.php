@@ -124,18 +124,40 @@
             </div>
         @endif
 
-        {{-- Aksi selama masa sanggah --}}
-        @if ($jalur->masaSanggahBerjalan())
+        {{-- Sudah diperiksa tim keuangan, tinggal menunggu dikirim: belum ada
+             yang perlu disikapi, tetapi pelaksana tahu berkasnya bergerak. --}}
+        @if ($jalur->menungguDikirim())
+            <div class="mb-5 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                <p class="text-xs font-bold text-indigo-800 mb-1">Sudah dicek tim keuangan</p>
+                <p class="text-xs text-indigo-700 leading-relaxed">
+                    Nominalnya sudah diperiksa dan dinyatakan benar. Berkas akan dikirimkan kepada Anda
+                    untuk disetujui atau disanggah; Anda akan diberi tahu saat masa sanggahnya dibuka.
+                </p>
+            </div>
+        @endif
+
+        {{-- Tanda tangan pelaksana terbuka sampai PPK mengesahkan; sanggahan
+             hanya selama masa sanggah berjalan. --}}
+        @if ($jalur->bolehDitandatanganiPelaksana())
+            @if ($jalur->sanggahKedaluwarsa())
+                <p class="mb-3 text-xs text-slate-500">
+                    Masa sanggah berakhir {{ $item->batas_sanggah->translatedFormat('d F Y') }} tanpa tanggapan,
+                    sehingga nominal dianggap diterima. Anda tetap dapat menandatangani dokumen ini.
+                </p>
+            @endif
+
             <div class="flex flex-wrap gap-2">
                 <button type="button" @click="$dispatch('buka-{{ $kotak }}')"
                         class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
                     Setuju &amp; Tandatangani
                 </button>
 
-                <button type="button" @click="formSanggah = !formSanggah"
-                        class="px-5 py-2.5 bg-white border border-amber-200 hover:bg-amber-50 text-amber-700 text-sm font-semibold rounded-xl transition">
-                    Sanggah Nominal
-                </button>
+                @if ($jalur->masaSanggahBerjalan())
+                    <button type="button" @click="formSanggah = !formSanggah"
+                            class="px-5 py-2.5 bg-white border border-amber-200 hover:bg-amber-50 text-amber-700 text-sm font-semibold rounded-xl transition">
+                        Sanggah Nominal
+                    </button>
+                @endif
             </div>
 
             <x-modal-konfirmasi

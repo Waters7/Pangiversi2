@@ -22,10 +22,8 @@ use App\Services\WorkflowUsulan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UsulanController extends Controller
@@ -141,63 +139,11 @@ class UsulanController extends Controller
 
         $lokasiTujuan = LokasiTujuan::aktif()->orderBy('nama')->get();
 
-        // Kandidat peserta kelompok: seluruh pegawai selain pengusul sendiri.
-        $calonPeserta = User::whereKeyNot($request->user()->id)
-            ->orderBy('nama')
-            ->get(['id', 'nama', 'nip', 'jabatan']);
-
-        return view('usulan.add-usulan', compact('lokasiTujuan', 'calonPeserta') + [
+        return view('usulan.add-usulan', compact('lokasiTujuan') + [
             'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
             'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
             'spdTerkait' => $this->bekalSpd($request->user()),
-            'salinan' => $this->salinan($request),
         ]);
-    }
-
-    /**
-     * Isi awal formulir yang disalin dari usulan sebelumnya.
-     *
-     * Perjalanan dinas banyak berulang: tujuan, kegiatan, dan rombongan yang
-     * itu-itu juga. Yang tidak ikut disalin adalah yang harus baru — tanggal,
-     * dan SPD yang mendasarinya.
-     *
-     * @return array<string, mixed>
-     */
-    private function salinan(Request $request): array
-    {
-        $nomor = $request->input('salin');
-
-        if (blank($nomor)) {
-            return [];
-        }
-
-        $asal = Usulan::with('peserta')
-            ->where('no_usulan', $nomor)
-            ->where(fn ($query) => $query
-                ->where('id_user', $request->user()->id)
-                ->orWhereHas('peserta', fn ($q) => $q->where('id_user', $request->user()->id)))
-            ->first();
-
-        if (! $asal) {
-            return [];
-        }
-
-        $anggota = $asal->peserta
-            ->pluck('id_user')
-            ->filter()
-            ->reject(fn ($id) => (int) $id === $request->user()->id)
-            ->values();
-
-        return [
-            'dari' => $asal->no_usulan,
-            'id_kegiatan' => $asal->id_kegiatan,
-            'id_kategori_perjadin' => $asal->id_kategori_perjadin,
-            'lokasi' => $asal->lokasi,
-            'instansi' => $asal->instansi,
-            'uraian' => $asal->uraian,
-            'jenis_pengajuan' => $anggota->isNotEmpty() ? 'kelompok' : 'personal',
-            'anggota' => $anggota->all(),
-        ];
     }
 
     /**
@@ -240,7 +186,8 @@ class UsulanController extends Controller
                 'maksud' => $spd->maksud,
                 'alat_angkut' => $spd->alat_angkut,
                 'instansi_pembebanan' => $spd->instansi_pembebanan,
-                // Rekan sepelaksana, untuk menawarkan pengajuan kelompok.
+                // Rekan sepelaksana pada SPD yang sama — ditampilkan sebagai
+                // keterangan; masing-masing mengajukan usulannya sendiri.
                 'rekan' => $spd->pelaksana
                     ->filter(fn ($orang) => $orang->id_user && $orang->id_user !== $pengguna->id)
                     ->map(fn ($orang) => ['id' => $orang->id_user, 'nama' => $orang->nama])
@@ -315,10 +262,16 @@ class UsulanController extends Controller
                 ->with('error', 'Usulan hanya dapat diedit selama berstatus draft, ditolak, atau perlu revisi.');
         }
 
+        // Berkas SPD bertanda tangan boleh dilewati hanya bila sudah pernah
+        // diunggah; nomornya tetap wajib karena ikut tercatat pada jejak audit.
+        $sudahAdaSpd = filled($usulan->dokumen()->latest('id')->value('spd_ditandatangani'));
+
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
+            'no_spd' => ['required', 'string', 'max:255'],
+            'spd_ditandatangani' => [$sudahAdaSpd ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
             'tanggal_mulai' => ['required', 'date'],
@@ -327,6 +280,9 @@ class UsulanController extends Controller
             'surat_tugas' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
+        ], [
+            'no_spd.required' => 'Nomor Surat Perjalanan Dinas wajib diisi sebelum usulan dikirim.',
+            'spd_ditandatangani.required' => 'Unggah Surat Perjalanan Dinas yang sudah ditandatangani sebelum usulan dikirim.',
         ]);
 
         $isDraft = $request->input('action') === 'draft';
@@ -334,6 +290,7 @@ class UsulanController extends Controller
 
         $usulan->update([
             'no_tugas' => $request->no_tugas,
+            'no_spd' => $request->no_spd,
             'status' => StatusUsulan::Draft->value,
             'lokasi' => $request->lokasi,
             'id_lokasi' => $this->resolveLokasi($request->lokasi),
@@ -353,6 +310,10 @@ class UsulanController extends Controller
 
             if ($request->hasFile('surat_tugas')) {
                 $docData['surat_tugas'] = $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public');
+            }
+
+            if ($request->hasFile('spd_ditandatangani')) {
+                $docData['spd_ditandatangani'] = $request->file('spd_ditandatangani')->store('dokumen/spd', 'public');
             }
 
             if ($request->hasFile('rundown')) {
@@ -394,6 +355,10 @@ class UsulanController extends Controller
 
         $request->validate([
             'id_spd' => ['required', Rule::in($this->spdMilik($request->user())->pluck('id'))],
+            // SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
+            // resminya — dasar persetujuan PPK yang tercatat pada jejak audit.
+            'no_spd' => ['required', 'string', 'max:255'],
+            'spd_ditandatangani' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
@@ -405,74 +370,34 @@ class UsulanController extends Controller
             'surat_tugas' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
-            'jenis_pengajuan' => ['required', Rule::in([Usulan::PENGAJUAN_PERSONAL, Usulan::PENGAJUAN_KELOMPOK])],
-            'anggota' => ['array'],
-            'anggota.*' => ['distinct', 'exists:users,id', 'different:pengusul'],
         ], [
-            'anggota.*.distinct' => 'Ada pegawai yang dipilih lebih dari sekali.',
             'id_spd.required' => 'Pilih Surat Perjalanan Dinas yang menjadi dasar usulan ini.',
             'id_spd.in' => 'Surat Perjalanan Dinas itu bukan milik Anda.',
+            'no_spd.required' => 'Nomor Surat Perjalanan Dinas wajib diisi sebelum usulan dikirim.',
+            'spd_ditandatangani.required' => 'Unggah Surat Perjalanan Dinas yang sudah ditandatangani sebelum usulan dikirim.',
             'id_kegiatan.required' => 'Pilih jenis kegiatan perjalanan dinas ini.',
         ]);
 
-        // Pengajuan kelompok wajib menyertakan minimal satu rekan seperjalanan.
-        if ($request->input('jenis_pengajuan') === Usulan::PENGAJUAN_KELOMPOK
-            && count(array_filter((array) $request->input('anggota', []))) === 0) {
-            return back()->withInput()->withErrors([
-                'anggota' => 'Pilih minimal satu pegawai yang ikut dalam perjalanan kelompok.',
-            ]);
-        }
-
         $isDraft = $request->input('action') === 'draft';
-        $kelompok = $request->input('jenis_pengajuan') === Usulan::PENGAJUAN_KELOMPOK;
         $pengusul = $request->user();
 
-        // Pertanggungjawaban bersifat perorangan, jadi setiap peserta menerima
-        // usulan bernomor sendiri. Pengajuan kelompok hanya alat bantu input.
-        $pemilik = collect([$pengusul]);
-        $kodeRombongan = null;
-
-        if ($kelompok) {
-            $rekan = User::whereIn('id', array_filter((array) $request->input('anggota', [])))
-                ->whereKeyNot($pengusul->id)
-                ->get();
-
-            $pemilik = $pemilik->concat($rekan);
-            $kodeRombongan = 'RBG-'.mb_strtoupper(Str::random(8));
-        }
-
+        // Pengajuan selalu perorangan: tiap pelaksana mengunggah SPD bertanda
+        // tangannya sendiri, jadi tidak ada lagi usulan yang dibuatkan untuk
+        // orang lain dan menunggu konfirmasi pemiliknya.
         $berkas = $this->simpanBerkasPengajuan($request);
 
-        $dibuat = DB::transaction(
-            fn () => $pemilik->map(fn (User $orang) => $this->buatUsulanUntuk(
-                $request,
-                $orang,
-                $pengusul,
-                $kodeRombongan,
-                $berkas,
-            ))
+        $usulan = DB::transaction(
+            fn () => $this->buatUsulanUntuk($request, $pengusul, $pengusul, null, $berkas)
         );
 
-        // Usulan yang dibuatkan orang lain menunggu konfirmasi pemiliknya
-        // lebih dulu; hanya usulan milik sendiri yang langsung ke PPK.
         if (! $isDraft) {
-            $dibuat
-                ->reject(fn (Usulan $usulan) => $usulan->dibuatkanOrangLain())
-                ->each(fn (Usulan $usulan) => $this->workflow->ajukan($usulan));
+            $this->workflow->ajukan($usulan);
         }
 
-        if ($kelompok) {
-            $this->beritahuRekan($dibuat, $pengusul);
-        }
-
-        $message = match (true) {
-            $isDraft && $kelompok => "Draft untuk {$dibuat->count()} peserta berhasil disimpan.",
-            $isDraft => 'Draft usulan berhasil disimpan.',
-            $kelompok => "Usulan untuk {$dibuat->count()} peserta berhasil diajukan, masing-masing dengan nomor sendiri.",
-            default => 'Usulan berhasil diajukan.',
-        };
-
-        return redirect()->route('usulan.list')->with('success', $message);
+        return redirect()->route('usulan.list')->with(
+            'success',
+            $isDraft ? 'Draft usulan berhasil disimpan.' : 'Pengajuan perjadin berhasil dikirim.',
+        );
     }
 
     /**
@@ -484,6 +409,7 @@ class UsulanController extends Controller
     {
         return [
             'surat_tugas' => $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public'),
+            'spd_ditandatangani' => $request->file('spd_ditandatangani')->store('dokumen/spd', 'public'),
             'rundown' => $request->hasFile('rundown')
                 ? $request->file('rundown')->store('dokumen/rundown', 'public')
                 : null,
@@ -523,6 +449,7 @@ class UsulanController extends Controller
             'id_kegiatan' => $request->id_kegiatan,
             'id_kategori_perjadin' => $request->id_kategori_perjadin,
             'id_spd' => $request->id_spd,
+            'no_spd' => $request->no_spd,
             'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
             'id_user' => $pemilik->id,
             'id_pembuat' => $pengusul->id,
@@ -550,29 +477,6 @@ class UsulanController extends Controller
         );
 
         return $usulan;
-    }
-
-    /**
-     * Beri tahu rekan bahwa sebuah usulan dibuatkan atas nama mereka.
-     *
-     * @param  Collection<int, Usulan>  $dibuat
-     */
-    private function beritahuRekan($dibuat, User $pengusul): void
-    {
-        $dibuat
-            ->filter(fn (Usulan $usulan) => $usulan->dibuatkanOrangLain())
-            ->each(function (Usulan $usulan) use ($pengusul): void {
-                if (! $usulan->user) {
-                    return;
-                }
-
-                $this->notifikasi->kirim(
-                    $usulan->user,
-                    'Usulan perjalanan dinas dibuatkan untuk Anda',
-                    "{$pengusul->nama} membuatkan usulan {$usulan->no_usulan} ke {$usulan->lokasi} atas nama Anda. Konfirmasi kesediaan agar usulannya berlaku.",
-                    ['usulan' => $usulan, 'tipe' => Notifikasi::TIPE_PERINGATAN],
-                );
-            });
     }
 
     /**
@@ -649,9 +553,15 @@ class UsulanController extends Controller
             return back()->with('error', 'Konfirmasi kesediaan Anda lebih dulu sebelum usulan dikirim ke PPK.');
         }
 
+        // Draf lama mungkin dibuat sebelum SPD bertanda tangan diwajibkan;
+        // ia baru boleh berjalan setelah dilengkapi lewat formulir ubah.
+        if (! $usulan->punyaSpdBertandaTangan()) {
+            return back()->with('error', 'Lengkapi nomor dan berkas Surat Perjalanan Dinas yang sudah ditandatangani lebih dulu sebelum pengajuan dikirim.');
+        }
+
         $this->workflow->ajukan($usulan);
 
-        return back()->with('success', 'Usulan dikirim untuk diverifikasi PPK.');
+        return back()->with('success', 'Pengajuan perjadin dikirim dan tercatat berlaku.');
     }
 
     private function pastikanPemilikBolehKonfirmasi(Request $request, Usulan $usulan): void

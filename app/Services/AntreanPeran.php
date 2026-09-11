@@ -6,6 +6,7 @@ use App\Enums\Kemampuan;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
+use App\Models\LaporanPerjadin;
 use App\Models\User;
 use App\Models\Usulan;
 
@@ -38,6 +39,7 @@ class AntreanPeran
             'verifikasi-nominatif' => $this->bila($pengguna, Kemampuan::MenandatanganiDaftarRiil, fn () => $this->nominatifMenungguPpk()),
             'pembayaran' => $this->bila($pengguna, Kemampuan::MelihatPembayaran, fn () => $this->menungguDibayar()),
             'keuangan' => $this->bila($pengguna, Kemampuan::MemvalidasiBiaya, fn () => $this->menungguValidasi()),
+            'laporan-pimpinan' => $this->bila($pengguna, Kemampuan::MengonfirmasiLaporanPerjadin, fn () => $this->laporanMenungguPimpinan()),
         ], fn (int $jumlah) => $jumlah > 0);
     }
 
@@ -77,6 +79,11 @@ class AntreanPeran
                 'label' => 'Komponen biaya belum divalidasi',
                 'keterangan' => 'Nominalnya belum dinyatakan benar.',
                 'tautan' => 'keuangan',
+            ],
+            'laporan-pimpinan' => [
+                'label' => 'Laporan perjadin menunggu konfirmasi',
+                'keterangan' => 'Dikirim pelaksana, tinggal ditandatangani.',
+                'tautan' => 'laporan-perjadin.index',
             ],
         ];
 
@@ -127,6 +134,12 @@ class AntreanPeran
         return Usulan::whereIn('status', [StatusUsulan::Disetujui->value, StatusUsulan::Selesai->value])
             ->whereDoesntHave('keuangan', fn ($q) => $q->whereNotNull('tanggal_transfer'))
             ->count();
+    }
+
+    /** Laporan perjalanan dinas yang dikirim pelaksana dan belum diputuskan. */
+    public function laporanMenungguPimpinan(): int
+    {
+        return LaporanPerjadin::menungguKonfirmasi()->count();
     }
 
     /** Berkas yang masih memuat komponen biaya belum divalidasi. */

@@ -12,7 +12,7 @@ class LaporanKegiatan extends Model
 {
     protected $table = 'laporan_kegiatan';
 
-    protected $fillable = ['id_laporan', 'urutan', 'tanggal', 'uraian'];
+    protected $fillable = ['id_laporan', 'urutan', 'tanggal', 'tempat', 'uraian'];
 
     /**
      * @return array<string, string>

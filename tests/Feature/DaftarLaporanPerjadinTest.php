@@ -87,7 +87,7 @@ class DaftarLaporanPerjadinTest extends TestCase
             ->get(route('dokumen.laporan.index'))
             ->assertOk()
             ->assertSee($this->usulan->no_usulan)
-            ->assertSee('Belum diisi');
+            ->assertSee('Belum Selesai');
     }
 
     public function test_daftar_menandai_laporan_yang_sudah_selesai(): void

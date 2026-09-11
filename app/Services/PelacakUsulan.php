@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\DaftarNominatif;
-use App\Models\Persetujuan;
 use App\Models\Usulan;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -14,11 +13,17 @@ use Illuminate\Support\Collection;
  *
  * Berbeda dari jejak audit — yang mencatat tiap tindakan siapa pun — daftar
  * ini hanya memuat tonggak yang benar-benar menggerakkan berkas: dibuat,
- * disetujui, SPD terbit, dokumen masuk, laporan selesai, kedua dokumen
+ * uang muka cair, dokumen masuk, laporan selesai, kedua dokumen
  * ditandatangani, nominatif disahkan PPK dan diterima tim keuangan, lalu
- * dibayar. Tiap tonggak menyebut waktunya, dan yang belum terjadi tetap
- * tampil sebagai langkah yang menunggu — supaya jelas berkasnya berhenti
- * di mana.
+ * dibayar. Tiap tonggak menyebut waktunya dan berapa hari berselang dari
+ * tonggak sebelumnya, dan yang belum terjadi tetap tampil sebagai langkah
+ * yang menunggu — lengkap dengan sudah berapa hari menunggunya — supaya
+ * jelas berkasnya berhenti di mana dan seberapa lama.
+ *
+ * Persetujuan PPK dan terbitnya SPD sengaja tidak menjadi tonggak: SPD
+ * terbit sebelum usulan ada, dan persetujuan PPK melekat pada SPD yang
+ * ditandatanganinya, jadi keduanya selalu sudah terlewati begitu usulan
+ * dibuat dan tidak menambah keterangan apa pun.
  *
  * Seluruh waktunya dibaca dari kolom yang memang menyimpannya, bukan dari
  * uraian jejak audit yang bisa berubah kata-katanya.
@@ -31,8 +36,7 @@ class PelacakUsulan
      * @var list<string>
      */
     private const RELASI = [
-        'user', 'spd', 'dokumen', 'laporan', 'keuangan',
-        'daftarRiil.ppk', 'persetujuan.approver',
+        'user', 'dokumen', 'laporan', 'keuangan', 'daftarRiil.ppk',
     ];
 
     /**
@@ -67,7 +71,7 @@ class PelacakUsulan
     /**
      * Tonggak perjalanan berkas ini, berurutan.
      *
-     * @return Collection<int, array{judul: string, keterangan: string, waktu: ?CarbonInterface, oleh: ?string, selesai: bool}>
+     * @return Collection<int, array{judul: string, keterangan: string, waktu: ?CarbonInterface, oleh: ?string, selesai: bool, durasi: ?int, durasi_label: ?string}>
      */
     public function tonggak(Usulan $usulan): Collection
     {
@@ -75,29 +79,19 @@ class PelacakUsulan
 
         $keuangan = $usulan->keuangan;
         $riil = $usulan->daftarRiil->first();
-        $nominatif = $this->nominatif($usulan);
 
-        $putusan = $usulan->persetujuan
-            ->firstWhere('keputusan', Persetujuan::KEPUTUSAN_SETUJU);
+        // Daftar nominatif terbit per surat tugas begitu satu pelaksana
+        // tuntas; usulan ini baru tercantum di sana setelah berkasnya sendiri
+        // ditandatangani PPK. Sebelum itu tonggak nominatifnya belum terlewati
+        // meski daftarnya sudah ada.
+        $nominatif = $this->keduanyaDitandatangani($riil) ? $this->nominatif($usulan) : null;
 
-        return collect([
+        return $this->lekatkanDurasi(collect([
             $this->langkah(
                 'Usulan dibuat',
                 'Pelaksana menyusun usulan perjalanan dinas.',
                 $usulan->created_at,
                 $usulan->user?->nama,
-            ),
-            $this->langkah(
-                'Disetujui PPK',
-                'Usulan disahkan sehingga perjalanan boleh berjalan.',
-                $putusan?->waktu_keputusan,
-                $putusan?->approver?->nama,
-            ),
-            $this->langkah(
-                'Surat Perjalanan Dinas terbit',
-                'SPD diterbitkan berikut nomor suratnya.',
-                $usulan->spd?->created_at,
-                $usulan->spd?->dikeluarkan_di ? 'Dikeluarkan di '.$usulan->spd->dikeluarkan_di : null,
             ),
             $this->langkah(
                 'Uang muka dibayarkan',
@@ -143,7 +137,7 @@ class PelacakUsulan
             ),
             $this->langkah(
                 'Nominatif diterima tim keuangan',
-                'Daftar nominatif dikirim PPK dan menjadi dasar pelunasan.',
+                'Daftar nominatif dikirim PPK ke tim keuangan sebagai dasar pembayaran.',
                 $nominatif?->dikirim_at,
                 null,
             ),
@@ -153,7 +147,88 @@ class PelacakUsulan
                 $this->keTanggal($keuangan?->tanggal_pelunasan),
                 null,
             ),
-        ]);
+        ]));
+    }
+
+    /**
+     * Lekatkan berapa hari tiap tonggak berselang dari tonggak sebelumnya.
+     *
+     * Tonggak yang sudah terlewati dihitung dari tonggak terlewati terakhir
+     * sebelumnya; tonggak pertama yang belum terlewati dihitung sampai hari
+     * ini — itulah berapa lama berkas sudah menunggu di situ. Tonggak yang
+     * menunggu sesudahnya tidak diberi durasi: belum ada yang bisa diukur.
+     *
+     * Tonggak tidak selalu terlewati berurutan — dokumen bisa diunggah
+     * sebelum uang muka cair — jadi selisih yang negatif dibulatkan ke nol,
+     * bukan ditampilkan sebagai angka minus yang membingungkan.
+     *
+     * @param  Collection<int, array{judul: string, keterangan: string, waktu: ?CarbonInterface, oleh: ?string, selesai: bool}>  $tonggak
+     * @return Collection<int, array{judul: string, keterangan: string, waktu: ?CarbonInterface, oleh: ?string, selesai: bool, durasi: ?int, durasi_label: ?string}>
+     */
+    private function lekatkanDurasi(Collection $tonggak): Collection
+    {
+        $sebelumnya = null;
+        $menungguSudahDitandai = false;
+
+        return $tonggak->map(function (array $langkah) use (&$sebelumnya, &$menungguSudahDitandai): array {
+            $langkah['durasi'] = null;
+            $langkah['durasi_label'] = null;
+
+            if ($langkah['selesai']) {
+                if ($sebelumnya !== null) {
+                    $langkah['durasi'] = $this->selisihHari($sebelumnya, $langkah['waktu']);
+                    $langkah['durasi_label'] = $this->labelDurasi($langkah['durasi']).' dari tahap sebelumnya';
+                }
+
+                $sebelumnya = $langkah['waktu'];
+
+                return $langkah;
+            }
+
+            if (! $menungguSudahDitandai && $sebelumnya !== null) {
+                $menungguSudahDitandai = true;
+                $langkah['durasi'] = $this->selisihHari($sebelumnya, now());
+                $langkah['durasi_label'] = 'Sudah menunggu '.$this->labelDurasi($langkah['durasi']);
+            }
+
+            return $langkah;
+        });
+    }
+
+    private function selisihHari(CarbonInterface $dari, CarbonInterface $sampai): int
+    {
+        return max(0, (int) $dari->copy()->startOfDay()->diffInDays($sampai->copy()->startOfDay(), false));
+    }
+
+    /**
+     * "di hari yang sama", "1 hari", "12 hari".
+     */
+    public function labelDurasi(int $hari): string
+    {
+        return $hari === 0 ? 'di hari yang sama' : "{$hari} hari";
+    }
+
+    /**
+     * Berapa hari seluruh perjalanan berkas ini memakan waktu: dari tonggak
+     * pertama sampai tonggak terlewati terakhir, atau sampai hari ini bila
+     * masih ada yang menunggu.
+     */
+    public function lamaBerjalan(Usulan $usulan): int
+    {
+        $tonggak = $this->tonggak($usulan);
+        $pertama = $tonggak->first()['waktu'] ?? null;
+
+        if (! $pertama instanceof CarbonInterface) {
+            return 0;
+        }
+
+        // Tonggak tidak selalu terlewati berurutan, jadi akhirnya adalah yang
+        // paling belakangan — bukan sekadar yang tercantum terakhir.
+        $akhir = $tonggak->every(fn (array $langkah) => $langkah['selesai'])
+            ? $tonggak->max('waktu')
+            : now();
+
+        return $this->selisihHari($pertama, $akhir);
     }
 
     /**
