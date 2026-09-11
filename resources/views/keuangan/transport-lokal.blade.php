@@ -8,6 +8,8 @@
 
     <x-flash />
 
+    <x-mode-lihat-keuangan />
+
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-800">Transport Lokal</h1>
         <p class="text-xs text-slate-400 mt-0.5">

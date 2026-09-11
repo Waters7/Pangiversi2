@@ -4,36 +4,49 @@
     <meta charset="UTF-8">
     <title>Rincian Biaya Perjalanan Dinas — {{ $usulan->no_usulan }}</title>
     <style>
-        * { font-family: DejaVu Sans, sans-serif; }
-        body { font-size: 11px; color: #1e293b; margin: 0; }
-        .lampiran { text-align: right; font-size: 9px; line-height: 1.5; margin-bottom: 14px; }
-        h1 { font-size: 13px; text-align: center; text-transform: uppercase; margin: 0 0 14px; letter-spacing: .5px; }
-        .rujukan td { padding: 2px 0; font-size: 11px; }
-        .rujukan td:first-child { width: 170px; }
-        table.biaya { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table.biaya th, table.biaya td { border: 1px solid #475569; padding: 5px 8px; }
-        table.biaya th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; text-align: center; }
+        /* Arial dipetakan dompdf ke Helvetica: font baku PDF yang sama
+           dengan SPD, jadi seluruh dokumen cetak seragam dan lebih ringkas
+           daripada DejaVu Sans yang lebar. */
+        * { font-family: Arial, Helvetica, sans-serif; }
+        @page { margin: 14mm 16mm 12mm; }
+        body { font-size: 10pt; color: #000; margin: 0; line-height: 1.3; }
+        .lampiran { text-align: right; font-size: 8pt; line-height: 1.4; margin-bottom: 3mm; }
+        h1 { font-size: 12.5pt; text-align: center; text-transform: uppercase; margin: 0 0 3mm; letter-spacing: .4px; }
+        .rujukan td { padding: 0.6mm 0; font-size: 10pt; }
+        .rujukan td:first-child { width: 42mm; }
+        table.biaya { width: 100%; border-collapse: collapse; margin-top: 3mm; }
+        table.biaya th, table.biaya td { border: 0.6pt solid #000; padding: 1.1mm 2mm; }
+        table.biaya td.ket { font-size: 8.5pt; }
+        table.biaya th { background: #f2f2f2; font-size: 9pt; text-transform: uppercase; text-align: center; }
         .kanan { text-align: right; }
         .tengah { text-align: center; }
         .kategori td { font-weight: bold; }
-        .sub td { padding-left: 22px; }
-        .jumlah td { font-weight: bold; background: #f8fafc; }
-        .subjumlah td { font-style: italic; color: #334155; background: #fafafa; }
-        .kelompok td { background: #f8fafc; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
-        .terbilang { margin-top: 8px; font-style: italic; }
-        table.ttd { width: 100%; margin-top: 22px; }
-        table.ttd td { width: 50%; vertical-align: top; font-size: 11px; text-align: center; line-height: 1.5; }
+        .sub td { padding-left: 6mm; }
+        .jumlah td { font-weight: bold; background: #f2f2f2; }
+        .subjumlah td { font-style: italic; color: #333; }
+        .kelompok td { background: #f7f7f7; font-weight: bold; font-size: 9pt; text-transform: uppercase; letter-spacing: .3px; }
+        .terbilang { margin: 2.5mm 0 0; font-style: italic; }
+
+        /* Blok tanda tangan disusun sebagai tabel tanpa garis dan tidak boleh
+           terpotong halaman: satu halaman untuk seluruh dokumen. */
+        table.ttd { width: 100%; margin-top: 4mm; page-break-inside: avoid; }
+        table.ttd td { width: 50%; vertical-align: top; font-size: 10pt; text-align: center; line-height: 1.4; }
         /* Kotak tanda tangan bertinggi tetap: QR di dalamnya bila sudah terbit,
            kosong bila belum — semua kolom tanda tangan sejajar. */
-        .kotak-ttd { height: 26mm; margin: 4px 0 2px; }
+        .kotak-ttd { height: 21mm; margin: 1mm 0; }
         .nama { font-weight: bold; text-decoration: underline; }
-        .rampung { margin-top: 26px; }
-        .rampung h2 { font-size: 11px; text-transform: uppercase; margin: 0 0 8px; }
-        .rampung td { padding: 3px 0; }
-        .rampung td:first-child { width: 220px; }
-        .qr { width: 78px; height: 78px; margin-top: 4px; }
-        .kode-qr { font-family: DejaVu Sans Mono, monospace; font-size: 8px; letter-spacing: .4px; }
-        .catatan-qr { font-size: 7.5px; color: #64748b; line-height: 1.35; margin: 2px 0 0; }
+
+        /* Perhitungan SPD rampung di kiri, PPK di kanan — seperti pada
+           lembar Lampiran II aslinya, sekaligus menghemat tinggi halaman. */
+        table.rampung { width: 100%; margin-top: 3mm; page-break-inside: avoid; }
+        table.rampung td.kolom { width: 50%; vertical-align: top; font-size: 10pt; }
+        table.rampung td.kolom-ppk { text-align: center; line-height: 1.4; }
+        .rampung h2 { font-size: 10pt; text-transform: uppercase; margin: 0 0 2mm; }
+        table.hitung td { padding: 0.8mm 0; font-size: 10pt; }
+        table.hitung td:first-child { width: 48mm; }
+        .qr { width: 20mm; height: 20mm; margin-top: 0.5mm; }
+        .kode-qr { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.5pt; letter-spacing: .4px; }
+        .catatan-qr { font-size: 7pt; color: #444; line-height: 1.3; margin: 1mm 0 0; }
     </style>
 </head>
 <body>
@@ -59,10 +72,10 @@
     <table class="biaya">
         <thead>
             <tr>
-                <th style="width: 36px;">No</th>
+                <th style="width: 9mm;">No</th>
                 <th>Perincian Biaya</th>
-                <th style="width: 120px;">Jumlah</th>
-                <th style="width: 110px;">Ket.</th>
+                <th style="width: 32mm;">Jumlah</th>
+                <th style="width: 36mm;">Ket.</th>
             </tr>
         </thead>
         <tbody>
@@ -120,7 +133,7 @@
                                  Uang Penginapan tanpa menulis ulang datanya. --}}
                             <td>{{ preg_replace('/^Biaya Hotel\b/', 'Uang Penginapan', $item->komponen) }}</td>
                             <td class="kanan">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
-                            <td class="tengah">{{ $item->keterangan && $item->keterangan !== $item->komponen ? $item->keterangan : '' }}</td>
+                            <td class="tengah ket">{{ $item->keterangan && $item->keterangan !== $item->komponen ? str_replace('→', '-', $item->keterangan) : '' }}</td>
                         </tr>
 
                         @if ($item->volume > 1)
@@ -218,42 +231,42 @@
         </tr>
     </table>
 
-    <div class="rampung">
-        <h2>Perhitungan SPD Rampung</h2>
-        <table>
-            <tr><td>Ditetapkan sejumlah</td><td>: Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}</td></tr>
-            <tr><td>Yang telah dibayarkan semula</td><td>: Rp {{ number_format($dibayarkan, 0, ',', '.') }}</td></tr>
-            <tr><td>Sisa kurang / lebih</td><td>: Rp {{ number_format($totalKeseluruhan - $dibayarkan, 0, ',', '.') }}</td></tr>
-        </table>
-
-        <table class="ttd">
-            <tr>
-                <td></td>
-                <td>
-                    {{-- Tanggal PPK menandatangani menurut sistem; sebelum itu
-                         bertitik, bukan tanggal cetak yang bisa menyesatkan. --}}
-                    Manado, {{ $daftarRiil?->ditandatangani_at?->translatedFormat('d F Y') ?? '……………………' }}<br>
-                    Pejabat Pembuat Komitmen,
-                    <div class="kotak-ttd">
-                        @if ($qrPpk)
-                            {{-- Kode yang sama dengan QR PPK pada daftar pengeluaran riil --}}
-                            <img src="{{ $qrPpk }}" alt="QR verifikasi PPK" class="qr">
-                        @endif
-                    </div>
-                    <span class="nama">{{ $daftarRiil?->ppk?->nama ?? $ppk?->nama ?? '……………………………' }}</span><br>
-                    NIP : {{ $daftarRiil?->ppk?->nip ?? $ppk?->nip ?? '…………………………' }}
+    <table class="rampung">
+        <tr>
+            <td class="kolom">
+                <div class="rampung">
+                    <h2>Perhitungan SPD Rampung</h2>
+                    <table class="hitung">
+                        <tr><td>Ditetapkan sejumlah</td><td>: Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}</td></tr>
+                        <tr><td>Yang telah dibayarkan semula</td><td>: Rp {{ number_format($dibayarkan, 0, ',', '.') }}</td></tr>
+                        <tr><td>Sisa kurang / lebih</td><td>: Rp {{ number_format($totalKeseluruhan - $dibayarkan, 0, ',', '.') }}</td></tr>
+                    </table>
+                </div>
+            </td>
+            <td class="kolom kolom-ppk">
+                {{-- Tanggal PPK menandatangani menurut sistem; sebelum itu
+                     bertitik, bukan tanggal cetak yang bisa menyesatkan. --}}
+                Manado, {{ $daftarRiil?->ditandatangani_at?->translatedFormat('d F Y') ?? '……………………' }}<br>
+                Pejabat Pembuat Komitmen,
+                <div class="kotak-ttd">
                     @if ($qrPpk)
-                        <br><span class="kode-qr">{{ $daftarRiil->kode_verifikasi }}</span>
-                        <p class="catatan-qr">
-                            Ditandatangani secara elektronik pada
-                            {{ $daftarRiil->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.<br>
-                            Pindai QR untuk memeriksa keabsahan tanda tangan PPK.
-                        </p>
+                        {{-- Kode yang sama dengan QR PPK pada daftar pengeluaran riil --}}
+                        <img src="{{ $qrPpk }}" alt="QR verifikasi PPK" class="qr">
                     @endif
-                </td>
-            </tr>
-        </table>
-    </div>
+                </div>
+                <span class="nama">{{ $daftarRiil?->ppk?->nama ?? $ppk?->nama ?? '……………………………' }}</span><br>
+                NIP : {{ $daftarRiil?->ppk?->nip ?? $ppk?->nip ?? '…………………………' }}
+                @if ($qrPpk)
+                    <br><span class="kode-qr">{{ $daftarRiil->kode_verifikasi }}</span>
+                    <p class="catatan-qr">
+                        Ditandatangani secara elektronik pada
+                        {{ $daftarRiil->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.<br>
+                        Pindai QR untuk memeriksa keabsahan tanda tangan PPK.
+                    </p>
+                @endif
+            </td>
+        </tr>
+    </table>
 
 </body>
 </html>

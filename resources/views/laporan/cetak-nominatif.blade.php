@@ -79,9 +79,13 @@
             width: 50%;
         }
 
-        /* Ruang tanda tangan basah. */
-        .ruang-ttd { height: 28mm; }
+        /* Ruang tanda tangan bertinggi tetap: basah bagi KPPN, QR bagi PPK
+           begitu daftarnya ditandatangani di aplikasi. */
+        .ruang-ttd { height: 26mm; vertical-align: middle; }
         .nama-ttd { font-weight: bold; text-decoration: underline; }
+        .qr { width: 22mm; height: 22mm; }
+        .kode-qr { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.5pt; letter-spacing: .4px; }
+        .catatan-qr { font-size: 7pt; color: #444; line-height: 1.3; margin: 1mm 0 0; }
     </style>
 </head>
 <body>
@@ -104,26 +108,29 @@
     <table class="isi">
         <thead>
             <tr>
-                <th rowspan="2" style="width:4%">NO.</th>
-                <th rowspan="2" style="width:14%">NAMA</th>
-                <th colspan="2" style="width:11%">TEMPAT</th>
+            {{-- Lebar kolom dijumlahkan tepat 100%: dulu 115%, sehingga
+                 kolom terakhir terdorong keluar tepi kertas. --}}
+            <tr>
+                <th rowspan="2" style="width:3%">NO.</th>
+                <th rowspan="2" style="width:12%">NAMA</th>
+                <th colspan="2" style="width:10%">TEMPAT</th>
                 <th rowspan="2" style="width:8%">LAMANYA<br>PERJALANAN</th>
-                <th rowspan="2" style="width:20%">MAKSUD PERJALANAN,<br>No. &amp; Tgl. SPPD / SURAT TUGAS</th>
-                <th rowspan="2" style="width:8%">TIKET<br>(PP)</th>
-                <th rowspan="2" style="width:7%">TRANSPORT</th>
-                <th colspan="3" style="width:17%">UANG HARIAN / SAKU</th>
-                <th colspan="3" style="width:17%">UANG PENGINAPAN</th>
-                <th rowspan="2" style="width:9%">JUMLAH<br>PEMBAYARAN</th>
+                <th rowspan="2" style="width:18%">MAKSUD PERJALANAN,<br>No. &amp; Tgl. SPPD / SURAT TUGAS</th>
+                <th rowspan="2" style="width:7%">TIKET<br>(PP)</th>
+                <th rowspan="2" style="width:6%">TRANSPORT</th>
+                <th colspan="3" style="width:14%">UANG HARIAN / SAKU</th>
+                <th colspan="3" style="width:14%">UANG PENGINAPAN</th>
+                <th rowspan="2" style="width:8%">JUMLAH<br>PEMBAYARAN</th>
             </tr>
             <tr>
-                <th>ASAL</th>
-                <th>TUJUAN</th>
-                <th>HARI</th>
-                <th>BIAYA</th>
-                <th>JUMLAH</th>
-                <th>HARI</th>
-                <th>BIAYA</th>
-                <th>JUMLAH</th>
+                <th style="width:5%">ASAL</th>
+                <th style="width:5%">TUJUAN</th>
+                <th style="width:3%">HARI</th>
+                <th style="width:5.5%">BIAYA</th>
+                <th style="width:5.5%">JUMLAH</th>
+                <th style="width:3%">HARI</th>
+                <th style="width:5.5%">BIAYA</th>
+                <th style="width:5.5%">JUMLAH</th>
             </tr>
         </thead>
 
@@ -184,10 +191,13 @@
             <td>Pejabat Pembuat Komitmen</td>
         </tr>
         <tr>
+            {{-- KPPN menandatangani basah, jadi ruangnya dibiarkan kosong. --}}
             <td class="ruang-ttd"></td>
-            {{-- Dibiarkan kosong: daftar nominatif ditandatangani basah,
-                 jadi ruangnya harus tersedia di atas kertas. --}}
-            <td class="ruang-ttd"></td>
+            <td class="ruang-ttd">
+                @if ($qr)
+                    <img src="{{ $qr }}" alt="QR verifikasi PPK" class="qr">
+                @endif
+            </td>
         </tr>
         <tr>
             <td class="nama-ttd">…………………………………..</td>
@@ -195,7 +205,17 @@
         </tr>
         <tr>
             <td>NIP. …………………………</td>
-            <td>NIP. {{ $ppk?->nip ?? '…………………………' }}</td>
+            <td>
+                NIP. {{ $ppk?->nip ?? '…………………………' }}
+                @if ($qr)
+                    <br><span class="kode-qr">{{ $nominatif->kode_verifikasi }}</span>
+                    <p class="catatan-qr">
+                        Ditandatangani secara elektronik pada
+                        {{ $nominatif->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.
+                        Pindai QR untuk memeriksa keabsahan tanda tangan PPK.
+                    </p>
+                @endif
+            </td>
         </tr>
     </table>
 

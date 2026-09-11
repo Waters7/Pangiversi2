@@ -1,178 +1,146 @@
+@php
+    use App\Enums\StatusUsulan;
+    use App\Models\Persetujuan;
+
+    $tanggal = fn ($nilai, string $pola = 'd F Y') => $nilai
+        ? \Illuminate\Support\Carbon::parse($nilai)->translatedFormat($pola)
+        : '—';
+
+    $dokumen = $usulan->dokumen->last();
+    $status = StatusUsulan::dari($usulan->status);
+
+    // Persetujuan PPK tercatat saat usulan diajukan bersama SPD bertanda
+    // tangan; itulah dasar keputusannya.
+    $persetujuanPpk = $usulan->persetujuan
+        ->first(fn (Persetujuan $p) => $p->keputusan === Persetujuan::KEPUTUSAN_SETUJU);
+
+    $lampiran = [
+        ['Surat Tugas', $dokumen?->surat_tugas],
+        ['Surat Perjalanan Dinas bertanda tangan', $dokumen?->spd_ditandatangani],
+        ['Rundown / jadwal kegiatan', $dokumen?->rundown],
+        ['Dokumen pendukung', $dokumen?->dokumen_pendukung],
+    ];
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Usulan Perjalanan Dinas - {{ $usulan->no_usulan }}</title>
+    <title>Usulan Perjalanan Dinas — {{ $usulan->no_usulan }}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: #1e293b; line-height: 1.5; }
+        /* Arial dipetakan dompdf ke Helvetica: font baku PDF, tanpa berkas
+           font yang ikut ditanam, sama dengan dokumen cetak lainnya. */
+        * { font-family: Arial, Helvetica, sans-serif; }
+        @page { margin: 16mm 18mm 16mm; }
+        body { font-size: 10.5pt; color: #000; margin: 0; line-height: 1.35; }
 
-        .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #0d9488; padding-bottom: 16px; }
-        .header h1 { font-size: 16px; font-weight: bold; color: #0d9488; margin-bottom: 2px; }
-        .header p { font-size: 10px; color: #64748b; }
+        .kop { text-align: center; margin-bottom: 3mm; }
+        .kop img { width: 82%; height: auto; }
 
-        .section { margin-bottom: 20px; }
-        .section-title {
-            font-size: 12px; font-weight: bold; color: #0f766e;
-            border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px;
+        h1 { font-size: 13pt; text-align: center; text-transform: uppercase; letter-spacing: .3px; margin: 0; }
+        .nomor { text-align: center; font-size: 10pt; margin: 1mm 0 3mm; }
+
+        h2 {
+            font-size: 10.5pt; text-transform: uppercase; letter-spacing: .3px;
+            margin: 4mm 0 1mm; padding-bottom: 0.8mm; border-bottom: 0.6pt solid #000;
         }
 
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { padding: 5px 8px; vertical-align: top; }
-        .info-table .label { width: 180px; color: #64748b; font-weight: 600; }
-        .info-table .value { color: #1e293b; }
+        .isian td { padding: 0.9mm 0; vertical-align: top; }
+        .isian td.label { width: 46mm; }
+        .isian td.titik { width: 4mm; }
 
-        .detail-table { border: 1px solid #e2e8f0; }
-        .detail-table th {
-            background: #f1f5f9; color: #475569; font-size: 10px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0;
-        }
-        .detail-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        table.lampiran th, table.lampiran td { border: 0.6pt solid #000; padding: 1.6mm 2.5mm; }
+        table.lampiran th { font-size: 9.5pt; text-align: left; background: #f2f2f2; }
+        .tengah { text-align: center; }
 
-        .badge {
-            display: inline-block; padding: 2px 10px; border-radius: 10px;
-            font-size: 10px; font-weight: bold;
-        }
-        .badge-draft { background: #f1f5f9; color: #475569; }
-        .badge-diajukan { background: #dbeafe; color: #1e40af; }
-        .badge-menunggu { background: #fef3c7; color: #92400e; }
-        .badge-disetujui { background: #d1fae5; color: #065f46; }
-        .badge-ditolak { background: #fee2e2; color: #991b1b; }
-        .badge-selesai { background: #ede9fe; color: #5b21b6; }
+        .catatan { margin-top: 2mm; padding: 2.5mm 3mm; border: 0.6pt solid #000; }
+        .catatan .judul { font-weight: bold; margin-bottom: 1mm; }
 
-        .catatan-box {
-            background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;
-            padding: 10px 14px; margin-top: 10px;
-        }
-        .catatan-box .catatan-label { font-weight: bold; color: #991b1b; font-size: 10px; margin-bottom: 4px; }
-        .catatan-box .catatan-text { color: #dc2626; }
-
-        .footer { margin-top: 30px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+        .kaki { margin-top: 5mm; font-size: 8pt; color: #333; border-top: 0.5pt solid #999; padding-top: 2mm; }
     </style>
 </head>
 <body>
 
-    {{-- HEADER --}}
-    <div class="header">
-        <h1>USULAN PERJALANAN DINAS</h1>
-        <p>Sistem Informasi Perjalanan Dinas — Poltekkes Kemenkes</p>
+    <div class="kop">
+        <img src="{{ public_path('images/kop-surat-poltekkes.jpg') }}" alt="Kop Poltekkes Kemenkes Manado">
     </div>
 
-    {{-- DATA PEMOHON --}}
-    <div class="section">
-        <div class="section-title">Data Pemohon</div>
-        <table class="info-table">
-            <tr>
-                <td class="label">Nama Pegawai</td>
-                <td class="value">{{ $usulan->user->nama }}</td>
-            </tr>
-            <tr>
-                <td class="label">NIP</td>
-                <td class="value">{{ $usulan->user->nip }}</td>
-            </tr>
-            <tr>
-                <td class="label">Email</td>
-                <td class="value">{{ $usulan->user->email }}</td>
-            </tr>
-        </table>
-    </div>
+    <h1>Usulan Perjalanan Dinas</h1>
+    <p class="nomor">Nomor {{ $usulan->no_usulan }}</p>
 
-    {{-- DATA PERJALANAN --}}
-    <div class="section">
-        <div class="section-title">Data Perjalanan Dinas</div>
-        <table class="info-table">
+    <h2>Pelaksana</h2>
+    <table class="isian">
+        <tr><td class="label">Nama</td><td class="titik">:</td><td>{{ $usulan->user?->nama ?? '—' }}</td></tr>
+        <tr><td class="label">NIP</td><td class="titik">:</td><td>{{ $usulan->user?->nip ?? '—' }}</td></tr>
+        <tr><td class="label">Jabatan</td><td class="titik">:</td><td>{{ $usulan->user?->jabatan ?? '—' }}</td></tr>
+        <tr><td class="label">Unit Kerja</td><td class="titik">:</td><td>{{ $usulan->user?->unit?->nama ?? '—' }}</td></tr>
+        @if ($usulan->peserta->count() > 1)
             <tr>
-                <td class="label">No. Usulan</td>
-                <td class="value">{{ $usulan->no_usulan }}</td>
+                <td class="label">Peserta Lain</td><td class="titik">:</td>
+                <td>{{ $usulan->peserta->where('id_user', '!=', $usulan->id_user)->pluck('nama')->join(', ') }}</td>
             </tr>
-            <tr>
-                <td class="label">Status</td>
-                <td class="value">
-                    <span class="badge badge-{{ $usulan->status }}">{{ $usulan->status_text }}</span>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Jenis Kegiatan</td>
-                <td class="value">{{ $usulan->kegiatan?->nama ?? '—' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Dasar Penugasan</td>
-                <td class="value">{{ $usulan->no_tugas }}</td>
-            </tr>
-            <tr>
-                <td class="label">Lokasi / Kota Tujuan</td>
-                <td class="value">{{ $usulan->lokasi }}</td>
-            </tr>
-            <tr>
-                <td class="label">Instansi Tujuan</td>
-                <td class="value">{{ $usulan->instansi }}</td>
-            </tr>
-            <tr>
-                <td class="label">Tanggal Mulai</td>
-                <td class="value">{{ $usulan->tanggal_mulai_formatted }}</td>
-            </tr>
-            <tr>
-                <td class="label">Tanggal Selesai</td>
-                <td class="value">{{ $usulan->tanggal_selesai_formatted }}</td>
-            </tr>
-            <tr>
-                <td class="label">Durasi</td>
-                <td class="value">{{ $usulan->durasi }} hari</td>
-            </tr>
-            @if($usulan->uraian)
-            <tr>
-                <td class="label">Uraian Tujuan</td>
-                <td class="value">{{ $usulan->uraian }}</td>
-            </tr>
+        @endif
+    </table>
+
+    <h2>Perjalanan Dinas</h2>
+    <table class="isian">
+        <tr><td class="label">Dasar Penugasan</td><td class="titik">:</td><td>Surat Tugas {{ $usulan->no_tugas ?? '—' }}</td></tr>
+        <tr><td class="label">Nomor SPD</td><td class="titik">:</td><td>{{ $usulan->no_spd ?? '—' }}</td></tr>
+        <tr><td class="label">Kategori</td><td class="titik">:</td><td>{{ $usulan->kategoriPerjadin?->nama ?? '—' }}</td></tr>
+        <tr><td class="label">Jenis Kegiatan</td><td class="titik">:</td><td>{{ $usulan->kegiatan?->nama ?? '—' }}</td></tr>
+        <tr><td class="label">Tujuan</td><td class="titik">:</td><td>{{ $usulan->instansi }}, {{ $usulan->lokasi }}</td></tr>
+        <tr>
+            <td class="label">Waktu Pelaksanaan</td><td class="titik">:</td>
+            <td>{{ $tanggal($usulan->tanggal_mulai) }} s.d. {{ $tanggal($usulan->tanggal_selesai) }} ({{ $usulan->durasi }} hari)</td>
+        </tr>
+        <tr><td class="label">Tahun Anggaran</td><td class="titik">:</td><td>{{ $usulan->tahunAnggaran?->tahun ?? '—' }}</td></tr>
+        <tr><td class="label">Maksud Perjalanan</td><td class="titik">:</td><td>{{ $usulan->uraian ?: '—' }}</td></tr>
+        <tr><td class="label">Status Usulan</td><td class="titik">:</td><td>{{ $status->label() }}</td></tr>
+        <tr><td class="label">Tanggal Dibuat</td><td class="titik">:</td><td>{{ $tanggal($usulan->created_at) }}</td></tr>
+    </table>
+
+    @if ($persetujuanPpk)
+        <h2>Persetujuan</h2>
+        <table class="isian">
+            <tr><td class="label">Disetujui oleh</td><td class="titik">:</td><td>{{ $persetujuanPpk->approver?->nama ?? 'Pejabat Pembuat Komitmen' }}</td></tr>
+            <tr><td class="label">Tanggal</td><td class="titik">:</td><td>{{ $tanggal($persetujuanPpk->waktu_keputusan, 'd F Y, H:i') }} WITA</td></tr>
+            @if ($persetujuanPpk->catatan)
+                <tr><td class="label">Keterangan</td><td class="titik">:</td><td>{{ $persetujuanPpk->catatan }}</td></tr>
             @endif
         </table>
-    </div>
+    @endif
 
-    {{-- CATATAN PENOLAKAN --}}
-    @if($usulan->status === 'ditolak' && $usulan->catatan)
-    <div class="section">
-        <div class="catatan-box">
-            <div class="catatan-label">Catatan Penolakan dari PPK</div>
-            <div class="catatan-text">{{ $usulan->catatan }}</div>
+    @if ($status === StatusUsulan::Ditolak && $usulan->catatan)
+        <div class="catatan">
+            <div class="judul">Catatan penolakan PPK</div>
+            {{ $usulan->catatan }}
         </div>
-    </div>
     @endif
 
-    {{-- LAMPIRAN --}}
-    @php $dokumen = $usulan->dokumen->last(); @endphp
-    @if($dokumen)
-    <div class="section">
-        <div class="section-title">Lampiran Dokumen</div>
-        <table class="detail-table">
-            <thead>
+    <h2>Lampiran</h2>
+    <table class="lampiran">
+        <thead>
+            <tr>
+                <th style="width: 10mm" class="tengah">No.</th>
+                <th>Dokumen</th>
+                <th style="width: 32mm" class="tengah">Keterangan</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($lampiran as $i => [$nama, $ada])
                 <tr>
-                    <th>Jenis Dokumen</th>
-                    <th>Status</th>
+                    <td class="tengah">{{ $i + 1 }}</td>
+                    <td>{{ $nama }}</td>
+                    <td class="tengah">{{ $ada ? 'Terlampir' : 'Tidak ada' }}</td>
                 </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Surat Tugas</td>
-                    <td>{{ $dokumen->surat_tugas ? '✓ Tersedia' : '— Tidak ada' }}</td>
-                </tr>
-                <tr>
-                    <td>Rundown Kegiatan</td>
-                    <td>{{ $dokumen->rundown ? '✓ Tersedia' : '— Tidak ada' }}</td>
-                </tr>
-                <tr>
-                    <td>Dokumen Pendukung</td>
-                    <td>{{ $dokumen->dokumen_pendukung ? '✓ Tersedia' : '— Tidak ada' }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    @endif
+            @endforeach
+        </tbody>
+    </table>
 
-    {{-- FOOTER --}}
-    <div class="footer">
-        Dokumen ini dicetak secara otomatis oleh sistem pada {{ now()->translatedFormat('d F Y, H:i') }} WIB
-    </div>
+    <p class="kaki">
+        Dicetak dari aplikasi PANGI pada {{ now()->translatedFormat('d F Y, H:i') }} WITA.
+        Data pada dokumen ini mengikuti isian usulan saat dicetak.
+    </p>
 
 </body>
 </html>

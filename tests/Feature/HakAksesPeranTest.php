@@ -126,6 +126,49 @@ class HakAksesPeranTest extends TestCase
             ->assertOk();
     }
 
+    /**
+     * PPK membuka modul keuangan dalam mode lihat saja: seluruh usulan
+     * terbuka, spanduknya menyatakan begitu, dan tidak satu pun tombol
+     * ubah — input rincian, validasi, pembayaran, penagihan — yang tampil.
+     */
+    public function test_ppk_membuka_keuangan_dalam_mode_lihat_saja(): void
+    {
+        $usulan = Usulan::factory()->create(['status' => StatusUsulan::Disetujui->value]);
+        $usulan->keuangan()->create(['total' => 0, 'uang_muka' => 0, 'sisa' => 0]);
+
+        $ppk = $this->pengguna(PeranPengguna::Ppk);
+
+        $this->assertTrue($ppk->hanyaMelihatKeuangan());
+        $this->assertFalse($this->pengguna(PeranPengguna::TimKeuangan)->hanyaMelihatKeuangan());
+        $this->assertFalse($this->pengguna(PeranPengguna::Bendahara)->hanyaMelihatKeuangan());
+
+        $this->actingAs($ppk)
+            ->get(route('keuangan'))
+            ->assertOk()
+            ->assertSee('Mode lihat saja')
+            ->assertSee($usulan->no_usulan)
+            ->assertSee('Rincian Biaya Usulan')
+            ->assertDontSee('Input Rincian Biaya')
+            ->assertDontSee('Tagih ');
+
+        $this->actingAs($ppk)
+            ->get(route('keuangan.detail', $usulan))
+            ->assertOk()
+            ->assertSee('Mode lihat saja')
+            ->assertDontSee(route('keuangan.rincian.store', $usulan->no_usulan))
+            ->assertDontSee(route('keuangan.bayar-uang-muka', $usulan->no_usulan))
+            ->assertDontSee('Simpan Rincian');
+    }
+
+    public function test_tim_keuangan_tidak_melihat_spanduk_lihat_saja(): void
+    {
+        $this->actingAs($this->pengguna(PeranPengguna::TimKeuangan))
+            ->get(route('keuangan'))
+            ->assertOk()
+            ->assertDontSee('Mode lihat saja')
+            ->assertSee('Input Rincian Biaya');
+    }
+
     // ── Tim SDM ──
 
     public function test_tim_sdm_melihat_jadwal_dan_mengelola_pengguna_saja(): void

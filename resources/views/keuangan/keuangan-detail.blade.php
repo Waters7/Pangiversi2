@@ -21,6 +21,8 @@
             </div>
         </div>
 
+        <x-mode-lihat-keuangan />
+
         {{-- Banner Selesai --}}
         @if($usulan->status === 'selesai')
             <div class="mb-5 flex items-center gap-3 px-5 py-3 bg-purple-50 border border-purple-200 rounded-xl">

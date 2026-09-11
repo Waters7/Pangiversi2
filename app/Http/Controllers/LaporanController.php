@@ -278,22 +278,45 @@ class LaporanController extends Controller
     /**
      * Daftar nominatif per surat tugas yang sudah dikirim PPK.
      */
+    /**
+     * Saringan status daftar nominatif beserta labelnya.
+     *
+     * @var array<string, string>
+     */
+    private const STATUS_NOMINATIF = [
+        'menunggu' => 'Menunggu Tanda Tangan PPK',
+        'ditandatangani' => 'Ditandatangani PPK',
+        'diterima' => 'Diterima Tim Keuangan',
+    ];
+
+    /**
+     * Seluruh daftar nominatif yang sudah terbit — bukan hanya yang sudah
+     * diterima — supaya tim keuangan melihat mana yang masih menunggu PPK,
+     * beserta siapa saja pelaksana yang sudah menandatangani berkasnya.
+     */
     public function nominatif(Request $request, PenyusunNominatif $penyusun)
     {
         $cari = $request->input('cari');
 
+        // Periodenya mengikuti tanggal daftar diterima tim keuangan — itulah
+        // tanggal yang menentukan pembukuannya; yang belum diterima memakai
+        // tanggal surat tugasnya supaya tetap berada di bulan yang wajar.
+        $tanggal = fn (DaftarNominatifModel $item) => $item->dikirim_at ?? $item->tanggal_tugas ?? $item->created_at;
+
         $semua = DaftarNominatifModel::with('ppk', 'kategoriPembiayaan', 'akunPembiayaan')
-            ->whereNotNull('dikirim_at')
             ->when($cari, fn ($q) => $q->where('no_tugas', 'like', "%{$cari}%"))
-            ->latest('dikirim_at')
-            ->get();
+            ->get()
+            ->sortByDesc($tanggal)
+            ->values();
 
         // Disaring per akun bila diminta, supaya terlihat berapa yang keluar
         // dari tiap mata anggaran.
         $akun = $request->input('akun');
 
-        // Periodenya mengikuti tanggal daftar diterima tim keuangan —
-        // itulah tanggal yang menentukan pembukuannya.
+        $status = array_key_exists((string) $request->input('status'), self::STATUS_NOMINATIF)
+            ? $request->input('status')
+            : null;
+
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
 
@@ -302,25 +325,34 @@ class LaporanController extends Controller
             $akun === 'belum' ? null : (int) $akun,
         ));
 
+        $cocokStatus = fn (DaftarNominatifModel $item, string $kunci) => match ($kunci) {
+            'diterima' => $item->sudahDikirim(),
+            'ditandatangani' => $item->sudahDitandatangani() && ! $item->sudahDikirim(),
+            'menunggu' => ! $item->sudahDitandatangani(),
+        };
+
         $tampil = $berakun
+            ->when($status, fn ($koleksi) => $koleksi->filter(
+                fn (DaftarNominatifModel $item) => $cocokStatus($item, $status)
+            ))
             ->when($tahun, fn ($koleksi) => $koleksi->filter(
-                fn (DaftarNominatifModel $item) => $item->dikirim_at?->year === (int) $tahun
+                fn (DaftarNominatifModel $item) => $tanggal($item)?->year === (int) $tahun
             ))
             ->when($bulan, fn ($koleksi) => $koleksi->filter(
-                fn (DaftarNominatifModel $item) => $item->dikirim_at?->month === (int) $bulan
+                fn (DaftarNominatifModel $item) => $tanggal($item)?->month === (int) $bulan
             ));
 
         // Barisnya dimuat sekali untuk seluruh surat tugas yang tampil, bukan
         // satu rangkaian kueri per daftar.
         $baris = $penyusun->barisBanyak($tampil->pluck('no_tugas'));
-        $menunggu = $penyusun->menungguBanyak($tampil->pluck('no_tugas'));
+        $tandaTangan = $penyusun->tandaTanganBanyak($tampil->pluck('no_tugas'));
 
         $daftar = $tampil
             ->map(fn (DaftarNominatifModel $item) => [
                 'nominatif' => $item,
                 'baris' => $baris->get($item->no_tugas) ?? collect(),
-                'menunggu' => $menunggu->get($item->no_tugas) ?? collect(),
-                'periode' => $item->dikirim_at?->translatedFormat('F Y') ?? 'Tanpa Tanggal',
+                'tandaTangan' => $tandaTangan->get($item->no_tugas) ?? collect(),
+                'periode' => $tanggal($item)?->translatedFormat('F Y') ?? 'Tanpa Tanggal',
             ])
             ->values()
             ->groupBy('periode');
@@ -329,17 +361,24 @@ class LaporanController extends Controller
             'daftar' => $daftar,
             'akun' => $akun,
             'cari' => $cari,
+            'status' => $status,
+            'pilihanStatus' => self::STATUS_NOMINATIF,
+            'jumlahStatus' => collect(self::STATUS_NOMINATIF)->map(
+                fn (string $label, string $kunci) => $berakun->filter(
+                    fn (DaftarNominatifModel $item) => $cocokStatus($item, $kunci)
+                )->count()
+            ),
             'tahun' => $tahun,
             'bulan' => $bulan,
             // Hanya tahun yang benar-benar berisi yang ditawarkan, dan
             // hitungan bulannya mengikuti akun yang sedang dilihat.
-            'tahunTersedia' => $berakun->pluck('dikirim_at')->filter()
+            'tahunTersedia' => $berakun->map($tanggal)->filter()
                 ->map(fn ($waktu) => $waktu->year)->unique()->sortDesc()->values(),
             'jumlahBulan' => $berakun
                 ->when($tahun, fn ($koleksi) => $koleksi->filter(
-                    fn (DaftarNominatifModel $item) => $item->dikirim_at?->year === (int) $tahun
+                    fn (DaftarNominatifModel $item) => $tanggal($item)?->year === (int) $tahun
                 ))
-                ->pluck('dikirim_at')->filter()->countBy(fn ($waktu) => $waktu->month),
+                ->map($tanggal)->filter()->countBy(fn ($waktu) => $waktu->month),
             'pilihanAkun' => AkunPembiayaan::pilihan(),
             'pilihanKategori' => KategoriPembiayaan::pilihan(),
             'jumlahBelumBerakun' => $semua->whereNull('id_akun_pembiayaan')->count(),

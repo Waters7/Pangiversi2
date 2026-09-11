@@ -7,6 +7,7 @@ use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
 use App\Models\RincianBiaya;
 use App\Models\Usulan;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -79,6 +80,53 @@ class PenyusunNominatif
     {
         return $this->usulanBanyakSuratTugas($noTugas, [...self::RELASI_BARIS, ...self::RELASI_KELENGKAPAN])
             ->map(fn (Collection $usulan) => $this->namaMenunggu($usulan));
+    }
+
+    /**
+     * Sejauh mana tanda tangan tiap pelaksana di bawah sekumpulan surat
+     * tugas: sudah disahkan PPK, baru ditandatangani pelaksana, masih di
+     * tim keuangan, atau usulannya belum berjalan sama sekali.
+     *
+     * @param  iterable<int, string>  $noTugas
+     * @return Collection<string, Collection<int, array{nama: string, tahap: string, keterangan: string, waktu: ?CarbonInterface, tercantum: bool}>>
+     */
+    public function tandaTanganBanyak(iterable $noTugas): Collection
+    {
+        return $this->usulanBanyakSuratTugas($noTugas, [...self::RELASI_BARIS, ...self::RELASI_KELENGKAPAN, 'daftarRiil.ppk'])
+            ->map(fn (Collection $usulan) => $usulan
+                ->reject(fn (Usulan $item) => StatusUsulan::dari($item->status) === StatusUsulan::Ditolak)
+                ->map(fn (Usulan $item) => $this->keteranganTandaTangan($item))
+                ->values());
+    }
+
+    /**
+     * @return array{nama: string, tahap: string, keterangan: string, waktu: ?CarbonInterface, tercantum: bool}
+     */
+    private function keteranganTandaTangan(Usulan $usulan): array
+    {
+        $riil = $usulan->daftarRiil->first();
+        $tercantum = $this->usulanSiap($usulan);
+
+        [$tahap, $keterangan, $waktu] = match (true) {
+            StatusUsulan::dari($usulan->status) === StatusUsulan::Draft => ['draf', 'Usulan masih draf, belum diajukan', null],
+            $riil === null || ! $riil->sudahDikirimKePegawai() => ['keuangan', $this->penagih->lengkap($usulan)
+                    ? 'Berkas diperiksa tim keuangan'
+                    : 'Berkas pertanggungjawaban belum lengkap', null],
+            $riil->sudah_ditandatangani && $riil->jalurRincian()->sudahDitandatangani() => ['ppk', 'Ditandatangani PPK '.($riil->ppk?->nama ?? ''),
+                max($riil->ditandatangani_at, $riil->rincian_ditandatangani_at)],
+            $riil->sedangDisanggah() || $riil->jalurRincian()->sedangDisanggah() => ['disanggah', 'Disanggah pelaksana, kembali ke tim keuangan', null],
+            $riil->sudahDisetujuiPegawai() && $riil->jalurRincian()->sudahDisetujui() => ['pelaksana', 'Ditandatangani pelaksana, menunggu PPK',
+                max($riil->disetujui_pegawai_at, $riil->rincian_disetujui_at)],
+            default => ['menunggu-pelaksana', 'Menunggu tanda tangan pelaksana', null],
+        };
+
+        return [
+            'nama' => $usulan->user?->nama ?? $usulan->peserta->first()?->nama ?? $usulan->no_usulan,
+            'tahap' => $tahap,
+            'keterangan' => trim($keterangan),
+            'waktu' => $waktu,
+            'tercantum' => $tercantum,
+        ];
     }
 
     /**

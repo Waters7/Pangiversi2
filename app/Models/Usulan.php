@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Usulan extends Model
 {
@@ -441,19 +442,23 @@ class Usulan extends Model
         return $this->belongsTo(User::class, 'id_pembuat');
     }
 
-    public function getPeriodeAttribute()
+    /**
+     * Rentang tanggal perjalanan dengan nama bulan berbahasa Indonesia —
+     * dulu memakai date() yang selalu berbahasa Inggris ("Aug", "Dec").
+     */
+    public function getPeriodeAttribute(): string
     {
-        return date('d M Y', strtotime($this->tanggal_mulai)).' — '.date('d M Y', strtotime($this->tanggal_selesai));
+        return $this->tanggal_mulai_formatted.' — '.$this->tanggal_selesai_formatted;
     }
 
-    public function getTanggalMulaiFormattedAttribute()
+    public function getTanggalMulaiFormattedAttribute(): string
     {
-        return date('d M Y', strtotime($this->tanggal_mulai));
+        return Carbon::parse($this->tanggal_mulai)->translatedFormat('d M Y');
     }
 
-    public function getTanggalSelesaiFormattedAttribute()
+    public function getTanggalSelesaiFormattedAttribute(): string
     {
-        return date('d M Y', strtotime($this->tanggal_selesai));
+        return Carbon::parse($this->tanggal_selesai)->translatedFormat('d M Y');
     }
 
     public function getDurasiAttribute()

@@ -20,6 +20,8 @@
         </div>
     </div>
 
+    <x-mode-lihat-keuangan />
+
     {{-- Perjadin yang sudah selesai tetap terbuka di sini: tim keuangan
          masih menelusurinya dan mencetak ulang dokumennya. --}}
     <x-tab-status
@@ -137,8 +139,9 @@
                                         Detail
                                     </a>
 
-                                    {{-- Menagih berkas yang belum diunggah lewat WhatsApp --}}
-                                    @if ($item->tautan_wa)
+                                    {{-- Menagih berkas yang belum diunggah lewat WhatsApp —
+                                         pekerjaan tim keuangan, bukan pemantau. --}}
+                                    @if ($item->tautan_wa && auth()->user()->bisaMengelolaBiaya())
                                         <a href="{{ $item->tautan_wa }}" target="_blank" rel="noopener"
                                            title="Kirim pengingat {{ count($item->berkas_kurang) }} berkas kurang lewat WhatsApp"
                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold transition whitespace-nowrap"

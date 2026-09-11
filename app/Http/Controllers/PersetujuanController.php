@@ -83,7 +83,10 @@ class PersetujuanController extends Controller
 
     public function export(Usulan $usulan)
     {
-        $usulan->load('user', 'kegiatan', 'dokumen', 'peserta');
+        $usulan->load(
+            'user.unit', 'kegiatan', 'dokumen', 'peserta',
+            'kategoriPerjadin', 'tahunAnggaran', 'persetujuan.approver',
+        );
 
         $pdf = Pdf::loadView('persetujuan.export-usulan', compact('usulan'))
             ->setPaper(KertasCetak::UKURAN);

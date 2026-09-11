@@ -233,6 +233,21 @@ class User extends Authenticatable
     }
 
     /**
+     * Membuka modul keuangan tanpa satu pun kewenangan mengubahnya —
+     * PPK dan pimpinan memantau rincian biaya, pembayaran, dan buktinya
+     * tiap usulan, tetapi tidak menyusun angka, memvalidasi, maupun
+     * mencatat pembayaran.
+     */
+    public function hanyaMelihatKeuangan(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MelihatKeuangan)
+            && ! $this->bisaMengelolaBiaya()
+            && ! $this->bisaMemvalidasiBiaya()
+            && ! $this->bisaMencatatPembayaran()
+            && ! $this->isAdmin();
+    }
+
+    /**
      * Akses mencatat pembayaran beserta bukti transfernya.
      */
     public function bisaMencatatPembayaran(): bool

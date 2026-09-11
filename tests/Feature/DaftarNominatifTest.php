@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
+use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\User;
 use App\Models\Usulan;
@@ -407,9 +408,13 @@ class DaftarNominatifTest extends TestCase
         ]);
     }
 
-    // ── Arsip Tim SDM ──
+    // ── List Daftar Nominatif (tim keuangan & Tim SDM) ──
 
-    public function test_tim_sdm_hanya_melihat_yang_sudah_dikirim(): void
+    /**
+     * Seluruh daftar yang terbit tampil — bukan hanya yang sudah diterima —
+     * lengkap dengan statusnya, supaya yang masih menunggu PPK pun terlihat.
+     */
+    public function test_list_memuat_seluruh_daftar_beserta_statusnya(): void
     {
         $this->usulanLengkap();
         $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
@@ -417,7 +422,10 @@ class DaftarNominatifTest extends TestCase
         $this->actingAs($this->timSdm)
             ->get(route('laporan.nominatif'))
             ->assertOk()
-            ->assertDontSee(self::NO_TUGAS);
+            ->assertSee(self::NO_TUGAS)
+            ->assertSee('Menunggu Tanda Tangan PPK')
+            ->assertSee('Belum ditandatangani PPK')
+            ->assertSee('belum dikirim ke tim keuangan');
 
         $daftar->update([
             'id_ppk' => $this->ppk->id,
@@ -425,10 +433,86 @@ class DaftarNominatifTest extends TestCase
             'dikirim_at' => now(),
         ]);
 
-        $this->actingAs($this->timSdm)
+        $this->actingAs($this->timKeuangan)
             ->get(route('laporan.nominatif'))
             ->assertOk()
-            ->assertSee(self::NO_TUGAS);
+            ->assertSee(self::NO_TUGAS)
+            ->assertSee('Terkirim ke Tim Keuangan')
+            ->assertSee('Ditandatangani PPK '.$this->ppk->nama)
+            ->assertSee('diterima tim keuangan');
+    }
+
+    public function test_list_dapat_disaring_menurut_status(): void
+    {
+        $this->usulanLengkap();
+        $this->penyusun()->terbitkan(self::NO_TUGAS);
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('laporan.nominatif', ['status' => 'diterima']))
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->isEmpty());
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('laporan.nominatif', ['status' => 'menunggu']))
+            ->assertOk()
+            ->assertViewHas('daftar', fn ($daftar) => $daftar->flatten(1)->count() === 1)
+            ->assertViewHas('jumlahStatus', fn ($jumlah) => $jumlah['menunggu'] === 1 && $jumlah['diterima'] === 0);
+    }
+
+    /**
+     * Tiap pelaksana di bawah surat tugas disebut beserta sejauh mana tanda
+     * tangannya: yang sudah disahkan PPK, yang baru ditandatangani
+     * pelaksana, dan yang usulannya belum berjalan.
+     */
+    public function test_list_menyebut_siapa_saja_yang_sudah_menandatangani(): void
+    {
+        $tuntas = User::factory()->create(['nama' => 'Junita Ratela']);
+        $this->usulanLengkap($tuntas);
+
+        $setengah = User::factory()->create(['nama' => 'Meike Kaunang']);
+        $usulanSetengah = Usulan::factory()->create([
+            'id_user' => $setengah->id,
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Disetujui->value,
+        ]);
+        $peserta = $usulanSetengah->peserta()->create(['id_user' => $setengah->id, 'nama' => $setengah->nama, 'peran' => 'ketua']);
+        DaftarRiil::create([
+            'id_usulan' => $usulanSetengah->id,
+            'id_peserta' => $peserta->id,
+            'total_riil' => 100_000,
+            'dikirim_ke_pegawai_at' => now()->subDay(),
+            'batas_sanggah' => today()->addDays(6),
+            'disetujui_pegawai_at' => now(),
+            'rincian_disetujui_at' => now(),
+        ]);
+
+        Usulan::factory()->create([
+            'id_user' => User::factory()->create(['nama' => 'Pingkan Umboh'])->id,
+            'no_tugas' => self::NO_TUGAS,
+            'status' => StatusUsulan::Draft->value,
+        ]);
+
+        $this->penyusun()->terbitkan(self::NO_TUGAS);
+
+        $halaman = $this->actingAs($this->timKeuangan)
+            ->get(route('laporan.nominatif'))
+            ->assertOk()
+            ->assertSee('Tanda tangan pelaksana')
+            ->assertSee('1 dari 3 sudah disahkan PPK')
+            ->assertSee('Junita Ratela')
+            ->assertSee('Ditandatangani PPK '.$this->ppk->nama)
+            ->assertSee('Meike Kaunang')
+            ->assertSee('Ditandatangani pelaksana, menunggu PPK')
+            ->assertSee('Pingkan Umboh')
+            ->assertSee('Usulan masih draf, belum diajukan');
+
+        $tandaTangan = $halaman->viewData('daftar')->flatten(1)->first()['tandaTangan'];
+
+        $this->assertSame(
+            ['ppk', 'pelaksana', 'draf'],
+            $tandaTangan->pluck('tahap')->all(),
+        );
+        $this->assertSame([true, false, false], $tandaTangan->pluck('tercantum')->all());
     }
 
     public function test_tim_sdm_membuka_arsip_daftar_riil(): void

@@ -459,7 +459,7 @@
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M4 6h16M4 10h16M4 14h10"/>
               </svg>
-              Input Rincian Biaya
+              {{ auth()->user()->bisaMengelolaBiaya() ? 'Input Rincian Biaya' : 'Rincian Biaya Usulan' }}
               <x-lencana-antrean :jumlah="$antrean['keuangan'] ?? 0" />
             </a>
 
@@ -469,7 +469,7 @@
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M3 17h2l1-4h12l1 4h2M5 13l1.5-5h11L19 13M7 17a1.5 1.5 0 103 0 1.5 1.5 0 10-3 0M14 17a1.5 1.5 0 103 0 1.5 1.5 0 10-3 0"/>
               </svg>
-              Periksa Transport Lokal
+              {{ auth()->user()->bisaMengelolaBiaya() ? 'Periksa Transport Lokal' : 'Transport Lokal' }}
             </a>
 
           </div>

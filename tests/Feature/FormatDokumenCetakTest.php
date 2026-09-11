@@ -12,6 +12,8 @@ use App\Models\PesertaUsulan;
 use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\PenyusunNominatif;
+use App\Services\QrCodeService;
 use App\Services\SinkronBiayaDokumen;
 use App\Services\Terbilang;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -322,7 +324,106 @@ class FormatDokumenCetakTest extends TestCase
             ->assertSee('Dokumen Tidak Terverifikasi');
     }
 
+    // ── Kerapian cetakan ──
+
+    /**
+     * Lebar kolom nominatif harus berjumlah tepat 100%: dulu 115%, sehingga
+     * kolom "Jumlah Pembayaran" terdorong keluar tepi kertas.
+     */
+    public function test_lebar_kolom_nominatif_berjumlah_seratus_persen(): void
+    {
+        $html = $this->htmlNominatif();
+
+        preg_match('/<tr>(.*?)<\/tr>/s', $html, $barisKepala);
+        preg_match_all('/width:\s*([\d.]+)%/', $barisKepala[1], $lebar);
+
+        $this->assertEqualsWithDelta(100, array_sum($lebar[1]), 0.01);
+    }
+
+    public function test_cetakan_nominatif_memuat_qr_ppk_setelah_ditandatangani(): void
+    {
+        $this->assertStringNotContainsString('data:image/png;base64,', $this->htmlNominatif());
+
+        $nominatif = $this->nominatif();
+        $nominatif->update(['ditandatangani_at' => now(), 'id_ppk' => $this->ppk->id]);
+        $nominatif->terbitkanKodeVerifikasi();
+
+        $html = $this->htmlNominatif();
+
+        $this->assertStringContainsString('data:image/png;base64,', $html);
+        $this->assertStringContainsString($nominatif->fresh()->kode_verifikasi, $html);
+        $this->assertStringContainsString('Ditandatangani secara elektronik', $html);
+    }
+
+    /**
+     * Seluruh dokumen cetak memakai font baku PDF yang sama (Arial /
+     * Helvetica) dan margin halaman yang ditetapkan sendiri — bukan
+     * DejaVu Sans bawaan dompdf yang lebar dan margin bawaannya.
+     */
+    public function test_cetakan_memakai_font_dan_margin_yang_seragam(): void
+    {
+        foreach (['keuangan.cetak-rincian', 'daftar-riil.cetak', 'persetujuan.export-usulan'] as $templat) {
+            $html = file_get_contents(resource_path('views/'.str_replace('.', '/', $templat).'.blade.php'));
+
+            $this->assertMatchesRegularExpression('/font-family:\s*Arial, Helvetica, sans-serif/', $html, $templat);
+            $this->assertMatchesRegularExpression('/@page\s*\{\s*margin:/', $html, $templat);
+            $this->assertStringNotContainsString('DejaVu Sans, sans-serif', $html, $templat);
+        }
+    }
+
+    /**
+     * Tanda panah rute tiket tidak ada pada font baku PDF dan tercetak "?",
+     * jadi cetakan rincian menggantinya dengan tanda hubung.
+     */
+    public function test_cetakan_rincian_tidak_memuat_tanda_panah(): void
+    {
+        $html = $this->htmlRincian();
+
+        $this->assertStringNotContainsString('→', $html);
+        $this->assertStringContainsString('Manado - ', $html);
+    }
+
+    public function test_cetakan_usulan_berbahasa_indonesia_dan_menyebut_spd(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-08-26', 'tanggal_selesai' => '2026-08-28', 'no_spd' => 'KU.02.04/F.XXX.8/77/2026']);
+
+        $html = view('persetujuan.export-usulan', [
+            'usulan' => $this->usulan->fresh(['user', 'kegiatan', 'dokumen', 'peserta', 'kategoriPerjadin', 'tahunAnggaran', 'persetujuan']),
+        ])->render();
+
+        $this->assertStringContainsString('26 Agustus 2026 s.d. 28 Agustus 2026 (3 hari)', $html);
+        $this->assertStringContainsString('KU.02.04/F.XXX.8/77/2026', $html);
+        $this->assertStringContainsString('Surat Perjalanan Dinas bertanda tangan', $html);
+        $this->assertStringContainsString('WITA', $html);
+        $this->assertStringNotContainsString('Aug 2026', $html);
+        $this->assertStringNotContainsString('WIB.', $html);
+    }
+
+    public function test_periode_usulan_berbahasa_indonesia(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-08-26', 'tanggal_selesai' => '2026-12-02']);
+
+        $this->assertSame('26 Agt 2026 — 02 Des 2026', $this->usulan->fresh()->periode);
+    }
+
     // ── Pembantu ──
+
+    private function htmlNominatif(): string
+    {
+        $nominatif = $this->nominatif()->fresh(['ppk', 'kategoriPembiayaan', 'akunPembiayaan']);
+        $penyusun = app(PenyusunNominatif::class);
+        $baris = $penyusun->baris(self::NO_TUGAS);
+
+        return view('laporan.cetak-nominatif', [
+            'nominatif' => $nominatif,
+            'baris' => $baris,
+            'total' => $penyusun->total($baris),
+            'ppk' => $nominatif->ppk ?? $this->ppk,
+            'qr' => $nominatif->urlVerifikasi()
+                ? app(QrCodeService::class)->dataUri($nominatif->urlVerifikasi(), 180)
+                : null,
+        ])->render();
+    }
 
     private function rincian()
     {

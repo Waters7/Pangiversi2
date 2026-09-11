@@ -11,8 +11,24 @@
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-800">List Daftar Nominatif</h1>
         <p class="text-xs text-slate-400 mt-0.5">
-            Daftar nominatif per surat tugas yang sudah ditandatangani dan dikirim PPK ke tim keuangan.
+            Seluruh daftar nominatif per surat tugas — yang masih menunggu PPK, sudah ditandatangani,
+            maupun sudah diterima tim keuangan — beserta siapa saja pelaksana yang sudah menandatangani.
         </p>
+    </div>
+
+    {{-- Saringan status: seluruh daftar tampil, tapi tiap tahap dapat dipilih. --}}
+    <div class="flex flex-wrap gap-2 mb-5">
+        @php $tautanStatus = fn ($nilai) => route('laporan.nominatif', array_filter(['status' => $nilai, 'akun' => $akun, 'tahun' => $tahun, 'bulan' => $bulan, 'cari' => $cari], fn ($v) => $v !== null && $v !== '')); @endphp
+        <a href="{{ $tautanStatus(null) }}"
+           class="px-3.5 py-2 rounded-xl text-xs font-bold transition {{ $status === null ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+            Semua <span class="ml-1 opacity-70">{{ $jumlahStatus->sum() }}</span>
+        </a>
+        @foreach ($pilihanStatus as $kunci => $label)
+            <a href="{{ $tautanStatus($kunci) }}"
+               class="px-3.5 py-2 rounded-xl text-xs font-bold transition {{ $status === $kunci ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">
+                {{ $label }} <span class="ml-1 opacity-70">{{ $jumlahStatus[$kunci] }}</span>
+            </a>
+        @endforeach
     </div>
 
     {{-- Penyaring akun: memperlihatkan berapa yang keluar dari tiap mata anggaran. --}}
@@ -21,6 +37,7 @@
         <input type="hidden" name="tahun" value="{{ $tahun }}">
         <input type="hidden" name="bulan" value="{{ $bulan }}">
         <input type="hidden" name="cari" value="{{ $cari }}">
+        <input type="hidden" name="status" value="{{ $status }}">
         <div class="flex-1">
             <label class="block text-xs font-semibold text-slate-600 mb-1.5">Akun Pembiayaan</label>
             <select name="akun" onchange="this.form.submit()"
@@ -35,7 +52,7 @@
 
         @if ($akun !== null && $akun !== '')
             <div class="flex items-end">
-                <a href="{{ route('laporan.nominatif', ['tahun' => $tahun, 'bulan' => $bulan, 'cari' => $cari]) }}"
+                <a href="{{ route('laporan.nominatif', ['tahun' => $tahun, 'bulan' => $bulan, 'cari' => $cari, 'status' => $status]) }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
                     Tampilkan Semua
                 </a>
@@ -45,7 +62,7 @@
 
     <x-kotak-cari :rute="route('laporan.nominatif')" :nilai="$cari"
                   petunjuk="Cari nomor surat tugas"
-                  :sembunyi="['akun' => $akun, 'tahun' => $tahun, 'bulan' => $bulan]" />
+                  :sembunyi="['akun' => $akun, 'tahun' => $tahun, 'bulan' => $bulan, 'status' => $status]" />
 
     <x-saring-periode
         :aksi="route('laporan.nominatif')"
@@ -53,9 +70,10 @@
         :bulan="$bulan"
         :tahun-tersedia="$tahunTersedia"
         :jumlah-bulan="$jumlahBulan"
-        :ekstra="['akun' => $akun, 'cari' => $cari]" />
+        :ekstra="['akun' => $akun, 'cari' => $cari, 'status' => $status]" />
 
-    {{-- Dikelompokkan menurut bulan daftar diterima tim keuangan. --}}
+    {{-- Dikelompokkan menurut bulan daftar diterima tim keuangan; yang belum
+         diterima mengikuti tanggal surat tugasnya. --}}
     @forelse ($daftar as $periode => $kelompok)
         <div class="flex items-center gap-3 mt-6 mb-3 first:mt-0">
             <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">{{ $periode }}</p>
@@ -70,23 +88,41 @@
         @php
             $nominatif = $entri['nominatif'];
             $baris = $entri['baris'];
-            $menunggu = $entri['menunggu'];
+            $tandaTangan = $entri['tandaTangan'];
         @endphp
 
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
 
             <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm font-bold text-slate-800">{{ $nominatif->no_tugas }}</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-sm font-bold text-slate-800">{{ $nominatif->no_tugas }}</p>
+                        <span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full {{ $nominatif->status_badge }}">
+                            {{ $nominatif->status_label }}
+                        </span>
+                    </div>
                     <p class="text-xs text-slate-400 mt-0.5">
-                        {{ $baris->count() }} pelaksana ·
-                        Rp {{ number_format($baris->sum('jumlah'), 0, ',', '.') }} ·
-                        diterima {{ $nominatif->dikirim_at->translatedFormat('d F Y') }}
+                        {{ $baris->count() }} pelaksana tercantum ·
+                        Rp {{ number_format($baris->sum('jumlah'), 0, ',', '.') }}
+                        @if ($nominatif->tanggal_tugas)
+                            · surat tugas {{ $nominatif->tanggal_tugas->translatedFormat('d F Y') }}
+                        @endif
                     </p>
                     <p class="text-xs text-slate-400 mt-1">
-                        Ditandatangani {{ $nominatif->ppk?->nama ?? '—' }}
-                        @if ($nominatif->ppk?->nip)
-                            · NIP. {{ $nominatif->ppk->nip }}
+                        @if ($nominatif->sudahDitandatangani())
+                            Ditandatangani PPK {{ $nominatif->ppk?->nama ?? '—' }}
+                            @if ($nominatif->ppk?->nip)
+                                · NIP. {{ $nominatif->ppk->nip }}
+                            @endif
+                            · {{ $nominatif->ditandatangani_at->translatedFormat('d F Y H:i') }}
+                        @else
+                            Belum ditandatangani PPK
+                        @endif
+                        ·
+                        @if ($nominatif->sudahDikirim())
+                            diterima tim keuangan {{ $nominatif->dikirim_at->translatedFormat('d F Y') }}
+                        @else
+                            belum dikirim ke tim keuangan
                         @endif
                     </p>
 
@@ -112,7 +148,8 @@
                 <div class="flex flex-col sm:flex-row lg:items-end gap-3">
                     {{-- Pembebanan ditetapkan di sini, bukan saat daftar terbit:
                          sumber dana dan mata anggarannya baru pasti setelah tim
-                         keuangan memeriksa. --}}
+                         keuangan menerima dan memeriksa daftarnya. --}}
+                    @if ($nominatif->sudahDikirim())
                     <form method="POST" action="{{ route('laporan.nominatif.akun', $nominatif) }}"
                           class="flex flex-wrap items-end gap-2">
                         @csrf @method('PUT')
@@ -143,6 +180,11 @@
                             Simpan
                         </button>
                     </form>
+                    @else
+                        <p class="text-xs text-slate-400 self-end max-w-xs">
+                            Pembebanan ditetapkan setelah daftar diterima dari PPK.
+                        </p>
+                    @endif
 
                     <a href="{{ route('laporan.nominatif.cetak', $nominatif) }}"
                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition self-end">
@@ -157,19 +199,19 @@
 
             <div class="p-4">
                 <x-tabel-nominatif :baris="$baris" />
-                <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
+                <x-nominatif-tanda-tangan :daftar="$tandaTangan" class="mt-3" />
             </div>
         </div>
         @endforeach
     @empty
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-14 text-center">
             <p class="text-sm font-semibold text-slate-500">
-                {{ ($akun !== null && $akun !== '') || $tahun || $bulan
+                {{ ($akun !== null && $akun !== '') || $tahun || $bulan || $status
                     ? 'Tidak ada daftar pada saringan ini'
-                    : 'Belum ada daftar nominatif yang diterima' }}
+                    : 'Belum ada daftar nominatif yang terbit' }}
             </p>
             <p class="text-xs text-slate-400 mt-1.5 max-w-md mx-auto">
-                Daftar muncul di sini setelah PPK menandatangani dan mengirimkannya.
+                Daftar terbit begitu satu pelaksana pada surat tugas itu berkasnya disahkan PPK.
             </p>
         </div>
     @endforelse
