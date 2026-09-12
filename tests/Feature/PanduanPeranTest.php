@@ -6,6 +6,7 @@ use App\Enums\PeranPengguna;
 use App\Http\Controllers\PanduanController;
 use App\Models\DaftarRiil;
 use App\Models\User;
+use App\Services\VersiAplikasi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -172,7 +173,18 @@ class PanduanPeranTest extends TestCase
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Dalam kota')
             ->assertSee('Luar kota')
-            ->assertSee('Bill hotel beserta jumlah malamnya');
+            ->assertSee('Bill hotel beserta nomor transaksi &amp; nominal', false)
+            ->assertSee('Bukti bayar biaya penyelenggaraan');
+    }
+
+    /** Riwayat perubahan tampil bagi semua peran, menyebut versi tayang dan rilis terbaru. */
+    public function test_panduan_memuat_riwayat_perubahan(): void
+    {
+        $this->bukaSebagai(PeranPengguna::DosenTendik)
+            ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5')
+            ->assertSee('Biaya penyelenggaraan')
+            ->assertSee('PANGI '.app(VersiAplikasi::class)->label());
     }
 
     /** Rincian biaya dan daftar riil dua dokumen terpisah, masing-masing bertanda tangan sendiri. */

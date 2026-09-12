@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Kemampuan;
 use App\Models\DaftarRiil;
 use App\Models\User;
+use App\Services\VersiAplikasi;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -29,9 +30,9 @@ class PanduanController extends Controller
      * selalu sepasang dengan sistem yang sedang berjalan — bukan berkas lepas
      * di storage yang bisa tertinggal saat aplikasi diperbarui.
      */
-    public const BERKAS_BUKU = 'Buku-Panduan-PANGI-v2.4.docx';
+    public const BERKAS_BUKU = 'Buku-Panduan-PANGI-v2.5.docx';
 
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, VersiAplikasi $versi): View
     {
         $pengguna = $request->user();
 
@@ -51,6 +52,8 @@ class PanduanController extends Controller
                 'jejakAudit' => $pengguna->punyaKemampuan(Kemampuan::MelihatJejakAudit),
             ],
             'hariSanggah' => DaftarRiil::HARI_MASA_SANGGAH,
+            'versi' => $versi->label(),
+            'riwayat' => $this->riwayatPerubahan(),
         ]);
     }
 
@@ -107,8 +110,46 @@ class PanduanController extends Controller
         }
 
         $bagian['bantuan'] = 'Melapor Kendala';
+        $bagian['perubahan'] = 'Riwayat Perubahan';
 
         return $bagian;
+    }
+
+    /**
+     * Yang berubah dari versi ke versi — terbaru di atas — supaya pembaca
+     * versi lama tahu bagian mana yang perlu dibaca ulang. Sengaja ditulis
+     * dari sudut pengguna, bukan daftar commit.
+     *
+     * @return list<array{versi: string, tanggal: string, butir: list<string>}>
+     */
+    private function riwayatPerubahan(): array
+    {
+        return [
+            [
+                'versi' => '2.5',
+                'tanggal' => '12 September 2026',
+                'butir' => [
+                    'Usulan wajib melampirkan SPD bertanda tangan beserta nomornya; persetujuan PPK tercatat otomatis dari SPD itu. Pengajuan berkelompok dan tombol Salin dihapus — satu orang satu usulan.',
+                    'Laporan perjalanan dinas: tempat kegiatan per hari, tersimpan sekaligus terkirim ke pimpinan, dikonfirmasi dan ditandatangani Direktur lewat QR, atau dikembalikan untuk direvisi. Menu Laporan Perjadin bagi pimpinan.',
+                    'Pelunasan hanya menunggu konfirmasi laporan oleh Direktur — bukan tanda tangan PPK maupun daftar nominatif.',
+                    'Daftar nominatif terbit per surat tugas begitu satu pelaksana tuntas; yang belum tercantum disebut dan bertambah sendiri. List Daftar Nominatif memuat seluruh daftar beserta status tanda tangan tiap pelaksana; cetakannya memuat QR PPK.',
+                    'Berkas terkirim otomatis ke pelaksana begitu seluruh validasi rampung, berstatus Sudah Dicek Tim Keuangan; tombol tanda tangan pelaksana tetap ada setelah masa sanggah; validasi dan pencabutannya dikonfirmasi lewat popup.',
+                    'Biaya penyelenggaraan: ditanya ada atau tidak; bila ada, nominal, bukti bayar, dan nomor invoice, tercetak di bawah uang penginapan.',
+                    'Tiket membawa invoice; nota transport lokal hanya untuk ruas bernominal (transport lokal boleh tidak ada); dalam kota satu baris transport lokal; checklist kelengkapan mengikuti formulir.',
+                    'Verifikasi PPK dan Arsip Rincian Lengkap dikelompokkan per bulan dan tahun; arsip tidak lagi menunggu nominatif; menu Keuangan bagi PPK dalam mode lihat saja.',
+                    'Pembatalan penggantian transport lokal dengan alasan, tercatat pada riwayat.',
+                    'Seluruh dokumen cetak berukuran folio dan dirapikan: usulan sebagai dokumen resmi berkop, rincian satu halaman, tanggal berbahasa Indonesia, WITA.',
+                    'Pelacakan berkas: sepuluh tonggak dengan lama hari antar tahap; versi aplikasi tertera di halaman masuk.',
+                ],
+            ],
+            [
+                'versi' => '2.4',
+                'tanggal' => '5 September 2026',
+                'butir' => [
+                    'Rilis dasar versi 2: Surat Perjalanan Dinas dengan nomor unik dan pengikut, pertanggungjawaban per pelaksana (tiket, nota, bill hotel, laporan), rincian biaya dan daftar riil dengan dua jalur tanda tangan, daftar nominatif, pembayaran beserta riwayatnya, pelacakan berkas, dan saluran bantuan.',
+                ],
+            ],
+        ];
     }
 
     /**

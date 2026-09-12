@@ -11,6 +11,7 @@
             <h1 class="text-xl font-bold text-slate-800">Panduan Penggunaan PANGI</h1>
             <p class="text-xs text-slate-400 mt-0.5">
                 Alur perjalanan dinas dari terbitnya SPD sampai pelunasan
+                <span class="ml-1 font-mono text-[11px] text-slate-400">PANGI {{ $versi }}</span>
             </p>
         </div>
 
@@ -273,7 +274,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Dalam kota</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Nota / bukti transport lokal', 'Laporan perjalanan dinas'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Nota transport lokal — bila ada biaya', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -287,7 +288,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Tiket & boarding pass pergi', 'Tiket & boarding pass pulang', 'Nota / bukti transport lokal', 'Bill hotel beserta jumlah malamnya', 'Kuitansi', 'Laporan perjalanan dinas'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -321,11 +322,18 @@
                     <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
                 </svg>
                 <div class="text-xs text-red-800 leading-relaxed">
-                    <p class="font-bold mb-1">Nota transportasi menentukan penggantian biaya</p>
+                    <p class="font-bold mb-1">Nota menentukan penggantian biaya</p>
                     <p>
-                        Tanpa nota atau bukti biaya transportasi selama perjalanan, biaya tersebut
-                        <strong>tidak dapat diganti</strong>. Simpan seluruh bukti sejak hari
-                        keberangkatan.
+                        Nota transport lokal hanya diminta untuk ruas yang <strong>bernominal</strong>;
+                        ruas tanpa biaya dikosongkan, dan perjalanan tanpa transport lokal sama sekali tetap
+                        dapat selesai. Perjalanan dalam kota cukup satu baris transport lokal. Nominal tanpa
+                        nota <strong>tidak dapat diganti</strong> — simpan seluruh bukti sejak hari keberangkatan.
+                    </p>
+                    <p class="mt-2">
+                        <strong>Biaya penyelenggaraan</strong> (kontribusi atau registrasi kegiatan) ditanya
+                        dulu ada atau tidak. Bila ada: isi nominal, unggah bukti bayar, dan nomor invoice
+                        bila diterbitkan penyelenggara; nominalnya tercantum pada rincian biaya di bawah
+                        uang penginapan. Bila tidak, kolomnya tidak ditampilkan.
                     </p>
                 </div>
             </div>
@@ -353,7 +361,7 @@
                     </div>
                     <p class="p-4 text-xs text-slate-600 leading-relaxed">
                         Seluruh komponen biaya <strong>kecuali transport lokal</strong>: tiket,
-                        uang harian, dan uang penginapan.
+                        uang harian, uang penginapan, dan biaya penyelenggaraan.
                     </p>
                 </div>
 
@@ -374,10 +382,12 @@
                 menyatakan tiap komponennya benar.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="2" judul="Berkas dikirim kepada Anda">
-                Pesan <em>“Berkas menunggu tanda tangan Anda”</em> muncul di lonceng
-                pemberitahuan. Menu <strong>Rincian Saya</strong> di sidebar memuat keduanya,
-                masing-masing pada submenunya sendiri.
+            <x-panduan-langkah nomor="2" judul="Berkas terkirim kepada Anda">
+                Begitu seluruh komponen divalidasi, berkas <strong>terkirim sendiri</strong> —
+                berstatus <strong>Sudah Dicek Tim Keuangan</strong> — dan pesan
+                <em>“Berkas menunggu tanda tangan Anda”</em> muncul di lonceng pemberitahuan.
+                Menu <strong>Rincian Saya</strong> di sidebar memuat keduanya, masing-masing pada
+                submenunya sendiri.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Sikapi tiap dokumen sendiri-sendiri">
@@ -414,7 +424,9 @@
                     <p>
                         Bila sampai batas waktu tidak ada tanggapan, nominal
                         <strong>dianggap Anda terima</strong> dan PPK dapat langsung
-                        menandatanganinya. Karena itu, periksa pemberitahuan Anda secara berkala.
+                        menandatanganinya. Tombol tanda tangan Anda <strong>tetap tersedia</strong>
+                        sampai PPK mengesahkan; yang tertutup hanyalah sanggahan. Karena itu, periksa
+                        pemberitahuan Anda secara berkala.
                     </p>
                 </div>
             </div>
@@ -424,8 +436,8 @@
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                 </svg>
                 <p class="text-xs text-slate-600 leading-relaxed">
-                    Kedua dokumen dapat diunduh sebagai PDF dengan format lampiran resmi PMK, siap
-                    dicetak dan diarsipkan. Daftar pengeluaran riil memuat
+                    Kedua dokumen dapat diunduh sebagai PDF berformat lampiran resmi PMK pada kertas
+                    <strong>folio (F4)</strong>, siap dicetak dan diarsipkan. Keduanya memuat
                     <strong>QR code verifikasi</strong> yang dapat dipindai siapa pun untuk
                     memastikan keasliannya.
                 </p>
@@ -456,7 +468,8 @@
 
             <x-panduan-langkah nomor="3" judul="Validasi tiap komponen">
                 Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
-                validasi tersimpan, memuat komponen dan nominal yang akan dinyatakan benar.
+                validasi tersimpan, memuat komponen dan nominal yang akan dinyatakan benar;
+                mencabut validasi juga dikonfirmasi dan tercatat pada jejak audit.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Periksa transport lokal">
@@ -464,9 +477,19 @@
                 dinyatakan pelaksana pada daftar riilnya, beserta bukti yang dilampirkan.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="5" judul="Kirim berkas ke pelaksana" :terakhir="true">
-                Setelah seluruh komponen tervalidasi, kirim kedua dokumen kepada pelaksana untuk
-                ditandatangani. Masa sanggah {{ $hariSanggah }} hari mulai berjalan sejak saat itu.
+            <x-panduan-langkah nomor="5" judul="Berkas terkirim sendiri ke pelaksana">
+                Begitu seluruh komponen dan transport lokalnya tervalidasi, kedua dokumen
+                <strong>otomatis terkirim</strong> kepada pelaksana dan masa sanggah
+                {{ $hariSanggah }} hari mulai berjalan. Bila belum dapat dikirim, tombol kirim
+                menyebutkan komponen mana yang menahan.
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="6" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
+                Menu <strong>Laporan → List Daftar Nominatif</strong> memuat seluruh daftar yang
+                terbit — menunggu PPK, sudah ditandatangani, sudah diterima — beserta siapa saja
+                pelaksana yang sudah menandatangani berkasnya; kategori dan akun pembiayaan
+                ditetapkan setelah daftar diterima. Rincian yang sudah ditandatangani pelaksana
+                dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>.
             </x-panduan-langkah>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
@@ -514,15 +537,28 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Verifikasi Daftar Nominatif">
-                Nominatif terbit sendiri per surat tugas, begitu <em>seluruh</em> pelaksana di
-                bawahnya menyelesaikan dokumen dan kedua berkasnya Anda tandatangani. Satu orang
-                yang belum lengkap menahan seluruh daftarnya.
+                Nominatif terbit sendiri per surat tugas begitu <em>satu</em> pelaksana di
+                bawahnya tuntas — rincian biaya dan daftar riilnya Anda tandatangani — dan hanya
+                memuat yang sudah tuntas. Yang belum tercantum disebut di bawah tabelnya dan
+                bertambah sendiri setelah berkasnya Anda sahkan. Ketiga menu verifikasi
+                dikelompokkan per bulan dan tahun.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Kirim nominatif ke tim keuangan" :terakhir="true">
                 Setelah ditandatangani, kirimkan daftarnya ke tim keuangan sebagai dasar
-                pembayaran. Nominatif ditandatangani basah, jadi cetakannya tidak memuat QR.
+                pembayaran. Tanda tangannya elektronik: cetakan nominatif memuat QR dan kode
+                verifikasi yang dapat dipindai siapa pun.
             </x-panduan-langkah>
+
+            <div class="mt-6 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 leading-relaxed">
+                <p class="font-bold mb-1">Persetujuan usulan tidak lagi lewat tombol</p>
+                <p>
+                    Tanda tangan Anda pada SPD adalah persetujuannya: saat pelaksana mengirim usulan
+                    bersama SPD bertanda tangan, persetujuan PPK tercatat sendiri pada rantai
+                    persetujuan dan jejak audit. Menu <strong>Keuangan</strong> terbuka bagi Anda
+                    dalam mode lihat saja — seluruh usulan dapat dibuka tanpa satu pun tombol ubah.
+                </p>
+            </div>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl">
                 <svg class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -567,16 +603,17 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Catat pelunasan">
-                Pelunasan baru terbuka setelah berkas pertanggungjawaban lengkap dan kedua dokumen
-                ditandatangani. Selisih antara uang muka dan nominal akhir terhitung sendiri.
-                Pelunasan juga menunggu <strong>laporan perjalanan dinas dikonfirmasi pimpinan</strong>
-                lewat QR — halaman keuangan menampilkan syarat ini sebelum bukti transfer diunggah.
+                Satu-satunya syaratnya: <strong>laporan perjalanan dinas sudah dikonfirmasi
+                Direktur</strong> lewat QR — tanda tangan pelaksana, PPK, maupun daftar nominatif
+                tidak menahannya, dan halaman keuangan menampilkan syarat ini sebelum bukti
+                transfer diunggah. Selisih antara uang muka dan nominal akhir terhitung sendiri.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Bayar transport lokal">
                 Submenu <strong>Bayar Transport Lokal</strong> memuat daftar riil yang sudah
                 ditandatangani penuh. Isi tanggal pembayaran dan buktinya. Yang sudah dibayar di
-                sini tidak ikut terhitung lagi pada pelunasan.
+                sini tidak ikut terhitung lagi pada pelunasan; yang keliru dapat dibatalkan
+                dengan menyebut alasannya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Telusuri lewat Riwayat Pembayaran" :terakhir="true">
@@ -659,13 +696,16 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Arsip Daftar Riil dan Arsip Rincian Lengkap">
-                Arsip dokumen pertanggungjawaban yang sudah lengkap tanda tangannya, siap dicetak
-                ulang kapan pun dibutuhkan pemeriksa.
+                Arsip dokumen pertanggungjawaban yang sudah ditandatangani pelaksana dan PPK,
+                dikelompokkan per bulan dan tahun, siap dicetak ulang kapan pun dibutuhkan
+                pemeriksa — tanpa menunggu daftar nominatif.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="List Daftar Nominatif" :terakhir="true">
-                Daftar nominatif yang sudah dikirim PPK ke tim keuangan, dikelompokkan per bulan
-                penerimaan. Di sini pula pembebanan kategori dan akun anggarannya ditetapkan.
+                Seluruh daftar nominatif yang terbit — menunggu PPK, sudah ditandatangani, sudah
+                diterima tim keuangan — dengan saringan status dan keterangan siapa saja pelaksana
+                yang sudah menandatangani berkasnya. Di sini pula pembebanan kategori dan akun
+                anggarannya ditetapkan setelah daftar diterima.
             </x-panduan-langkah>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl">
@@ -749,6 +789,42 @@
                 Lencana angka pada menu Bantuan menghitung obrolan yang sudah dijawab tetapi belum
                 Anda baca. Obrolan yang sudah tuntas dapat ditandai selesai.
             </x-panduan-langkah>
+        </div>
+    </div>
+
+    {{-- ── Riwayat perubahan ── --}}
+    <div x-show="bagian === 'perubahan'" x-transition x-cloak class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-bold text-slate-800 text-sm">Riwayat Perubahan</h2>
+            <p class="text-xs text-slate-400">Yang berubah dari versi ke versi — versi tayang: PANGI {{ $versi }}</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            @foreach ($riwayat as $rilis)
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-2.5">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-full {{ $loop->first ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600' }}">
+                            Versi {{ $rilis['versi'] }}
+                        </span>
+                        <span class="text-xs text-slate-400">{{ $rilis['tanggal'] }}</span>
+                        @if ($loop->first)
+                            <span class="text-[11px] font-semibold text-teal-600">terbaru</span>
+                        @endif
+                    </div>
+                    <ul class="space-y-1.5">
+                        @foreach ($rilis['butir'] as $butir)
+                            <li class="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $loop->parent->first ? 'bg-teal-500' : 'bg-slate-400' }} shrink-0 mt-1.5"></span>
+                                {{ $butir }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endforeach
+
+            <p class="text-xs text-slate-400 leading-relaxed">
+                Riwayat yang sama tercantum pada bab terakhir buku panduan yang dapat diunduh di atas.
+            </p>
         </div>
     </div>
 
