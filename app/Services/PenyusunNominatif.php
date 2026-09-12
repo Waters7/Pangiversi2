@@ -112,11 +112,11 @@ class PenyusunNominatif
             $riil === null || ! $riil->sudahDikirimKePegawai() => ['keuangan', $this->penagih->lengkap($usulan)
                     ? 'Berkas diperiksa tim keuangan'
                     : 'Berkas pertanggungjawaban belum lengkap', null],
-            $riil->sudah_ditandatangani && $riil->jalurRincian()->sudahDitandatangani() => ['ppk', 'Ditandatangani PPK '.($riil->ppk?->nama ?? ''),
-                max($riil->ditandatangani_at, $riil->rincian_ditandatangani_at)],
+            $riil->disahkanPpkSeluruhnya() => ['ppk', 'Ditandatangani PPK '.($riil->jalurRincian()->ppk()?->nama ?? $riil->ppk?->nama ?? ''),
+                $riil->waktuDisahkanPpk()],
             $riil->sedangDisanggah() || $riil->jalurRincian()->sedangDisanggah() => ['disanggah', 'Disanggah pelaksana, kembali ke tim keuangan', null],
-            $riil->sudahDisetujuiPegawai() && $riil->jalurRincian()->sudahDisetujui() => ['pelaksana', 'Ditandatangani pelaksana, menunggu PPK',
-                max($riil->disetujui_pegawai_at, $riil->rincian_disetujui_at)],
+            $riil->disetujuiPelaksanaSeluruhnya() => ['pelaksana', 'Ditandatangani pelaksana, menunggu PPK',
+                $riil->waktuDisetujuiPelaksana()],
             default => ['menunggu-pelaksana', 'Menunggu tanda tangan pelaksana', null],
         };
 
@@ -224,7 +224,10 @@ class PenyusunNominatif
         $transport = (float) $usulan->daftarRiil->sum('total_riil');
         $harian = $this->rekapHarian($rincian, KategoriBiaya::UangHarian);
         $inap = $this->rekapHarian($rincian, KategoriBiaya::Penginapan);
-        $lainnya = $this->jumlahKategori($rincian, KategoriBiaya::Lainnya);
+        // Biaya penyelenggaraan tidak berkolom sendiri pada lembar nominatif;
+        // ia ikut pada jumlah pembayaran bersama biaya lainnya.
+        $lainnya = $this->jumlahKategori($rincian, KategoriBiaya::Lainnya)
+            + $this->jumlahKategori($rincian, KategoriBiaya::Penyelenggaraan);
 
         return [
             'nomor' => $nomor,
@@ -363,10 +366,7 @@ class PenyusunNominatif
         $usulan->loadMissing('daftarRiil');
 
         return $usulan->daftarRiil->isNotEmpty()
-            && $usulan->daftarRiil->every(
-                fn ($daftar) => $daftar->sudah_ditandatangani
-                    && $daftar->jalurRincian()->sudahDitandatangani()
-            );
+            && $usulan->daftarRiil->every(fn ($daftar) => $daftar->disahkanPpkSeluruhnya());
     }
 
     /**
@@ -409,8 +409,8 @@ class PenyusunNominatif
             ->whereNotIn('no_tugas', $sudahTerbit)
             ->whereHas('daftarRiil')
             ->whereDoesntHave('daftarRiil', fn ($q) => $q
-                ->whereNull('ditandatangani_at')
-                ->orWhereNull('rincian_ditandatangani_at'))
+                ->whereNull('rincian_ditandatangani_at')
+                ->orWhere(fn ($r) => $r->whereNull('ditandatangani_at')->where('total_riil', '>', 0)))
             ->distinct()
             ->pluck('no_tugas');
 

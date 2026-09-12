@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\KategoriBiaya;
 use App\Services\JalurPersetujuan;
 use App\Services\TautanVerifikasi;
+use Carbon\CarbonInterface;
 use Database\Factories\DaftarRiilFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -245,6 +246,64 @@ class DaftarRiil extends Model
     public function getSudahDitandatanganiAttribute(): bool
     {
         return $this->ditandatangani_at !== null;
+    }
+
+    /**
+     * Daftar pengeluaran riil hanya berlaku bila ada transport lokal yang
+     * dinyatakan. Perjalanan tanpa transport lokal tetap punya baris ini
+     * (rincian biayanya menumpang di sini), tetapi daftarnya kosong dan
+     * tidak perlu ditandatangani siapa pun — dulu ia justru menahan
+     * pengiriman, tanda tangan PPK, dan daftar nominatif selamanya.
+     */
+    public function berlaku(): bool
+    {
+        return $this->total_riil > 0;
+    }
+
+    /**
+     * Kedua dokumen sudah disetujui pelaksana — daftar riil nol dianggap
+     * selesai dengan sendirinya.
+     */
+    public function disetujuiPelaksanaSeluruhnya(): bool
+    {
+        return $this->jalurRincian()->sudahDisetujui()
+            && (! $this->berlaku() || $this->sudahDisetujuiPegawai());
+    }
+
+    /**
+     * Kedua dokumen sudah ditandatangani PPK — daftar riil nol tidak
+     * menunggu tanda tangan.
+     */
+    public function disahkanPpkSeluruhnya(): bool
+    {
+        return $this->jalurRincian()->sudahDitandatangani()
+            && (! $this->berlaku() || $this->sudah_ditandatangani);
+    }
+
+    /**
+     * Waktu pengesahan PPK yang terakhir dibubuhkan, bila kedua dokumen
+     * sudah disahkan.
+     */
+    public function waktuDisahkanPpk(): ?CarbonInterface
+    {
+        if (! $this->disahkanPpkSeluruhnya()) {
+            return null;
+        }
+
+        return max(array_filter([$this->rincian_ditandatangani_at, $this->ditandatangani_at]));
+    }
+
+    /**
+     * Waktu persetujuan pelaksana yang terakhir, bila kedua dokumen sudah
+     * disetujui.
+     */
+    public function waktuDisetujuiPelaksana(): ?CarbonInterface
+    {
+        if (! $this->disetujuiPelaksanaSeluruhnya()) {
+            return null;
+        }
+
+        return max(array_filter([$this->rincian_disetujui_at, $this->disetujui_pegawai_at]));
     }
 
     /**

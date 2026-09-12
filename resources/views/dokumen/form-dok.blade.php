@@ -467,14 +467,95 @@
             </form>
             @endunless
 
-            {{-- ══════════ 5. LAPORAN PERJALANAN DINAS ══════════ --}}
+            {{-- ══════════ 5. BIAYA PENYELENGGARAAN ══════════ --}}
+            <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
+                  x-data="{ ada: {{ old('penyelenggaraan_ada', $dokumen?->penyelenggaraan_ada ? '1' : '0') === '1' ? 'true' : 'false' }} }">
+                @csrf
+                <input type="hidden" name="section" value="penyelenggaraan">
+
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">5. Biaya Penyelenggaraan</h3>
+                            <p class="text-xs text-slate-400">Kontribusi atau registrasi kegiatan yang dibayar pelaksana</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        {{-- Ditanya dulu supaya yang tidak punya biaya ini tidak
+                             dihadapkan pada kolom yang tidak berlaku baginya. --}}
+                        <div>
+                            <p class="text-sm font-semibold text-slate-700 mb-2">Apakah ada biaya penyelenggaraan?</p>
+                            <div class="flex flex-wrap gap-3">
+                                <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
+                                       :class="! ada ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                    <input type="radio" name="penyelenggaraan_ada" value="0" @change="ada = false"
+                                           :checked="! ada" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                    Tidak ada
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
+                                       :class="ada ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                    <input type="radio" name="penyelenggaraan_ada" value="1" @change="ada = true"
+                                           :checked="ada" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                    Ada
+                                </label>
+                            </div>
+                        </div>
+
+                        <div x-show="ada" x-cloak class="space-y-5">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal <span class="text-red-500">*</span></label>
+                                    <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
+                                        <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
+                                        <input type="number" name="penyelenggaraan_nominal" min="0" step="1" @disabled($terkunci)
+                                               value="{{ old('penyelenggaraan_nominal', $dokumen?->penyelenggaraan_nominal ? (int) $dokumen->penyelenggaraan_nominal : '') }}"
+                                               class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
+                                    </div>
+                                    @error('penyelenggaraan_nominal')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                        Nomor invoice <span class="font-normal text-slate-400">— bila ada</span>
+                                    </label>
+                                    <input type="text" name="penyelenggaraan_invoice" @disabled($terkunci)
+                                           value="{{ old('penyelenggaraan_invoice', $dokumen?->penyelenggaraan_invoice) }}"
+                                           placeholder="cth: INV/2026/0123"
+                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                </div>
+                            </div>
+
+                            <x-unggah-berkas
+                                nama="penyelenggaraan_bukti"
+                                label="Bukti bayar biaya penyelenggaraan"
+                                :berkas="$dokumen?->penyelenggaraan_bukti"
+                                terima=".pdf,.jpg,.jpeg,.png"
+                                keterangan="Kuitansi, invoice lunas, atau bukti transfer — PDF, JPG, atau PNG, maks. 2 MB."
+                                :terkunci="$terkunci" />
+                        </div>
+
+                        @unless ($terkunci)
+                            <button type="submit" class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">
+                                Simpan Biaya Penyelenggaraan
+                            </button>
+                        @endunless
+                    </div>
+                </div>
+            </form>
+
+            {{-- ══════════ 6. LAPORAN PERJALANAN DINAS ══════════ --}}
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
                         <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
                     </div>
                     <div class="min-w-0">
-                        <h3 class="font-bold text-slate-800 text-sm">5. Laporan Perjalanan Dinas</h3>
+                        <h3 class="font-bold text-slate-800 text-sm">6. Laporan Perjalanan Dinas</h3>
                         <p class="text-xs text-slate-400">Diisi langsung di aplikasi, dokumennya terbit sendiri</p>
                     </div>
                     @if ($usulan->laporan?->sudahSelesai())

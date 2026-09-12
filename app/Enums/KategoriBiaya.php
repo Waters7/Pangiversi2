@@ -16,6 +16,9 @@ enum KategoriBiaya: string
 
     case Penginapan = 'penginapan';
 
+    /** Kontribusi/registrasi kegiatan yang dibayar pelaksana, berbukti invoice. */
+    case Penyelenggaraan = 'penyelenggaraan';
+
     case Lainnya = 'lainnya';
 
     public function label(): string
@@ -25,6 +28,7 @@ enum KategoriBiaya: string
             self::UangHarian => 'Uang Harian',
             self::TransportLokal => 'Transport Lokal',
             self::Penginapan => 'Uang Penginapan',
+            self::Penyelenggaraan => 'Biaya Penyelenggaraan',
             self::Lainnya => 'Biaya Lainnya',
         };
     }
@@ -39,7 +43,8 @@ enum KategoriBiaya: string
             self::UangHarian => 2,
             self::TransportLokal => 3,
             self::Penginapan => 4,
-            self::Lainnya => 5,
+            self::Penyelenggaraan => 5,
+            self::Lainnya => 6,
         };
     }
 
@@ -58,6 +63,7 @@ enum KategoriBiaya: string
             self::UangHarian => 'bg-teal-100 text-teal-700',
             self::TransportLokal => 'bg-indigo-100 text-indigo-700',
             self::Penginapan => 'bg-amber-100 text-amber-700',
+            self::Penyelenggaraan => 'bg-rose-100 text-rose-700',
             self::Lainnya => 'bg-slate-100 text-slate-600',
         };
     }

@@ -255,6 +255,25 @@ class SinkronBiayaDokumen
             );
         }
 
+        // Biaya penyelenggaraan hanya bila pelaksana menyatakan ada; nomor
+        // invoice ikut pada nama komponen supaya cetakannya dapat ditelusuri
+        // ke bukti bayarnya.
+        if ($dokumen?->adaPenyelenggaraan() && $dokumen->penyelenggaraan_nominal > 0) {
+            $nama = 'Biaya Penyelenggaraan';
+
+            if ($dokumen->penyelenggaraan_invoice) {
+                $nama .= ' (No. Invoice '.$dokumen->penyelenggaraan_invoice.')';
+            }
+
+            $baris['penyelenggaraan'] = $this->baris(
+                KategoriBiaya::Penyelenggaraan,
+                $nama,
+                'paket',
+                (float) $dokumen->penyelenggaraan_nominal,
+                null,
+            );
+        }
+
         return $baris;
     }
 

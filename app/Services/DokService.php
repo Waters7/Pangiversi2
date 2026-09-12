@@ -26,6 +26,7 @@ class DokService
             'tiket' => $this->simpanTiket($request, $usulan),
             'nota' => $this->simpanNota($request, $usulan),
             'akomodasi' => $this->simpanAkomodasi($request, $usulan),
+            'penyelenggaraan' => $this->simpanPenyelenggaraan($request, $usulan),
             default => abort(422, 'Tipe dokumen tidak dikenali.'),
         };
     }
@@ -196,6 +197,62 @@ class DokService
         ]);
 
         return true;
+    }
+
+    // ── Seksi 5: biaya penyelenggaraan ──
+
+    /**
+     * Ditanya dulu ada atau tidak. Bila ada, nominal dan bukti bayarnya
+     * wajib — nomor invoice hanya bila diterbitkan penyelenggara. Bila
+     * tidak, seluruh isiannya dikosongkan supaya tidak ada nominal lama
+     * yang diam-diam ikut ke rincian biaya.
+     */
+    private function simpanPenyelenggaraan(Request $request, Usulan $usulan): bool
+    {
+        $dokumen = $this->dokumen($usulan);
+        $ada = (string) $request->input('penyelenggaraan_ada') === '1';
+
+        $request->validate([
+            'penyelenggaraan_ada' => ['required', 'in:0,1'],
+            'penyelenggaraan_nominal' => [$ada ? 'required' : 'nullable', 'numeric', 'min:1'],
+            'penyelenggaraan_invoice' => ['nullable', 'string', 'max:100'],
+            'penyelenggaraan_bukti' => [
+                $ada ? $this->aturanBerkas($dokumen, 'penyelenggaraan_bukti') : 'nullable',
+                'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
+            ],
+        ], [
+            'penyelenggaraan_ada.required' => 'Pilih ada atau tidaknya biaya penyelenggaraan.',
+            'penyelenggaraan_nominal.required' => 'Isi nominal biaya penyelenggaraan.',
+            'penyelenggaraan_nominal.min' => 'Nominal biaya penyelenggaraan harus lebih dari nol.',
+            'penyelenggaraan_bukti.required' => 'Unggah bukti bayar biaya penyelenggaraan.',
+        ]);
+
+        if (! $ada) {
+            $this->hapusBerkasLama($dokumen?->penyelenggaraan_bukti);
+
+            $data = [
+                'penyelenggaraan_ada' => false,
+                'penyelenggaraan_nominal' => null,
+                'penyelenggaraan_invoice' => null,
+                'penyelenggaraan_bukti' => null,
+            ];
+
+            if ($dokumen) {
+                $dokumen->update($data);
+            } else {
+                Dokumen::create(['id_usulan' => $usulan->id] + $data);
+            }
+
+            $this->rampungkan($usulan);
+
+            return true;
+        }
+
+        return $this->simpanBerkas($request, $usulan, ['penyelenggaraan_bukti'], [
+            'penyelenggaraan_ada' => true,
+            'penyelenggaraan_nominal' => (float) $request->input('penyelenggaraan_nominal'),
+            'penyelenggaraan_invoice' => $request->input('penyelenggaraan_invoice') ?: null,
+        ]);
     }
 
     // ── Pembantu ──

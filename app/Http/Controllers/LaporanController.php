@@ -141,9 +141,11 @@ class LaporanController extends Controller
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
 
+        // Daftar riil yang nol tidak menunggu tanda tangan siapa pun; yang
+        // menentukan lengkapnya adalah rincian biayanya.
         $semua = DaftarRiil::with('usulan.user', 'usulan.keuangan.rincianBiaya', 'peserta', 'ppk')
-            ->whereNotNull('ditandatangani_at')
             ->whereNotNull('rincian_ditandatangani_at')
+            ->where(fn ($q) => $q->whereNotNull('ditandatangani_at')->orWhere('total_riil', '<=', 0))
             ->whereHas('usulan')
             ->when($cari, fn ($q) => $q->whereHas(
                 'usulan',
@@ -154,7 +156,7 @@ class LaporanController extends Controller
             ->get()
             ->map(function (DaftarRiil $item) {
                 // Waktu lengkapnya adalah tanda tangan terakhir yang dibubuhkan.
-                $lengkap = max($item->ditandatangani_at, $item->rincian_ditandatangani_at);
+                $lengkap = $item->waktuDisahkanPpk();
 
                 return [
                     'berkas' => $item,

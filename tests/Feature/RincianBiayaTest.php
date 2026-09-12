@@ -83,6 +83,7 @@ class RincianBiayaTest extends TestCase
             'uang_harian',
             'transport_lokal',
             'penginapan',
+            'penyelenggaraan',
             'lainnya',
         ], $urutan);
     }
@@ -145,22 +146,30 @@ class RincianBiayaTest extends TestCase
     public function test_nota_transportasi_ikut_menentukan_kelengkapan(): void
     {
         $usulan = $this->lengkapiPertanggungjawaban($this->usulan);
-        $usulan->notaTransport()->delete();
+        $usulan->notaTransport()->update(['bukti' => null]);
 
         $kurang = app(PenagihDokumen::class)->berkasKurang($usulan->fresh('notaTransport'));
 
-        $this->assertContains('Nota/biaya transportasi lokal', $kurang);
+        $this->assertContains('Nota transportasi lokal untuk ruas 1', $kurang);
     }
 
-    public function test_usulan_belum_selesai_selama_nota_transportasi_kosong(): void
+    /**
+     * Transport lokal boleh tidak ada sama sekali; yang menahan hanyalah
+     * nominal yang belum berbukti.
+     */
+    public function test_usulan_belum_selesai_selama_nota_bernominal_tanpa_bukti(): void
     {
         $this->usulan->keuangan->update(['status' => 'lunas']);
 
         $usulan = $this->lengkapiPertanggungjawaban($this->usulan);
-        $usulan->notaTransport()->delete();
+        $usulan->notaTransport()->update(['bukti' => null]);
 
         $this->assertFalse($this->usulan->fresh()->checkCompletion());
         $this->assertSame(StatusUsulan::Disetujui->value, $this->usulan->fresh()->status);
+
+        $usulan->notaTransport()->delete();
+
+        $this->assertTrue($this->usulan->fresh()->checkCompletion());
     }
 
     public function test_usulan_selesai_setelah_nota_transportasi_dilengkapi(): void

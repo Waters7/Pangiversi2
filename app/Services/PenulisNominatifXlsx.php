@@ -278,7 +278,8 @@ class PenulisNominatifXlsx
             'penginapan_hari' => (float) $penginapan->sum('volume'),
             'penginapan_satuan' => (float) ($penginapan->first()?->harga_satuan ?? 0),
             'penginapan_jumlah' => (float) $penginapan->sum('jumlah'),
-            'lainnya' => (float) $perKategori(KategoriBiaya::Lainnya)->sum('jumlah'),
+            'lainnya' => (float) $perKategori(KategoriBiaya::Lainnya)->sum('jumlah')
+                + (float) $perKategori(KategoriBiaya::Penyelenggaraan)->sum('jumlah'),
         ];
 
         // Jumlah pembayaran mengikuti nilai yang benar-benar dianggarkan.

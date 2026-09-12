@@ -308,23 +308,11 @@ class PelacakUsulan
      */
     private function keduanyaDisetujui(mixed $riil): ?CarbonInterface
     {
-        if (! $riil) {
-            return null;
-        }
-
-        $waktu = [$riil->disetujui_pegawai_at, $riil->rincian_disetujui_at];
-
-        return in_array(null, $waktu, true) ? null : max($waktu);
+        return $riil?->waktuDisetujuiPelaksana();
     }
 
     private function keduanyaDitandatangani(mixed $riil): ?CarbonInterface
     {
-        if (! $riil) {
-            return null;
-        }
-
-        $waktu = [$riil->ditandatangani_at, $riil->rincian_ditandatangani_at];
-
-        return in_array(null, $waktu, true) ? null : max($waktu);
+        return $riil?->waktuDisahkanPpk();
     }
 }

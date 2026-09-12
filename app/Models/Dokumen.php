@@ -26,6 +26,10 @@ class Dokumen extends Model
         'bill_hotel',
         'bill_hotel_no_transaksi',
         'bill_hotel_nominal',
+        'penyelenggaraan_ada',
+        'penyelenggaraan_nominal',
+        'penyelenggaraan_invoice',
+        'penyelenggaraan_bukti',
         'laporan_hasil',
         'id_usulan',
     ];
@@ -35,7 +39,19 @@ class Dokumen extends Model
      */
     protected function casts(): array
     {
-        return ['bill_hotel_nominal' => 'float'];
+        return [
+            'bill_hotel_nominal' => 'float',
+            'penyelenggaraan_ada' => 'boolean',
+            'penyelenggaraan_nominal' => 'float',
+        ];
+    }
+
+    /**
+     * Pelaksana menyatakan ada biaya penyelenggaraan yang ia bayar.
+     */
+    public function adaPenyelenggaraan(): bool
+    {
+        return $this->penyelenggaraan_ada === true;
     }
 
     public function usulan()

@@ -47,6 +47,7 @@ class PenagihDokumen
             return collect([filled($dokumen?->sppd) ? null : self::LABEL['sppd']])
                 ->filter()
                 ->concat($this->notaKurang($usulan))
+                ->concat($this->penyelenggaraanKurang($dokumen))
                 ->concat($this->laporanKurang($usulan))
                 ->values()
                 ->all();
@@ -61,6 +62,7 @@ class PenagihDokumen
             ->concat($this->tiketKurang($usulan))
             ->concat($this->notaKurang($usulan))
             ->concat($this->rincianHotelKurang($dokumen))
+            ->concat($this->penyelenggaraanKurang($dokumen))
             ->concat($this->laporanKurang($usulan))
             ->values()
             ->all();
@@ -119,7 +121,7 @@ class PenagihDokumen
 
         $baris[] = [
             'label' => 'Nota Transportasi Lokal',
-            'terpenuhi' => $adaNota && $ruasKurang === [],
+            'terpenuhi' => $ruasKurang === [],
             'berkas' => $usulan->notaTransport
                 ->filter(fn ($item) => filled($item->bukti))
                 ->sortBy('urutan')
@@ -130,7 +132,7 @@ class PenagihDokumen
                 ->values()
                 ->all(),
             'catatan' => match (true) {
-                ! $adaNota => 'Tanpa nota, biaya transportasi tidak diganti',
+                ! $adaNota => 'Tidak ada biaya transport lokal yang dinyatakan',
                 $ruasKurang !== [] => 'Bernominal tapi belum ada notanya: '.implode(', ', $ruasKurang),
                 default => 'Ruas terisi: '.$usulan->notaTransport->filter(fn ($item) => $item->terisi())->count(),
             },
@@ -150,6 +152,21 @@ class PenagihDokumen
             ];
 
             $baris[] = $this->barisChecklist('Kuitansi', $dokumen?->kwintasi);
+        }
+
+        // Seksi 5 — biaya penyelenggaraan, hanya bila pelaksana menyatakan ada.
+        if ($dokumen?->adaPenyelenggaraan()) {
+            $baris[] = [
+                'label' => 'Bukti Biaya Penyelenggaraan',
+                'terpenuhi' => $this->penyelenggaraanKurang($dokumen) === [],
+                'berkas' => filled($dokumen->penyelenggaraan_bukti)
+                    ? [['label' => 'Bukti bayar', 'path' => $dokumen->penyelenggaraan_bukti]]
+                    : [],
+                'catatan' => $dokumen->penyelenggaraan_nominal > 0
+                    ? 'Rp '.number_format($dokumen->penyelenggaraan_nominal, 0, ',', '.')
+                        .($dokumen->penyelenggaraan_invoice ? ' · No. invoice '.$dokumen->penyelenggaraan_invoice : '')
+                    : 'Nominal dan bukti bayarnya wajib diisi',
+            ];
         }
 
         // Laporan perjadin diisi langsung di aplikasi, bukan diunggah.
@@ -241,11 +258,14 @@ class PenagihDokumen
     }
 
     /**
-     * Sedikitnya satu ruas transportasi lokal dinotakan.
+     * Nota transportasi lokal hanya ditagih untuk ruas yang bernominal.
      *
-     * Tidak diwajibkan keempatnya: ada perjalanan darat yang memang tidak
-     * melewati bandara, dan menagih ruas yang tidak pernah ada hanya membuat
-     * pelaksana mengarang angka.
+     * Tidak ada ruas yang diwajibkan: perjalanan yang diantar kendaraan
+     * dinas atau dijemput panitia memang tidak mengeluarkan transport lokal,
+     * dan dulu syarat "sedikitnya satu ruas" membuat berkas seperti itu
+     * tidak pernah lengkap — tidak pernah tercantum di daftar nominatif dan
+     * tidak pernah selesai. Kosong berarti tidak ada biaya; yang bernominal
+     * tanpa nota itulah yang ditagih.
      *
      * @return list<string>
      */
@@ -253,15 +273,28 @@ class PenagihDokumen
     {
         $usulan->loadMissing('notaTransport');
 
-        if (! $usulan->notaTransport->contains(fn ($nota) => $nota->terisi())) {
-            return ['Nota/biaya transportasi lokal'];
-        }
-
         $tanpaBukti = $this->ruasTanpaBukti($usulan);
 
         return $tanpaBukti === []
             ? []
             : ['Nota transportasi lokal untuk '.implode(', ', $tanpaBukti)];
+    }
+
+    /**
+     * Biaya penyelenggaraan yang dinyatakan ada harus bernominal dan
+     * berbukti bayar; yang dinyatakan tidak ada tidak ditagih apa pun.
+     *
+     * @return list<string>
+     */
+    private function penyelenggaraanKurang(?Dokumen $dokumen): array
+    {
+        if (! $dokumen?->adaPenyelenggaraan()) {
+            return [];
+        }
+
+        return $dokumen->penyelenggaraan_nominal > 0 && filled($dokumen->penyelenggaraan_bukti)
+            ? []
+            : ['Bukti bayar biaya penyelenggaraan'];
     }
 
     /**

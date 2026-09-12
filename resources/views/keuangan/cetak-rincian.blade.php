@@ -9,13 +9,13 @@
            daripada DejaVu Sans yang lebar. */
         * { font-family: Arial, Helvetica, sans-serif; }
         @page { margin: 14mm 16mm 12mm; }
-        body { font-size: 10pt; color: #000; margin: 0; line-height: 1.3; }
-        .lampiran { text-align: right; font-size: 8pt; line-height: 1.4; margin-bottom: 3mm; }
+        body { font-size: 10pt; color: #000; margin: 0; line-height: 1.25; }
+        .lampiran { text-align: right; font-size: 7.5pt; line-height: 1.3; margin-bottom: 2.5mm; }
         h1 { font-size: 12.5pt; text-align: center; text-transform: uppercase; margin: 0 0 3mm; letter-spacing: .4px; }
-        .rujukan td { padding: 0.6mm 0; font-size: 10pt; }
+        .rujukan td { padding: 0.4mm 0; font-size: 10pt; }
         .rujukan td:first-child { width: 42mm; }
         table.biaya { width: 100%; border-collapse: collapse; margin-top: 3mm; }
-        table.biaya th, table.biaya td { border: 0.6pt solid #000; padding: 1.1mm 2mm; }
+        table.biaya th, table.biaya td { border: 0.6pt solid #000; padding: 1mm 2mm; }
         table.biaya td.ket { font-size: 8.5pt; }
         table.biaya th { background: #f2f2f2; font-size: 9pt; text-transform: uppercase; text-align: center; }
         .kanan { text-align: right; }
@@ -29,22 +29,26 @@
 
         /* Blok tanda tangan disusun sebagai tabel tanpa garis dan tidak boleh
            terpotong halaman: satu halaman untuk seluruh dokumen. */
-        table.ttd { width: 100%; margin-top: 4mm; page-break-inside: avoid; }
+        /* Kedua blok tanda tangan (bendahara–pelaksana, lalu rampung–PPK)
+           dijaga sebagai satu kesatuan: bila tidak muat, keduanya pindah
+           bersama — bukan PPK sendirian di halaman berikutnya. */
+        .blok-ttd { page-break-inside: avoid; }
+        table.ttd { width: 100%; margin-top: 3mm; }
         table.ttd td { width: 50%; vertical-align: top; font-size: 10pt; text-align: center; line-height: 1.4; }
         /* Kotak tanda tangan bertinggi tetap: QR di dalamnya bila sudah terbit,
            kosong bila belum — semua kolom tanda tangan sejajar. */
-        .kotak-ttd { height: 21mm; margin: 1mm 0; }
+        .kotak-ttd { height: 19mm; margin: 0.5mm 0; }
         .nama { font-weight: bold; text-decoration: underline; }
 
         /* Perhitungan SPD rampung di kiri, PPK di kanan — seperti pada
            lembar Lampiran II aslinya, sekaligus menghemat tinggi halaman. */
-        table.rampung { width: 100%; margin-top: 3mm; page-break-inside: avoid; }
+        table.rampung { width: 100%; margin-top: 2.5mm; }
         table.rampung td.kolom { width: 50%; vertical-align: top; font-size: 10pt; }
         table.rampung td.kolom-ppk { text-align: center; line-height: 1.4; }
         .rampung h2 { font-size: 10pt; text-transform: uppercase; margin: 0 0 2mm; }
         table.hitung td { padding: 0.8mm 0; font-size: 10pt; }
         table.hitung td:first-child { width: 48mm; }
-        .qr { width: 20mm; height: 20mm; margin-top: 0.5mm; }
+        .qr { width: 18mm; height: 18mm; margin-top: 0.5mm; }
         .kode-qr { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.5pt; letter-spacing: .4px; }
         .catatan-qr { font-size: 7pt; color: #444; line-height: 1.3; margin: 1mm 0 0; }
     </style>
@@ -85,14 +89,16 @@
                 $nomor = 0;
 
                 // Susunan resmi dokumen: transportasi (pesawat/kereta/bus), uang
-                // harian, transportasi lokal, biaya akomodasi, lalu lainnya. Tiap
-                // kelompok berjudul, dan transport lokal — yang datang dari daftar
-                // riil, bukan dari baris rincian — disisipkan pada urutannya.
+                // harian, transportasi lokal, biaya akomodasi, biaya
+                // penyelenggaraan, lalu lainnya. Tiap kelompok berjudul, dan
+                // transport lokal — yang datang dari daftar riil, bukan dari
+                // baris rincian — disisipkan pada urutannya.
                 $judulKelompok = [
                     KategoriBiaya::Transport->value => 'Transportasi (Pesawat / Kereta / Bus)',
                     KategoriBiaya::UangHarian->value => 'Uang Harian',
                     KategoriBiaya::TransportLokal->value => 'Transportasi Lokal',
                     KategoriBiaya::Penginapan->value => 'Biaya Akomodasi',
+                    KategoriBiaya::Penyelenggaraan->value => 'Biaya Penyelenggaraan',
                     KategoriBiaya::Lainnya->value => 'Biaya Lainnya',
                 ];
 
@@ -182,6 +188,7 @@
             ?? ($keuangan?->tanggal_pelunasan ? \Carbon\Carbon::parse($keuangan->tanggal_pelunasan) : null);
     @endphp
 
+    <div class="blok-ttd">
     <table class="ttd">
         <tr>
             <td>
@@ -267,6 +274,7 @@
             </td>
         </tr>
     </table>
+    </div>
 
 </body>
 </html>

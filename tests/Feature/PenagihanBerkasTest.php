@@ -58,8 +58,9 @@ class PenagihanBerkasTest extends TestCase
 
         $kurang = $this->penagih->berkasKurang($usulan);
 
-        // Berkas unggahan, kedua tiket, nota transportasi, dan laporannya.
-        $this->assertCount(count(Usulan::DOKUMEN_LPJ_WAJIB) + 4, $kurang);
+        // Berkas unggahan, kedua tiket, dan laporannya. Nota transportasi
+        // lokal tidak ditagih selama tidak ada nominal yang dinyatakan.
+        $this->assertCount(count(Usulan::DOKUMEN_LPJ_WAJIB) + 3, $kurang);
         $this->assertFalse($this->penagih->lengkap($usulan));
     }
 
@@ -152,7 +153,7 @@ class PenagihanBerkasTest extends TestCase
             ->get(route('keuangan'))
             ->assertOk()
             ->assertSee('https://wa.me/6281200002222', false)
-            ->assertSee('Tagih 6 berkas');
+            ->assertSee('Tagih 5 berkas');
     }
 
     public function test_baris_dengan_berkas_lengkap_menampilkan_keterangan_bukan_tombol(): void

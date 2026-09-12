@@ -227,7 +227,7 @@ class PemberitahuanBendaharaTest extends TestCase
         $this->actingAs($this->bendahara)
             ->get(route('pembayaran', ['tahap' => 'uang-muka']))
             ->assertOk()
-            ->assertSee('Kurang 6 berkas')
+            ->assertSee('Kurang 5 berkas')
             ->assertDontSee('Dokumen lengkap');
     }
 }

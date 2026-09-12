@@ -134,13 +134,32 @@ class BerkasDalamKotaTest extends TestCase
         }
     }
 
-    public function test_dalam_kota_tetap_menagih_sppd_dan_nota(): void
+    public function test_dalam_kota_tetap_menagih_sppd_dan_laporan(): void
     {
         $usulan = $this->usulan(dalamKota: true);
         $kurang = $this->penagih()->berkasKurang($usulan);
 
         $this->assertContains('SPPD bertanda tangan', $kurang);
-        $this->assertContains('Nota/biaya transportasi lokal', $kurang);
+        $this->assertContains('Laporan perjalanan dinas', $kurang);
+    }
+
+    /**
+     * Transport lokal tidak diwajibkan — yang dijemput panitia memang tidak
+     * mengeluarkannya. Hanya nominal tanpa nota yang ditagih.
+     */
+    public function test_transport_lokal_kosong_tidak_ditagih(): void
+    {
+        $usulan = $this->usulan(dalamKota: true);
+        Dokumen::updateOrCreate(['id_usulan' => $usulan->id], ['sppd' => 'demo/sppd.pdf']);
+        $usulan->laporan()->create(['diselesaikan_at' => now()]);
+
+        $this->assertTrue($this->penagih()->lengkap($usulan->fresh()));
+
+        $usulan->notaTransport()->create(['urutan' => RuasTransport::Lokal->value, 'nominal' => 50_000]);
+
+        $kurang = $this->penagih()->berkasKurang($usulan->fresh());
+
+        $this->assertContains('Nota transportasi lokal untuk transport lokal', $kurang);
     }
 
     public function test_luar_kota_dengan_berkas_yang_sama_masih_kurang(): void
