@@ -264,6 +264,12 @@
                 <p class="text-center text-xs mt-6" style="color: var(--tinta-samar)">
                     Butuh akun? Hubungi Tim SDM atau administrator sistem.
                 </p>
+
+                {{-- Versi tayang disebut di sini supaya laporan masalah dapat
+                     menyebut versi yang dipakai tanpa perlu masuk dulu. --}}
+                <p class="text-center text-[11px] mt-3 tracking-wide" style="color: var(--tinta-samar)">
+                    PANGI {{ app(\App\Services\VersiAplikasi::class)->label() }}
+                </p>
             </div>
         </div>
     </div>
