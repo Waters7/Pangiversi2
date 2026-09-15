@@ -123,6 +123,35 @@ class AdministrasiController extends Controller
     }
 
     /**
+     * Buka atau kunci tanggal dikeluarkan SPD bagi peran di luar pimpinan.
+     *
+     * Bawaannya terkunci: tanggal mengikuti hari pembuatan supaya dokumen
+     * tidak berselisih dengan kapan surat benar-benar terbit. Untuk kasus
+     * tertentu — nomor surat sudah tercatat di buku agenda pada tanggal yang
+     * lebih awal — super administrator membukanya sementara, lalu mengunci
+     * kembali. Tiap perubahannya tercatat pada jejak audit.
+     */
+    public function simpanKunciTanggalSpd(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Kunci tanggal SPD hanya diatur super administrator.');
+
+        $terbuka = $request->boolean('tanggal_spd_terbuka');
+
+        Pengaturan::simpan([Pengaturan::TANGGAL_SPD_TERBUKA => $terbuka ? '1' : '0']);
+
+        $this->audit->catat(
+            AuditLog::AKSI_PENGGUNA,
+            $terbuka
+                ? 'Tanggal dikeluarkan SPD dibuka untuk seluruh peran (tanggal mundur diizinkan).'
+                : 'Tanggal dikeluarkan SPD dikunci kembali: peran selain pimpinan mengikuti tanggal pembuatan.',
+        );
+
+        return back()->with('success', $terbuka
+            ? 'Tanggal dikeluarkan SPD dibuka untuk seluruh peran. Jangan lupa mengunci kembali setelah selesai.'
+            : 'Tanggal dikeluarkan SPD dikunci kembali.');
+    }
+
+    /**
      * Jalankan pengingat sekarang tanpa menunggu penjadwal harian.
      */
     public function jalankanPengingat(PengingatDokumen $pengingat): RedirectResponse

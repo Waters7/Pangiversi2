@@ -28,6 +28,16 @@ class Pengaturan extends Model
     public const PENGINGAT_AKTIF = 'pengingat_dokumen_aktif';
 
     /**
+     * Tanggal dikeluarkan SPD terbuka bagi seluruh peran.
+     *
+     * Bawaannya terkunci: hanya pimpinan dan administrator yang boleh
+     * menyesuaikan tanggal terbit. Super administrator membukanya sementara
+     * bila ada SPD yang harus diterbitkan dengan tanggal mundur (backdate),
+     * lalu menguncinya kembali.
+     */
+    public const TANGGAL_SPD_TERBUKA = 'tanggal_spd_terbuka';
+
+    /**
      * Nilai bawaan bila belum pernah diatur.
      *
      * @var array<string, string>
@@ -37,6 +47,7 @@ class Pengaturan extends Model
         self::PENGINGAT_HARI => '3',
         self::PENGINGAT_ULANG => '7',
         self::PENGINGAT_MAKS => '4',
+        self::TANGGAL_SPD_TERBUKA => '0',
     ];
 
     private const CACHE = 'pengaturan.semua';

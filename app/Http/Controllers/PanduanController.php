@@ -126,6 +126,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.1',
+                'tanggal' => '15 September 2026',
+                'butir' => [
+                    'Administrasi Sistem: super administrator dapat membuka atau mengunci tanggal dikeluarkan SPD bagi seluruh peran untuk kasus tanggal mundur (backdate); bawaannya terkunci, tiap perubahan tercatat pada jejak audit.',
+                ],
+            ],
+            [
                 'versi' => '2.5',
                 'tanggal' => '12 September 2026',
                 'butir' => [

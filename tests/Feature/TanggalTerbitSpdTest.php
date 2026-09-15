@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Kemampuan;
 use App\Enums\PeranPengguna;
+use App\Models\Pengaturan;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,6 +182,83 @@ class TanggalTerbitSpdTest extends TestCase
             ->assertOk()
             ->assertDontSee('name="tanggal_surat"', escape: false)
             ->assertSee('Mengikuti tanggal pembuatan SPD.');
+    }
+
+    // ── Kunci tanggal oleh super administrator ──
+
+    /**
+     * Untuk kasus tanggal mundur, super administrator dapat membuka tanggal
+     * dikeluarkan bagi seluruh peran lewat Administrasi Sistem; begitu
+     * dikunci kembali, peran lain kembali mengikuti tanggal pembuatan.
+     */
+    public function test_administrator_dapat_membuka_tanggal_bagi_seluruh_peran(): void
+    {
+        $admin = User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]);
+        $pelaksana = User::factory()->create(['role' => PeranPengguna::DosenTendik->value]);
+        $agenda = today()->subDays(9);
+
+        $this->actingAs($admin)
+            ->put(route('administrasi.tanggal-spd'), ['tanggal_spd_terbuka' => '1'])
+            ->assertSessionHas('success');
+
+        $this->assertTrue(Pengaturan::aktif(Pengaturan::TANGGAL_SPD_TERBUKA));
+        $this->assertTrue($pelaksana->bolehMengubahTanggalSpd());
+        $this->assertDatabaseHas('audit_logs', [
+            'deskripsi' => 'Tanggal dikeluarkan SPD dibuka untuk seluruh peran (tanggal mundur diizinkan).',
+        ]);
+
+        $this->actingAs($pelaksana)
+            ->get(route('spd.create'))
+            ->assertOk()
+            ->assertSee('name="tanggal_surat"', escape: false)
+            ->assertSee('dibuka administrator');
+
+        $this->actingAs($pelaksana)
+            ->post('/spd', $this->formulir($pelaksana, ['tanggal_surat' => $agenda->toDateString()]))
+            ->assertRedirect();
+
+        $this->assertTrue(SuratPerjalananDinas::sole()->tanggal_surat->isSameDay($agenda));
+
+        // Dikunci kembali: kiriman tanggal peran lain diabaikan lagi.
+        $this->actingAs($admin)
+            ->put(route('administrasi.tanggal-spd'), [])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($pelaksana->fresh()->bolehMengubahTanggalSpd());
+
+        $this->actingAs($pelaksana)
+            ->post('/spd', $this->formulir($pelaksana, ['tanggal_surat' => $agenda->toDateString()], [[
+                'nomor_surat' => '816',
+                'nama' => $pelaksana->nama,
+                'nip' => $pelaksana->nip ?? '198001012010011001',
+                'id_user' => $pelaksana->id,
+            ]]))
+            ->assertRedirect();
+
+        $this->assertTrue(SuratPerjalananDinas::latest('id')->first()->tanggal_surat->isToday());
+    }
+
+    public function test_hanya_super_administrator_yang_dapat_mengubah_kuncinya(): void
+    {
+        $timSdm = User::factory()->create(['role' => PeranPengguna::TimSdm->value]);
+
+        $this->actingAs($timSdm)
+            ->put(route('administrasi.tanggal-spd'), ['tanggal_spd_terbuka' => '1'])
+            ->assertForbidden();
+
+        $this->assertFalse(Pengaturan::aktif(Pengaturan::TANGGAL_SPD_TERBUKA));
+
+        // Kartunya pun tidak ditampilkan bagi Tim SDM yang berbagi halaman ini.
+        $this->actingAs($timSdm)
+            ->get(route('administrasi'))
+            ->assertOk()
+            ->assertDontSee('Tanggal Dikeluarkan SPD');
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]))
+            ->get(route('administrasi'))
+            ->assertOk()
+            ->assertSee('Tanggal Dikeluarkan SPD')
+            ->assertSee('Terkunci');
     }
 
     /** Tanggal pilihan itulah yang tercetak pada dokumennya. */

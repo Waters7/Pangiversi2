@@ -45,17 +45,22 @@
                            class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
+                    @php
+                        $tanggalTerbit = $ubah ? $spd->tanggal_surat : now();
+                        $bolehUbahTanggal = auth()->user()->bolehMengubahTanggalSpd();
+                        $dibukaAdmin = $bolehUbahTanggal && ! auth()->user()->can('mengubah-tanggal-spd');
+                    @endphp
                     <label for="tanggal_surat" class="block text-sm font-semibold text-slate-700 mb-1.5">
                         Tanggal Dikeluarkan
-                        @can('mengubah-tanggal-spd') <span class="text-red-500">*</span> @endcan
+                        @if ($bolehUbahTanggal) <span class="text-red-500">*</span> @endif
                     </label>
-                    @php $tanggalTerbit = $ubah ? $spd->tanggal_surat : now(); @endphp
 
                     {{-- Bagi peran lain tanggalnya mengikuti tanggal pembuatan
                          agar tidak berselisih dengan kapan surat benar-benar
-                         terbit. Pimpinan dan administrator boleh
-                         menyesuaikannya dengan buku agenda. --}}
-                    @can('mengubah-tanggal-spd')
+                         terbit. Pimpinan dan administrator boleh menyesuaikannya
+                         dengan buku agenda; peran lain hanya selama super
+                         administrator membuka kuncinya. --}}
+                    @if ($bolehUbahTanggal)
                         <input type="date" name="tanggal_surat" id="tanggal_surat" required
                                value="{{ old('tanggal_surat', $tanggalTerbit?->toDateString()) }}"
                                class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
@@ -63,14 +68,19 @@
                             <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
                         @enderror
                         <p class="text-xs text-slate-400 mt-1">
-                            Dapat disesuaikan dengan buku agenda. Tanggal ini yang tercetak pada SPD.
+                            @if ($dibukaAdmin)
+                                Tanggal sedang <strong>dibuka administrator</strong> untuk keperluan tanggal mundur —
+                                isi sesuai buku agenda. Tanggal ini yang tercetak pada SPD.
+                            @else
+                                Dapat disesuaikan dengan buku agenda. Tanggal ini yang tercetak pada SPD.
+                            @endif
                         </p>
                     @else
                         <input type="text" readonly
                                value="{{ $tanggalTerbit?->translatedFormat('d F Y') }}"
                                class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 bg-slate-100 text-slate-600">
-                        <p class="text-xs text-slate-400 mt-1">Mengikuti tanggal pembuatan SPD.</p>
-                    @endcan
+                        <p class="text-xs text-slate-400 mt-1">Mengikuti tanggal pembuatan SPD. Bila perlu tanggal mundur, hubungi administrator.</p>
+                    @endif
                 </div>
             </div>
         </div>

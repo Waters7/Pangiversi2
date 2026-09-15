@@ -233,6 +233,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Boleh menetapkan tanggal dikeluarkan SPD sendiri, bukan mengikuti
+     * tanggal pembuatan: pimpinan dan administrator selalu; peran lain
+     * hanya selama super administrator membuka kuncinya untuk keperluan
+     * tanggal mundur.
+     */
+    public function bolehMengubahTanggalSpd(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MengubahTanggalSpd)
+            || Pengaturan::aktif(Pengaturan::TANGGAL_SPD_TERBUKA);
+    }
+
+    /**
      * Membuka modul keuangan tanpa satu pun kewenangan mengubahnya —
      * PPK dan pimpinan memantau rincian biaya, pembayaran, dan buktinya
      * tiap usulan, tetapi tidak menyusun angka, memvalidasi, maupun

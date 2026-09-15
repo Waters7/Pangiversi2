@@ -386,6 +386,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/pengaturan', [AdministrasiController::class, 'simpanPengaturan'])->name('administrasi.pengaturan');
         Route::post('/pengingat', [AdministrasiController::class, 'jalankanPengingat'])->name('administrasi.pengingat');
 
+        // Kunci tanggal dikeluarkan SPD — super administrator saja, dijaga di pengontrol.
+        Route::put('/tanggal-spd', [AdministrasiController::class, 'simpanKunciTanggalSpd'])->name('administrasi.tanggal-spd');
+
         Route::post('/', [AdministrasiController::class, 'store'])->name('administrasi.store');
         Route::put('/{user}', [AdministrasiController::class, 'update'])->name('administrasi.update');
         Route::put('/{user}/password', [AdministrasiController::class, 'updatePassword'])->name('administrasi.password');

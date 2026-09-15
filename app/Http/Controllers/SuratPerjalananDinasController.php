@@ -427,14 +427,16 @@ class SuratPerjalananDinasController extends Controller
     }
 
     /**
-     * Tanggal terbit SPD hanya boleh disesuaikan pimpinan dan administrator.
+     * Tanggal terbit SPD hanya boleh disesuaikan pimpinan dan administrator —
+     * atau siapa pun selama super administrator membuka kuncinya untuk
+     * keperluan tanggal mundur.
      *
-     * Bagi peran lain tanggalnya mengikuti tanggal pembuatan, supaya tanggal
+     * Bagi yang lain tanggalnya mengikuti tanggal pembuatan, supaya tanggal
      * pada dokumen tidak berselisih dengan kapan surat benar-benar terbit.
      */
     private function bolehMengubahTanggal(Request $request): bool
     {
-        return $request->user()->punyaKemampuan(Kemampuan::MengubahTanggalSpd);
+        return $request->user()->bolehMengubahTanggalSpd();
     }
 
     /**

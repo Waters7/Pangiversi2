@@ -186,6 +186,70 @@
         </form>
     </div>
 
+    {{-- Kunci tanggal dikeluarkan SPD — hanya super administrator yang melihat
+         dan mengubahnya; Tim SDM yang berbagi halaman ini tidak. --}}
+    @if (auth()->user()->isAdmin())
+        @php $tanggalSpdTerbuka = ($pengaturan['tanggal_spd_terbuka'] ?? '0') === '1'; @endphp
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg {{ $tanggalSpdTerbuka ? 'bg-amber-50' : 'bg-slate-100' }} flex items-center justify-center">
+                    <svg class="w-4 h-4 {{ $tanggalSpdTerbuka ? 'text-amber-600' : 'text-slate-500' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <rect x="5" y="11" width="14" height="10" rx="2"/>
+                        @if ($tanggalSpdTerbuka)
+                            <path d="M8 11V7a4 4 0 017.5-2"/>
+                        @else
+                            <path d="M8 11V7a4 4 0 018 0v4"/>
+                        @endif
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-800 text-sm">Tanggal Dikeluarkan SPD</h3>
+                    <p class="text-xs text-slate-400">
+                        Siapa yang boleh menetapkan tanggal terbit SPD sendiri — untuk kasus tanggal mundur (backdate)
+                    </p>
+                </div>
+                <span class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full {{ $tanggalSpdTerbuka ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' }}">
+                    {{ $tanggalSpdTerbuka ? 'Terbuka untuk semua peran' : 'Terkunci' }}
+                </span>
+            </div>
+
+            <form method="POST" action="{{ route('administrasi.tanggal-spd') }}" class="p-6"
+                  x-data="{ terbuka: {{ $tanggalSpdTerbuka ? 'true' : 'false' }} }"
+                  @submit.prevent="if (confirm(terbuka
+                        ? 'Buka tanggal dikeluarkan SPD untuk seluruh peran? Semua pengguna dapat menerbitkan SPD dengan tanggal mundur sampai dikunci kembali.'
+                        : 'Kunci kembali tanggal dikeluarkan SPD? Peran selain pimpinan akan mengikuti tanggal pembuatan.')) $el.submit()">
+                @csrf
+                @method('PUT')
+
+                <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                    Bawaannya <strong>terkunci</strong>: pimpinan dan administrator dapat menyesuaikan tanggal terbit dengan
+                    buku agenda, sedangkan peran lain otomatis mendapat tanggal pembuatan. Buka kuncinya hanya bila ada SPD yang
+                    harus diterbitkan dengan tanggal lebih awal oleh pengguna biasa, lalu kunci kembali — setiap perubahan tercatat
+                    pada jejak audit.
+                </p>
+
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="tanggal_spd_terbuka" value="1" x-model="terbuka"
+                           class="mt-0.5 w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-400">
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-700">Buka tanggal dikeluarkan untuk seluruh peran</span>
+                        <span class="block text-xs text-slate-400 mt-0.5">
+                            Selama terbuka, formulir SPD setiap pengguna menampilkan kolom tanggal yang dapat diisi sendiri.
+                        </span>
+                    </span>
+                </label>
+
+                <div class="flex justify-end mt-5 pt-5 border-t border-slate-100">
+                    <button type="submit"
+                            class="px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition shadow-sm"
+                            :class="terbuka ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' : 'bg-teal-500 hover:bg-teal-600 shadow-teal-200'"
+                            x-text="terbuka ? 'Buka Tanggal SPD' : 'Kunci Tanggal SPD'">
+                    </button>
+                </div>
+            </form>
+        </div>
+    @endif
+
     {{-- Flash Message --}}
     @if (session('success'))
     <div class="mb-5 flex items-center gap-3 px-4 py-3 bg-teal-50 border border-teal-100 rounded-xl"
