@@ -250,12 +250,12 @@ class TanggalTerbitSpdTest extends TestCase
 
         // Kartunya pun tidak ditampilkan bagi Tim SDM yang berbagi halaman ini.
         $this->actingAs($timSdm)
-            ->get(route('administrasi'))
+            ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertDontSee('Tanggal Dikeluarkan SPD');
 
         $this->actingAs(User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]))
-            ->get(route('administrasi'))
+            ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertSee('Tanggal Dikeluarkan SPD')
             ->assertSee('Terkunci');

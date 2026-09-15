@@ -610,13 +610,40 @@
       @endcan
 
       @can('mengelola-pengguna')
-      <a href="{{ route('administrasi') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('administrasi') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-        </svg>
-        Administrasi Sistem
-      </a>
+      {{-- Administrasi Sistem dipecah per halaman supaya tiap urusan —
+           akun, impor massal, pengaturan — punya pintunya sendiri. --}}
+      <div x-data="{ administrasiOpen: {{ request()->routeIs('administrasi', 'administrasi.*') ? 'true' : 'false' }} }">
+        <button
+          type="button"
+          @click.stop="administrasiOpen = !administrasiOpen"
+          class="nav-item w-full {{ request()->routeIs('administrasi', 'administrasi.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+          </svg>
+          Administrasi Sistem
+          <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+              :class="administrasiOpen ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div x-show="administrasiOpen" x-transition class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+          @foreach ([
+            ['route' => 'administrasi', 'aktif' => 'administrasi', 'label' => 'Pengguna'],
+            ['route' => 'administrasi.massal', 'aktif' => 'administrasi.massal', 'label' => 'Impor & Ekspor'],
+            ['route' => 'administrasi.pengaturan', 'aktif' => 'administrasi.pengaturan', 'label' => 'Pengaturan Sistem'],
+          ] as $menu)
+            <a href="{{ route($menu['route']) }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs($menu['aktif']) ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+              {{ $menu['label'] }}
+            </a>
+          @endforeach
+        </div>
+      </div>
       @endcan
 
       <div class="border-t border-white/10 my-3"></div>

@@ -24,9 +24,9 @@ class AdministrasiController extends Controller
     public function __construct(private AuditService $audit) {}
 
     /**
-     * Display all users with search & role filter.
+     * Halaman pengguna: daftar akun beserta saringan peran dan kehadiran.
      */
-    public function index(Request $request, PengingatDokumen $pengingat, SesiPengguna $sesi): View
+    public function index(Request $request, SesiPengguna $sesi): View
     {
         $search = $request->input('search');
         $roleFilter = $request->input('role');
@@ -68,7 +68,7 @@ class AdministrasiController extends Controller
         $unitKerja = UnitKerja::aktif()->orderBy('nama')->get();
         $calonAtasan = User::orderBy('nama')->get(['id', 'nama', 'jabatan']);
 
-        return view('administrasi-sistem', compact(
+        return view('administrasi.pengguna', compact(
             'users',
             'search',
             'roleFilter',
@@ -81,12 +81,30 @@ class AdministrasiController extends Controller
             'unitKerja',
             'calonAtasan',
         ) + [
-            'pengaturan' => Pengaturan::semua(),
-            'kandidatPengingat' => $pengingat->kandidat()->count(),
             'jumlahAktif' => $idAktif->count(),
             'sesiTersedia' => $sesi->tersedia(),
             'belumPernahMasuk' => User::whereNull('login_terakhir_at')->count(),
             'menitAktif' => SesiPengguna::MENIT_AKTIF,
+        ]);
+    }
+
+    /**
+     * Halaman impor dan ekspor pengguna massal lewat CSV.
+     */
+    public function massal(): View
+    {
+        return view('administrasi.massal');
+    }
+
+    /**
+     * Halaman pengaturan sistem: pengingat kelengkapan berkas dan — bagi
+     * super administrator — kunci tanggal dikeluarkan SPD.
+     */
+    public function pengaturan(PengingatDokumen $pengingat): View
+    {
+        return view('administrasi.pengaturan', [
+            'pengaturan' => Pengaturan::semua(),
+            'kandidatPengingat' => $pengingat->kandidat()->count(),
         ]);
     }
 
@@ -329,12 +347,12 @@ class AdministrasiController extends Controller
         $pesan = "Impor selesai — {$ringkasan['dibuat']} pengguna baru, {$ringkasan['diperbarui']} diperbarui.";
 
         if ($ringkasan['dilewati'] !== []) {
-            return redirect()->route('administrasi')
+            return redirect()->route('administrasi.massal')
                 ->with('success', $pesan)
                 ->with('impor_dilewati', $ringkasan['dilewati']);
         }
 
-        return redirect()->route('administrasi')->with('success', $pesan);
+        return redirect()->route('administrasi.massal')->with('success', $pesan);
     }
 
     /**

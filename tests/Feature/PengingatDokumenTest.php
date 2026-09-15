@@ -190,7 +190,7 @@ class PengingatDokumenTest extends TestCase
     public function test_panel_pengaturan_tampil_bagi_super_administrator(): void
     {
         $this->actingAs($this->admin())
-            ->get(route('administrasi'))
+            ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertSee('Pengingat Kelengkapan Berkas')
             ->assertSee('Aktifkan pengingat otomatis')
@@ -200,7 +200,7 @@ class PengingatDokumenTest extends TestCase
     public function test_admin_dapat_menyimpan_pengaturan(): void
     {
         $this->actingAs($this->admin())
-            ->put(route('administrasi.pengaturan'), [
+            ->put(route('administrasi.pengaturan.simpan'), [
                 'pengingat_aktif' => '1',
                 'pengingat_hari' => 10,
                 'pengingat_ulang' => 5,
@@ -218,7 +218,7 @@ class PengingatDokumenTest extends TestCase
     {
         $admin = $this->admin();
 
-        $this->actingAs($admin)->put(route('administrasi.pengaturan'), [
+        $this->actingAs($admin)->put(route('administrasi.pengaturan.simpan'), [
             'pengingat_aktif' => '1',
             'pengingat_hari' => 2,
             'pengingat_ulang' => 3,
@@ -227,7 +227,7 @@ class PengingatDokumenTest extends TestCase
 
         // Formulir membaca Pengaturan::semua(), bukan kolomnya satu per satu.
         $this->actingAs($admin)
-            ->get(route('administrasi'))
+            ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertViewHas('pengaturan', fn (array $isi) => $isi[Pengaturan::PENGINGAT_HARI] === '2'
                 && $isi[Pengaturan::PENGINGAT_ULANG] === '3'
@@ -237,7 +237,7 @@ class PengingatDokumenTest extends TestCase
     public function test_pengaturan_yang_belum_pernah_diisi_memakai_nilai_bawaan(): void
     {
         $this->actingAs($this->admin())
-            ->get(route('administrasi'))
+            ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertViewHas('pengaturan', fn (array $isi) => $isi === Pengaturan::BAWAAN);
     }
@@ -245,7 +245,7 @@ class PengingatDokumenTest extends TestCase
     public function test_tenggang_di_luar_batas_ditolak(): void
     {
         $this->actingAs($this->admin())
-            ->put(route('administrasi.pengaturan'), [
+            ->put(route('administrasi.pengaturan.simpan'), [
                 'pengingat_hari' => 400,
                 'pengingat_ulang' => 0,
                 'pengingat_maksimal' => 99,
@@ -268,7 +268,7 @@ class PengingatDokumenTest extends TestCase
     public function test_pengguna_biasa_tidak_dapat_mengubah_pengaturan(): void
     {
         $this->actingAs($this->pelaksana)
-            ->put(route('administrasi.pengaturan'), [
+            ->put(route('administrasi.pengaturan.simpan'), [
                 'pengingat_hari' => 1,
                 'pengingat_ulang' => 1,
                 'pengingat_maksimal' => 1,

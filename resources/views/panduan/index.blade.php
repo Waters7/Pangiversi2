@@ -732,9 +732,10 @@
 
         <div class="p-6">
             <x-panduan-langkah nomor="1" judul="Kelola akun pengguna">
-                Menu <strong>Administrasi Sistem</strong> memuat seluruh pengguna beserta peran,
-                unit kerja, dan atasannya. Kolom login terakhir memperlihatkan siapa yang belum
-                pernah masuk sama sekali.
+                Menu <strong>Administrasi Sistem → Pengguna</strong> memuat seluruh pengguna beserta
+                peran, unit kerja, dan atasannya. Kolom login terakhir memperlihatkan siapa yang belum
+                pernah masuk sama sekali. Submenu <strong>Impor &amp; Ekspor</strong> memuat data
+                pengguna massal lewat CSV.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pantau siapa yang sedang aktif"
@@ -753,8 +754,10 @@
 
                 <x-panduan-langkah nomor="4" judul="Atur pengingat dokumen" :terakhir="! $boleh['jejakAudit']">
                     Tenggang hari, jeda antar pengingat, dan batas jumlahnya diatur pada
-                    Administrasi Sistem. Angka tenggang inilah yang dipakai dashboard saat
-                    menghitung batas penyerahan laporan.
+                    <strong>Administrasi Sistem → Pengaturan Sistem</strong>. Angka tenggang inilah yang
+                    dipakai dashboard saat menghitung batas penyerahan laporan. Di halaman yang sama,
+                    super administrator dapat membuka atau mengunci tanggal dikeluarkan SPD untuk
+                    kasus tanggal mundur.
                 </x-panduan-langkah>
             @endif
 

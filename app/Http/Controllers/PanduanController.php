@@ -130,6 +130,7 @@ class PanduanController extends Controller
                 'tanggal' => '15 September 2026',
                 'butir' => [
                     'Administrasi Sistem: super administrator dapat membuka atau mengunci tanggal dikeluarkan SPD bagi seluruh peran untuk kasus tanggal mundur (backdate); bawaannya terkunci, tiap perubahan tercatat pada jejak audit.',
+                    'Administrasi Sistem dipecah menjadi tiga halaman bermenu — Pengguna, Impor & Ekspor, Pengaturan Sistem — dengan submenu di sidebar dan navigasi di kepala halaman.',
                 ],
             ],
             [

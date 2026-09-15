@@ -378,12 +378,16 @@ Route::middleware('auth')->group(function () {
 
     // Manajemen pengguna — Tim SDM dan super administrator
     Route::middleware('can:mengelola-pengguna')->prefix('administrasi')->group(function () {
+        // Tiga halaman bermenu: pengguna, impor/ekspor, dan pengaturan sistem.
         Route::get('/', [AdministrasiController::class, 'index'])->name('administrasi');
+        Route::get('/impor-ekspor', [AdministrasiController::class, 'massal'])->name('administrasi.massal');
+        Route::get('/pengaturan', [AdministrasiController::class, 'pengaturan'])->name('administrasi.pengaturan');
+
         Route::get('/export', [AdministrasiController::class, 'export'])->name('administrasi.export');
         Route::post('/import', [AdministrasiController::class, 'import'])->name('administrasi.import');
 
         // Pengingat kelengkapan berkas pertanggungjawaban
-        Route::put('/pengaturan', [AdministrasiController::class, 'simpanPengaturan'])->name('administrasi.pengaturan');
+        Route::put('/pengaturan', [AdministrasiController::class, 'simpanPengaturan'])->name('administrasi.pengaturan.simpan');
         Route::post('/pengingat', [AdministrasiController::class, 'jalankanPengingat'])->name('administrasi.pengingat');
 
         // Kunci tanggal dikeluarkan SPD — super administrator saja, dijaga di pengontrol.

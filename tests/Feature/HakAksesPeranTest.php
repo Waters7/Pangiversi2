@@ -332,6 +332,38 @@ class HakAksesPeranTest extends TestCase
 
         // Akun pengguna dibuat oleh Tim SDM dan super administrator saja.
         $this->actingAs($this->pengguna(PeranPengguna::TimSdm))->get(route('administrasi'))->assertOk();
+    }
+
+    /**
+     * Administrasi Sistem dipecah menjadi tiga halaman bermenu supaya tiap
+     * urusan punya pintunya sendiri; ketiganya terbuka bagi yang mengelola
+     * pengguna dan saling bertaut lewat navigasi di kepala halaman.
+     */
+    public function test_administrasi_sistem_terbagi_menjadi_tiga_halaman(): void
+    {
+        $timSdm = $this->pengguna(PeranPengguna::TimSdm);
+
+        $this->actingAs($timSdm)->get(route('administrasi'))
+            ->assertOk()
+            ->assertSee('Daftar Pengguna')
+            ->assertSee(route('administrasi.massal'))
+            ->assertSee(route('administrasi.pengaturan'))
+            ->assertDontSee('Data Pengguna Massal')
+            ->assertDontSee('Pengingat Kelengkapan Berkas');
+
+        $this->actingAs($timSdm)->get(route('administrasi.massal'))
+            ->assertOk()
+            ->assertSee('Data Pengguna Massal')
+            ->assertSee(route('administrasi.export'));
+
+        $this->actingAs($timSdm)->get(route('administrasi.pengaturan'))
+            ->assertOk()
+            ->assertSee('Pengingat Kelengkapan Berkas');
+
+        // Menu sampingnya ikut bertingkat.
+        $this->actingAs($timSdm)->get(route('administrasi'))
+            ->assertSee('Impor &amp; Ekspor', false)
+            ->assertSee('Pengaturan Sistem');
 
         foreach ([PeranPengguna::Ppk, PeranPengguna::Bendahara, PeranPengguna::TimKeuangan, PeranPengguna::Pimpinan] as $peran) {
             $this->actingAs($this->pengguna($peran))->get(route('master.unit-kerja'))->assertForbidden();
