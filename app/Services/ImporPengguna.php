@@ -25,10 +25,20 @@ class ImporPengguna
     private array $ringkasan = ['dibuat' => 0, 'diperbarui' => 0, 'dilewati' => []];
 
     /**
+     * Bila hanya melengkapi, akun yang sudah ada cuma diisi pada kolom yang
+     * masih kosong — nama, jabatan, nomor HP, dan sebagainya yang sudah
+     * terisi dibiarkan. Mode ini dipakai seeder data bawaan supaya aman
+     * dijalankan ulang di produksi; impor CSV oleh administrator tetap
+     * menimpa dengan isi berkasnya.
+     */
+    private bool $hanyaMelengkapi = false;
+
+    /**
      * @return array{dibuat: int, diperbarui: int, dilewati: list<string>}
      */
-    public function jalankan(SumberDataPegawai $sumber): array
+    public function jalankan(SumberDataPegawai $sumber, bool $hanyaMelengkapi = false): array
     {
+        $this->hanyaMelengkapi = $hanyaMelengkapi;
         $baris = $sumber->ambil();
 
         // Referensi dimuat sekali agar impor ratusan baris tidak memicu N+1.
@@ -97,8 +107,7 @@ class ImporPengguna
         $pengguna = User::firstWhere('nip', $data['nip']);
 
         if ($pengguna) {
-            // Peran hanya ditimpa bila kolomnya memang diisi.
-            $pengguna->update($peran ? $atribut + ['role' => $peran->value] : $atribut);
+            $pengguna->update($this->perubahanUntuk($pengguna, $atribut, $peran));
 
             $this->ringkasan['diperbarui']++;
 
@@ -118,5 +127,27 @@ class ImporPengguna
         $idPerNip->put($baru->nip, $baru->id);
 
         $this->ringkasan['dibuat']++;
+    }
+
+    /**
+     * Kolom yang boleh ditulis ke akun yang sudah ada.
+     *
+     * Sel yang kosong berarti "tidak ada data", bukan "kosongkan": surel,
+     * nomor HP, dan rekening yang sudah diisi pengguna lewat Profil tidak
+     * terhapus. Peran hanya ditimpa bila kolomnya diisi. Dalam mode hanya
+     * melengkapi, kolom yang sudah terisi pada akun pun dibiarkan.
+     *
+     * @param  array<string, mixed>  $atribut
+     * @return array<string, mixed>
+     */
+    private function perubahanUntuk(User $pengguna, array $atribut, ?PeranPengguna $peran): array
+    {
+        $terisi = array_filter($atribut, fn ($nilai) => $nilai !== null && $nilai !== '');
+
+        if ($this->hanyaMelengkapi) {
+            return array_filter($terisi, fn ($nilai, $kolom) => blank($pengguna->{$kolom}), ARRAY_FILTER_USE_BOTH);
+        }
+
+        return $peran ? $terisi + ['role' => $peran->value] : $terisi;
     }
 }

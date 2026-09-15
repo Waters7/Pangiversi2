@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Enums\PeranPengguna;
 use App\Models\UnitKerja;
 use App\Models\User;
+use App\Services\ImporPengguna;
+use App\Services\SumberDataPegawai;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 class ImporEksporPenggunaTest extends TestCase
@@ -113,6 +116,75 @@ class ImporEksporPenggunaTest extends TestCase
         $this->assertSame('Jabatan Baru', $lama->jabatan);
         // Jumlah pengguna tidak bertambah karena NIP dipakai sebagai kunci.
         $this->assertSame(2, User::count());
+    }
+
+    /**
+     * Seeder pegawai dijalankan ulang di produksi untuk menambah orang; sel
+     * yang kosong di berkasnya tidak boleh menghapus isian yang sudah
+     * dilengkapi pengguna sendiri.
+     */
+    public function test_sel_kosong_tidak_menghapus_isian_yang_sudah_ada(): void
+    {
+        $lama = User::factory()->create([
+            'nip' => 'NIP-6666666666',
+            'email' => 'lama@contoh.test',
+            'no_hp' => '0811000111',
+            'nama_bank' => 'Bank BRI',
+            'nomor_rekening' => '123456789',
+            'nama_rekening' => 'Nama Lama',
+        ]);
+
+        $isi = $this->header()."Nama Baru,NIP-6666666666,,,Jabatan Baru,,,,,\n";
+
+        $this->actingAs(User::factory()->administrator()->create())
+            ->post(route('administrasi.import'), ['berkas' => $this->csv($isi)]);
+
+        $lama->refresh();
+
+        $this->assertSame('Nama Baru', $lama->nama);
+        $this->assertSame('lama@contoh.test', $lama->email);
+        $this->assertSame('0811000111', $lama->no_hp);
+        $this->assertSame('123456789', $lama->nomor_rekening);
+        $this->assertSame('Nama Lama', $lama->nama_rekening);
+    }
+
+    /** Mode seeder: yang sudah terisi pada akun tidak ditimpa, yang kosong dilengkapi. */
+    public function test_mode_hanya_melengkapi_membiarkan_kolom_yang_sudah_terisi(): void
+    {
+        $lama = User::factory()->create([
+            'nip' => 'NIP-7777777777',
+            'nama' => 'Nama Lama',
+            'no_hp' => '0811000111',
+            'jabatan' => null,
+            'role' => PeranPengguna::DosenTendik->value,
+        ]);
+
+        $berkas = new class implements SumberDataPegawai
+        {
+            public function ambil(): Collection
+            {
+                return collect([[
+                    'nama' => 'Nama Berkas', 'nip' => 'NIP-7777777777', 'email' => 'berkas@contoh.test',
+                    'no_hp' => '0899999999', 'role' => 'pimpinan', 'jabatan' => 'Jabatan Berkas',
+                    'golongan' => null, 'unit_kode' => null, 'atasan_nip' => null,
+                    'nama_bank' => null, 'nomor_rekening' => null, 'nama_rekening' => null, 'password' => null,
+                ]]);
+            }
+
+            public function nama(): string
+            {
+                return 'berkas uji';
+            }
+        };
+
+        $hasil = app(ImporPengguna::class)->jalankan($berkas, hanyaMelengkapi: true);
+        $lama->refresh();
+
+        $this->assertSame(1, $hasil['diperbarui']);
+        $this->assertSame('Nama Lama', $lama->nama);
+        $this->assertSame('0811000111', $lama->no_hp);
+        $this->assertSame(PeranPengguna::DosenTendik->value, $lama->role);
+        $this->assertSame('Jabatan Berkas', $lama->jabatan);
     }
 
     public function test_impor_menautkan_atasan_berdasarkan_nip(): void

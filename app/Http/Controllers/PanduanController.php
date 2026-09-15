@@ -126,6 +126,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.2',
+                'tanggal' => '15 September 2026',
+                'butir' => [
+                    'Impor pengguna: sel yang kosong pada berkas CSV tidak lagi menghapus surel, nomor HP, dan rekening yang sudah diisi pengguna, sehingga data pegawai aman diimpor ulang untuk menambah orang. Wakil Direktur II ditambahkan ke data pegawai bawaan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.1',
                 'tanggal' => '15 September 2026',
                 'butir' => [

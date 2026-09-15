@@ -17,6 +17,11 @@ use Illuminate\Database\Seeder;
  * Berkasnya sengaja tidak memuat NIK: aplikasi tidak membutuhkannya.
  * Kata sandi awal tiap akun adalah NIP-nya sendiri dan wajib diganti
  * pengguna lewat menu Profil.
+ *
+ * Aman dijalankan ulang di produksi untuk menambah pegawai: akun yang sudah
+ * ada hanya dilengkapi pada kolom yang masih kosong, dan garis atasan hanya
+ * diisi bagi yang belum punya — isian pengguna maupun susunan yang sudah
+ * diubah administrator tidak ditimpa.
  */
 class PegawaiPoltekkesSeeder extends Seeder
 {
@@ -30,7 +35,7 @@ class PegawaiPoltekkesSeeder extends Seeder
             return;
         }
 
-        $hasil = app(ImporPengguna::class)->jalankan(new SumberPegawaiBerkas($berkas));
+        $hasil = app(ImporPengguna::class)->jalankan(new SumberPegawaiBerkas($berkas), hanyaMelengkapi: true);
 
         $this->tetapkanAtasan();
 
@@ -44,8 +49,8 @@ class PegawaiPoltekkesSeeder extends Seeder
     }
 
     /**
-     * Susun garis atasan: pegawai jurusan mengarah ke ketua jurusannya,
-     * sedangkan pegawai direktorat mengarah ke Direktur.
+     * Susun garis atasan bagi yang belum punya: pegawai jurusan mengarah ke
+     * ketua jurusannya, sedangkan pegawai direktorat mengarah ke Direktur.
      */
     private function tetapkanAtasan(): void
     {
@@ -66,9 +71,10 @@ class PegawaiPoltekkesSeeder extends Seeder
 
             User::where('id_unit', $unit->id)
                 ->whereKeyNot($atasan->id)
+                ->whereNull('id_atasan')
                 ->update(['id_atasan' => $atasan->id]);
 
-            if ($ketua && $ketua->id !== $direktur->id) {
+            if ($ketua && $ketua->id !== $direktur->id && $ketua->id_atasan === null) {
                 $ketua->update(['id_atasan' => $direktur->id]);
             }
         }
