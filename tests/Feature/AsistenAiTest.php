@@ -73,7 +73,7 @@ class AsistenAiTest extends TestCase
             ->assertOk()
             ->assertViewHas('aiAktif', false)
             ->assertSee('Wawasan AI')
-            ->assertSee('ANTHROPIC_API_KEY');
+            ->assertSee('kunci API Anthropic di Administrasi Sistem');
     }
 
     public function test_agen_menolak_menjawab_tanpa_kunci_api(): void

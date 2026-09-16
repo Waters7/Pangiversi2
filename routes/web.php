@@ -397,6 +397,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/token-api', [AdministrasiController::class, 'buatTokenApi'])->name('administrasi.token-api.buat');
         Route::delete('/token-api', [AdministrasiController::class, 'cabutTokenApi'])->name('administrasi.token-api.cabut');
 
+        // Kunci API Anthropic untuk asisten AI dashboard (super administrator)
+        Route::put('/kunci-anthropic', [AdministrasiController::class, 'simpanKunciAnthropic'])->name('administrasi.kunci-anthropic.simpan');
+        Route::delete('/kunci-anthropic', [AdministrasiController::class, 'hapusKunciAnthropic'])->name('administrasi.kunci-anthropic.hapus');
+
         Route::post('/', [AdministrasiController::class, 'store'])->name('administrasi.store');
         Route::put('/{user}', [AdministrasiController::class, 'update'])->name('administrasi.update');
         Route::put('/{user}/password', [AdministrasiController::class, 'updatePassword'])->name('administrasi.password');

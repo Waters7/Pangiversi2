@@ -107,7 +107,79 @@ class AdministrasiController extends Controller
             'pengaturan' => Pengaturan::semua(),
             'kandidatPengingat' => $pengingat->kandidat()->count(),
             'tokenApi' => Pengaturan::tokenApi(),
+            'kunciAnthropic' => $this->ringkasanKunciAnthropic(),
         ]);
+    }
+
+    /**
+     * Kunci Anthropic tidak pernah dikirim utuh ke layar — cukup status,
+     * asal, dan ujung-ujungnya untuk dikenali.
+     *
+     * @return array{sumber: 'pengaturan'|'env'|null, tersamar: string}
+     */
+    private function ringkasanKunciAnthropic(): array
+    {
+        $kunci = Pengaturan::kunciAnthropic();
+
+        return [
+            'sumber' => $kunci['sumber'],
+            'tersamar' => $kunci['kunci'] === ''
+                ? ''
+                : substr($kunci['kunci'], 0, 11).str_repeat('•', 16).substr($kunci['kunci'], -4),
+        ];
+    }
+
+    /**
+     * Pasang atau ganti kunci API Anthropic untuk asisten AI dashboard.
+     */
+    public function simpanKunciAnthropic(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Kunci API Anthropic hanya diatur super administrator.');
+
+        $data = $request->validate([
+            'kunci_anthropic' => ['required', 'string', 'min:30', 'max:255', 'regex:/^sk-ant-[A-Za-z0-9_-]+$/'],
+        ], [
+            'kunci_anthropic.required' => 'Kunci API belum diisi.',
+            'kunci_anthropic.min' => 'Kunci API terlalu pendek — salin utuh dari console.anthropic.com.',
+            'kunci_anthropic.regex' => 'Kunci API Anthropic diawali sk-ant- dan tidak memuat spasi.',
+        ]);
+
+        $sebelumnya = Pengaturan::kunciAnthropic()['sumber'];
+
+        Pengaturan::simpanRahasia(Pengaturan::KUNCI_ANTHROPIC, $data['kunci_anthropic']);
+
+        $this->audit->catat(
+            AuditLog::AKSI_PENGGUNA,
+            $sebelumnya === 'pengaturan'
+                ? 'Kunci API Anthropic untuk asisten AI dashboard diganti.'
+                : 'Kunci API Anthropic untuk asisten AI dashboard dipasang.',
+        );
+
+        return back()->with('success', 'Kunci API Anthropic tersimpan. Buka Dashboard Eksekutif untuk memastikan Wawasan AI muncul.');
+    }
+
+    /**
+     * Hapus kunci Anthropic buatan administrator; bila .env masih memuat
+     * ANTHROPIC_API_KEY, kunci itulah yang kembali berlaku.
+     */
+    public function hapusKunciAnthropic(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Kunci API Anthropic hanya diatur super administrator.');
+
+        Pengaturan::simpanRahasia(Pengaturan::KUNCI_ANTHROPIC, '');
+
+        $sisa = Pengaturan::kunciAnthropic()['sumber'];
+
+        $this->audit->catat(
+            AuditLog::AKSI_PENGGUNA,
+            $sisa === 'env'
+                ? 'Kunci API Anthropic dihapus; asisten AI kembali memakai kunci dari berkas .env.'
+                : 'Kunci API Anthropic dihapus; fitur AI dashboard nonaktif.',
+        );
+
+        return back()->with('success', $sisa === 'env'
+            ? 'Kunci API Anthropic dihapus. Asisten AI kembali memakai kunci dari berkas .env server.'
+            : 'Kunci API Anthropic dihapus. Fitur AI dashboard nonaktif sampai kunci baru dipasang.');
     }
 
     /**

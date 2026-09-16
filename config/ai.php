@@ -7,7 +7,9 @@ return [
     | Kredensial Claude
     |--------------------------------------------------------------------------
     |
-    | Diisi lewat ANTHROPIC_API_KEY pada berkas .env. Bila kosong, seluruh
+    | Cara yang dianjurkan: super administrator memasang kuncinya di menu
+    | Administrasi Sistem → Pengaturan Sistem (tersimpan terenkripsi); kunci
+    | itu mengalahkan ANTHROPIC_API_KEY di sini. Bila keduanya kosong, seluruh
     | fitur AI menonaktifkan dirinya sendiri dan dashboard tetap berjalan
     | dengan wawasan yang dihitung dari data aplikasi.
     |

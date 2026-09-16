@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 
 /**
  * Pengaturan aplikasi yang boleh diubah Super Administrator lewat menu
@@ -45,6 +47,16 @@ class Pengaturan extends Model
      * dari PANGI_API_TOKEN pada .env (kalau ada) yang berlaku.
      */
     public const TOKEN_API = 'token_api';
+
+    /**
+     * Kunci API Anthropic untuk wawasan dan agen AI dashboard eksekutif.
+     *
+     * Dipasang super administrator lewat Administrasi Sistem dan disimpan
+     * terenkripsi dengan APP_KEY — rahasia pihak ketiga tidak boleh
+     * terbaca apa adanya pada salinan basis data. Bila kosong, kunci dari
+     * ANTHROPIC_API_KEY pada .env (kalau ada) yang berlaku.
+     */
+    public const KUNCI_ANTHROPIC = 'kunci_api_anthropic';
 
     /**
      * Nilai bawaan bila belum pernah diatur.
@@ -97,6 +109,51 @@ class Pengaturan extends Model
     public static function aktif(string $kunci): bool
     {
         return self::ambil($kunci) === '1';
+    }
+
+    /**
+     * Kunci API Anthropic yang sedang berlaku beserta asalnya.
+     *
+     * Nilai yang tidak dapat didekripsi — misalnya karena APP_KEY diganti —
+     * diperlakukan sebagai kosong supaya fitur AI menonaktifkan diri alih-alih
+     * memanggil API dengan kunci rusak.
+     *
+     * @return array{kunci: string, sumber: 'pengaturan'|'env'|null}
+     */
+    public static function kunciAnthropic(): array
+    {
+        $tersimpan = self::rahasia(self::KUNCI_ANTHROPIC);
+
+        if ($tersimpan !== '') {
+            return ['kunci' => $tersimpan, 'sumber' => 'pengaturan'];
+        }
+
+        $env = (string) config('ai.api_key');
+
+        return ['kunci' => $env, 'sumber' => $env !== '' ? 'env' : null];
+    }
+
+    /**
+     * Simpan nilai rahasia terenkripsi; string kosong menghapusnya.
+     */
+    public static function simpanRahasia(string $kunci, string $nilai): void
+    {
+        self::simpan([$kunci => $nilai === '' ? '' : Crypt::encryptString($nilai)]);
+    }
+
+    public static function rahasia(string $kunci): string
+    {
+        $terenkripsi = self::ambil($kunci);
+
+        if ($terenkripsi === '') {
+            return '';
+        }
+
+        try {
+            return Crypt::decryptString($terenkripsi);
+        } catch (DecryptException) {
+            return '';
+        }
     }
 
     /**

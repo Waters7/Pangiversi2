@@ -8,7 +8,7 @@
 
     @php
         $judulHalaman = 'Pengaturan Sistem';
-        $subjudulHalaman = 'Pengingat kelengkapan berkas, kunci tanggal SPD, dan token API';
+        $subjudulHalaman = 'Pengingat kelengkapan berkas, kunci tanggal SPD, token API, dan kunci AI';
     @endphp
     @include('administrasi.partials.kepala')
 
@@ -379,6 +379,168 @@
                     API kembali memakai token dari PANGI_API_TOKEN pada berkas .env server.
                 @else
                     API tertutup sampai token baru dibuat.
+                @endif
+            </p>
+        </x-modal-konfirmasi>
+        @endif
+
+        {{-- Kunci API Anthropic untuk asisten AI dashboard eksekutif. Kuncinya
+             tidak pernah ditampilkan utuh; yang tampak hanya ujung-ujungnya. --}}
+        @php
+            $adaKunciAi = $kunciAnthropic['sumber'] !== null;
+            $kunciAiDariEnv = $kunciAnthropic['sumber'] === 'env';
+        @endphp
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg {{ $adaKunciAi ? 'bg-violet-50' : 'bg-slate-100' }} flex items-center justify-center">
+                    <svg class="w-4 h-4 {{ $adaKunciAi ? 'text-violet-600' : 'text-slate-500' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-800 text-sm">Kunci API Anthropic — Asisten AI Dashboard</h3>
+                    <p class="text-xs text-slate-400">
+                        Menghidupkan Wawasan AI dan agen tanya-jawab pada Dashboard Eksekutif
+                    </p>
+                </div>
+                <span class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full {{ $adaKunciAi ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-500' }}">
+                    @if (! $adaKunciAi)
+                        Fitur AI nonaktif — kunci belum dipasang
+                    @elseif ($kunciAiDariEnv)
+                        Aktif · dari berkas .env
+                    @else
+                        Aktif
+                    @endif
+                </span>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Kunci dibuat di <span class="font-mono">console.anthropic.com</span> → API Keys, diawali
+                    <span class="font-mono">sk-ant-</span>. Setelah dipasang di sini, kunci tersimpan
+                    <strong>terenkripsi</strong> dan langsung dipakai tanpa perlu menyunting .env di server.
+                    Model yang dipakai: <span class="font-mono">{{ config('ai.model') }}</span>.
+                </p>
+
+                @if ($adaKunciAi)
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kunci yang berlaku</label>
+                        <code class="block px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 break-all">{{ $kunciAnthropic['tersamar'] }}</code>
+                        <p class="text-[11px] text-slate-400 mt-1.5">
+                            @if ($kunciAiDariEnv)
+                                Kunci ini berasal dari ANTHROPIC_API_KEY pada berkas .env server. Memasang kunci di sini akan
+                                menggantikannya tanpa perlu menyunting .env.
+                            @else
+                                Kunci utuh tidak ditampilkan kembali; bila hilang, buat kunci baru di console Anthropic lalu pasang di sini.
+                            @endif
+                        </p>
+                    </div>
+                @endif
+
+                <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-5 border-t border-slate-100">
+                    @if ($kunciAnthropic['sumber'] === 'pengaturan')
+                        <button type="button" @click="$dispatch('buka-hapus-kunci-anthropic')"
+                                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 text-sm font-semibold rounded-xl transition">
+                            Hapus Kunci
+                        </button>
+                    @endif
+                    <button type="button" @click="$dispatch('buka-pasang-kunci-anthropic')"
+                            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 {{ $adaKunciAi ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' : 'bg-violet-500 hover:bg-violet-600 shadow-violet-200' }} text-white text-sm font-semibold rounded-xl transition shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2"/></svg>
+                        {{ $adaKunciAi ? 'Ganti Kunci' : 'Pasang Kunci' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Kotak pemasangan kunci: masukan ada di dalam kotaknya sendiri supaya
+             kunci tidak tertinggal di formulir halaman; terbuka lagi bila
+             kirimannya ditolak validasi. --}}
+        <div x-data="{ terbuka: {{ $errors->has('kunci_anthropic') ? 'true' : 'false' }}, tampil: false, mengirim: false }"
+             x-on:buka-pasang-kunci-anthropic.window="terbuka = true; $nextTick(() => $refs.kunci.focus())"
+             x-show="terbuka"
+             x-cloak
+             @keydown.escape.window="terbuka = false"
+             class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+
+            <div x-show="terbuka" x-transition.opacity
+                 class="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+                 @click="terbuka = false"></div>
+
+            <form method="POST" action="{{ route('administrasi.kunci-anthropic.simpan') }}" @submit="mengirim = true"
+                  x-show="terbuka" x-transition autocomplete="off"
+                  class="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden"
+                  role="dialog" aria-modal="true">
+                @csrf
+                @method('PUT')
+
+                <div class="p-6">
+                    <div class="flex gap-4">
+                        <span class="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center bg-violet-50 text-violet-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2"/></svg>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-base font-bold text-slate-800">{{ $adaKunciAi ? 'Ganti kunci API Anthropic?' : 'Pasang kunci API Anthropic' }}</h3>
+                            <p class="text-sm text-slate-500 leading-relaxed mt-1.5">
+                                Tempel kunci utuh dari console Anthropic. Kunci disimpan terenkripsi dan tidak
+                                ditampilkan kembali setelah tersimpan.
+                            </p>
+
+                            <label for="kunci_anthropic" class="block text-xs font-semibold text-slate-600 mt-4 mb-1.5">Kunci API <span class="text-red-500">*</span></label>
+                            <div class="flex gap-2">
+                                <input id="kunci_anthropic" name="kunci_anthropic" x-ref="kunci" required
+                                       :type="tampil ? 'text' : 'password'"
+                                       placeholder="sk-ant-api03-…" spellcheck="false" autocapitalize="off"
+                                       class="flex-1 min-w-0 px-3 py-2.5 border {{ $errors->has('kunci_anthropic') ? 'border-red-300' : 'border-slate-200' }} rounded-xl text-sm font-mono focus:ring-2 focus:ring-violet-400 focus:border-transparent transition">
+                                <button type="button" @click="tampil = ! tampil"
+                                        class="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition shrink-0"
+                                        x-text="tampil ? 'Sembunyikan' : 'Lihat'">Lihat</button>
+                            </div>
+                            @error('kunci_anthropic')
+                                <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
+                            @enderror
+
+                            @if ($adaKunciAi)
+                                <p class="text-xs bg-amber-50 text-amber-800 border border-amber-100 rounded-lg px-3 py-2 mt-3">
+                                    Kunci yang sekarang tidak dipakai lagi begitu kunci baru tersimpan. Perubahan tercatat pada jejak audit.
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                    <button type="button" @click="terbuka = false" x-bind:disabled="mengirim"
+                            class="px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl transition disabled:opacity-50">
+                        Batal
+                    </button>
+                    <button type="submit" x-bind:disabled="mengirim"
+                            class="px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-wait">
+                        <span x-show="! mengirim">{{ $adaKunciAi ? 'Ya, Ganti Kunci' : 'Simpan Kunci' }}</span>
+                        <span x-show="mengirim" x-cloak>Menyimpan…</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        @if ($kunciAnthropic['sumber'] === 'pengaturan')
+        <x-modal-konfirmasi
+            nama="hapus-kunci-anthropic"
+            judul="Hapus kunci API Anthropic?"
+            :aksi="route('administrasi.kunci-anthropic.hapus')"
+            metode="DELETE"
+            tombol="Ya, Hapus"
+            warna="red"
+            ikon="peringatan">
+            <p>
+                Kunci yang dipasang di sini dihapus. Wawasan AI dan agen tanya-jawab pada Dashboard Eksekutif berhenti
+                bekerja sampai kunci baru dipasang.
+            </p>
+            <p class="text-xs bg-red-50 text-red-700 border border-red-100 rounded-lg px-3 py-2">
+                @if ((string) config('ai.api_key') !== '')
+                    Asisten AI kembali memakai kunci dari ANTHROPIC_API_KEY pada berkas .env server.
+                @else
+                    Tidak ada kunci cadangan di .env — fitur AI dashboard nonaktif.
                 @endif
             </p>
         </x-modal-konfirmasi>

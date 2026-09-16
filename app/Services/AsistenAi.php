@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Anthropic\Client;
 use Anthropic\Lib\Tools\BetaRunnableTool;
+use App\Models\Pengaturan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -18,15 +19,19 @@ use Throwable;
  */
 class AsistenAi
 {
+    /** Pesan bagi pengguna saat fitur AI belum dipasang. */
+    public const PESAN_NONAKTIF = 'Fitur AI belum aktif — super administrator dapat memasang kunci API Anthropic di Administrasi Sistem → Pengaturan Sistem.';
+
     public function __construct(private RingkasanDataPerjadin $ringkasan) {}
 
     /**
-     * Fitur AI menonaktifkan diri bila kunci API belum dipasang, sehingga
-     * dashboard tetap dapat dibuka tanpa konfigurasi tambahan.
+     * Fitur AI menonaktifkan diri bila kunci API belum dipasang — lewat
+     * Administrasi Sistem maupun .env — sehingga dashboard tetap dapat
+     * dibuka tanpa konfigurasi tambahan.
      */
     public function tersedia(): bool
     {
-        return filled(config('ai.api_key'));
+        return Pengaturan::kunciAnthropic()['kunci'] !== '';
     }
 
     /**
@@ -39,7 +44,7 @@ class AsistenAi
     public function wawasan(int $tahun, bool $paksaSegarkan = false): array
     {
         if (! $this->tersedia()) {
-            return ['status' => 'nonaktif', 'pesan' => 'Kunci ANTHROPIC_API_KEY belum dipasang pada berkas .env.'];
+            return ['status' => 'nonaktif', 'pesan' => self::PESAN_NONAKTIF];
         }
 
         $kunci = "wawasan-ai:{$tahun}";
@@ -48,11 +53,22 @@ class AsistenAi
             Cache::forget($kunci);
         }
 
-        return Cache::remember(
-            $kunci,
-            now()->addMinutes((int) config('ai.cache_menit')),
-            fn () => $this->mintaWawasan($tahun),
-        );
+        $tersimpan = Cache::get($kunci);
+
+        if (is_array($tersimpan)) {
+            return $tersimpan;
+        }
+
+        $hasil = $this->mintaWawasan($tahun);
+
+        // Kegagalan — kunci keliru, kuota habis, jaringan — tidak disimpan
+        // supaya pengaturan yang baru dibetulkan langsung terasa, bukan
+        // setelah cache-nya kedaluwarsa.
+        if ($hasil['status'] === 'ok') {
+            Cache::put($kunci, $hasil, now()->addMinutes((int) config('ai.cache_menit')));
+        }
+
+        return $hasil;
     }
 
     /**
@@ -100,7 +116,7 @@ class AsistenAi
     public function tanya(string $pertanyaan, int $tahun, array $riwayat = []): array
     {
         if (! $this->tersedia()) {
-            return ['status' => 'nonaktif', 'pesan' => 'Kunci ANTHROPIC_API_KEY belum dipasang pada berkas .env.'];
+            return ['status' => 'nonaktif', 'pesan' => self::PESAN_NONAKTIF];
         }
 
         $pesan = [...$riwayat, ['role' => 'user', 'content' => $pertanyaan]];
@@ -317,6 +333,6 @@ class AsistenAi
 
     private function klien(): Client
     {
-        return new Client(apiKey: (string) config('ai.api_key'));
+        return new Client(apiKey: Pengaturan::kunciAnthropic()['kunci']);
     }
 }

@@ -221,7 +221,7 @@
                     </button>
                 </div>
                 <p x-show="! aktif" x-cloak class="text-[11px] text-amber-700 mt-2">
-                    Fitur AI belum aktif — isi ANTHROPIC_API_KEY pada berkas .env.
+                    {{ \App\Services\AsistenAi::PESAN_NONAKTIF }}
                 </p>
             </form>
         </div>
@@ -429,7 +429,7 @@
 
             async muatWawasan(segarkan = false) {
                 if (! this.aktif) {
-                    this.pesanWawasan = 'Fitur AI belum aktif — isi ANTHROPIC_API_KEY pada berkas .env.';
+                    this.pesanWawasan = @js(\App\Services\AsistenAi::PESAN_NONAKTIF);
                     return;
                 }
 

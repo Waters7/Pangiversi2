@@ -131,7 +131,8 @@ class PanduanController extends Controller
                 'butir' => [
                     'Impor pengguna: sel yang kosong pada berkas CSV tidak lagi menghapus surel, nomor HP, dan rekening yang sudah diisi pengguna, sehingga data pegawai aman diimpor ulang untuk menambah orang. Wakil Direktur II ditambahkan ke data pegawai bawaan.',
                     'Pengaturan Sistem: token API dashboard eksekutif dibuat, diganti, atau dicabut langsung dari aplikasi — tanpa menyunting .env di server — lengkap dengan alamat dan jalur API-nya; token yang berlaku dapat ditampilkan dan disalin.',
-                    'Membuka atau mengunci tanggal dikeluarkan SPD serta mengelola token API kini melalui kotak konfirmasi.',
+                    'Pengaturan Sistem: kunci API Anthropic untuk Wawasan AI dan agen tanya-jawab Dashboard Eksekutif dipasang, diganti, atau dihapus dari aplikasi — tersimpan terenkripsi, tanpa menyunting .env di server.',
+                    'Membuka atau mengunci tanggal dikeluarkan SPD serta mengelola token API dan kunci AI kini melalui kotak konfirmasi.',
                 ],
             ],
             [
