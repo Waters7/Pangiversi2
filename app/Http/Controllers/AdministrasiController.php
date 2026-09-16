@@ -15,6 +15,7 @@ use App\Services\SumberPegawaiCsv;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -105,7 +106,57 @@ class AdministrasiController extends Controller
         return view('administrasi.pengaturan', [
             'pengaturan' => Pengaturan::semua(),
             'kandidatPengingat' => $pengingat->kandidat()->count(),
+            'tokenApi' => Pengaturan::tokenApi(),
         ]);
+    }
+
+    /**
+     * Terbitkan token API baru untuk dashboard eksekutif. Token lama —
+     * termasuk yang dipasang lewat .env — seketika tidak berlaku.
+     */
+    public function buatTokenApi(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Token API hanya diatur super administrator.');
+
+        $sebelumnya = Pengaturan::tokenApi()['sumber'];
+
+        Pengaturan::simpan([Pengaturan::TOKEN_API => Str::random(64)]);
+
+        $this->audit->catat(
+            AuditLog::AKSI_PENGGUNA,
+            $sebelumnya === null
+                ? 'Token API dashboard eksekutif dibuat.'
+                : 'Token API dashboard eksekutif diganti; token sebelumnya tidak berlaku lagi.',
+        );
+
+        return back()->with('success', $sebelumnya === null
+            ? 'Token API dibuat. Salin dan kirimkan ke pengembang aplikasi dashboard lewat jalur yang aman.'
+            : 'Token API diganti. Aplikasi dashboard harus memakai token yang baru.');
+    }
+
+    /**
+     * Cabut token API buatan administrator. Bila .env masih memuat
+     * PANGI_API_TOKEN, token itulah yang kembali berlaku; bila tidak, API
+     * tertutup.
+     */
+    public function cabutTokenApi(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Token API hanya diatur super administrator.');
+
+        Pengaturan::simpan([Pengaturan::TOKEN_API => '']);
+
+        $sisa = Pengaturan::tokenApi()['sumber'];
+
+        $this->audit->catat(
+            AuditLog::AKSI_PENGGUNA,
+            $sisa === 'env'
+                ? 'Token API dashboard eksekutif dicabut; API kembali memakai token dari berkas .env.'
+                : 'Token API dashboard eksekutif dicabut; API tertutup.',
+        );
+
+        return back()->with('success', $sisa === 'env'
+            ? 'Token API dicabut. API kembali memakai token dari berkas .env server.'
+            : 'Token API dicabut. API tertutup sampai token baru dibuat.');
     }
 
     /**

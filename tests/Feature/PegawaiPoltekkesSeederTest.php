@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Golongan;
 use App\Enums\PeranPengguna;
 use App\Models\User;
 use Database\Seeders\PegawaiPoltekkesSeeder;
@@ -33,6 +34,8 @@ class PegawaiPoltekkesSeederTest extends TestCase
         $this->assertNotNull($wadir);
         $this->assertSame(PeranPengguna::Pimpinan->value, $wadir->role);
         $this->assertSame('Wakil Direktur II', $wadir->jabatan);
+        $this->assertSame('III/c', $wadir->golongan);
+        $this->assertSame('Penata', Golongan::from($wadir->golongan)->pangkat());
         $this->assertSame('DIR', $wadir->unit->kode);
         $this->assertTrue($wadir->id_atasan === $direktur->id);
         $this->assertNull($direktur->id_atasan);

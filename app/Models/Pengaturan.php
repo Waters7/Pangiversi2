@@ -38,6 +38,15 @@ class Pengaturan extends Model
     public const TANGGAL_SPD_TERBUKA = 'tanggal_spd_terbuka';
 
     /**
+     * Token bersama untuk API dashboard eksekutif.
+     *
+     * Dibuat dan dicabut super administrator lewat Administrasi Sistem
+     * sehingga tidak perlu menyunting .env di server. Bila kosong, token
+     * dari PANGI_API_TOKEN pada .env (kalau ada) yang berlaku.
+     */
+    public const TOKEN_API = 'token_api';
+
+    /**
      * Nilai bawaan bila belum pernah diatur.
      *
      * @var array<string, string>
@@ -88,6 +97,27 @@ class Pengaturan extends Model
     public static function aktif(string $kunci): bool
     {
         return self::ambil($kunci) === '1';
+    }
+
+    /**
+     * Token API yang sedang berlaku beserta asalnya.
+     *
+     * Token dari Administrasi Sistem didahulukan atas .env supaya token
+     * yang dibuat administrator langsung berlaku tanpa menyentuh server.
+     *
+     * @return array{token: string, sumber: 'pengaturan'|'env'|null}
+     */
+    public static function tokenApi(): array
+    {
+        $tersimpan = self::ambil(self::TOKEN_API);
+
+        if ($tersimpan !== '') {
+            return ['token' => $tersimpan, 'sumber' => 'pengaturan'];
+        }
+
+        $env = (string) config('api.token');
+
+        return ['token' => $env, 'sumber' => $env !== '' ? 'env' : null];
     }
 
     /**

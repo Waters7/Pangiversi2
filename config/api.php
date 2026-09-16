@@ -12,7 +12,9 @@ return [
     | di berkas .env — data eksekutif memuat realisasi anggaran dan sebaran
     | pegawai, jadi tidak boleh terbuka hanya karena pengaturannya terlewat.
     |
-    | Buat token acak dengan:  php artisan pangi:token-api
+    | Cara yang lebih mudah: super administrator membuat tokennya di menu
+    | Administrasi Sistem → Pengaturan Sistem; token itu mengalahkan yang di
+    | sini. Cara lama tetap tersedia:  php artisan pangi:token-api
     |
     */
 

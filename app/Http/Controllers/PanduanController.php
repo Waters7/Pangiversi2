@@ -130,6 +130,8 @@ class PanduanController extends Controller
                 'tanggal' => '15 September 2026',
                 'butir' => [
                     'Impor pengguna: sel yang kosong pada berkas CSV tidak lagi menghapus surel, nomor HP, dan rekening yang sudah diisi pengguna, sehingga data pegawai aman diimpor ulang untuk menambah orang. Wakil Direktur II ditambahkan ke data pegawai bawaan.',
+                    'Pengaturan Sistem: token API dashboard eksekutif dibuat, diganti, atau dicabut langsung dari aplikasi — tanpa menyunting .env di server — lengkap dengan alamat dan jalur API-nya; token yang berlaku dapat ditampilkan dan disalin.',
+                    'Membuka atau mengunci tanggal dikeluarkan SPD serta mengelola token API kini melalui kotak konfirmasi.',
                 ],
             ],
             [

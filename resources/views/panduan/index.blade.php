@@ -757,7 +757,9 @@
                     <strong>Administrasi Sistem → Pengaturan Sistem</strong>. Angka tenggang inilah yang
                     dipakai dashboard saat menghitung batas penyerahan laporan. Di halaman yang sama,
                     super administrator dapat membuka atau mengunci tanggal dikeluarkan SPD untuk
-                    kasus tanggal mundur.
+                    kasus tanggal mundur, serta membuat, mengganti, atau mencabut
+                    <strong>token API dashboard eksekutif</strong> — setiap perubahan dikonfirmasi
+                    lewat kotak dialog dan tercatat pada jejak audit.
                 </x-panduan-langkah>
             @endif
 

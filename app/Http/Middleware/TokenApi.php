@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Pengaturan;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,13 +16,14 @@ use Symfony\Component\HttpFoundation\Response;
  *     Authorization: Bearer <token>
  *
  * Header X-Api-Token juga diterima untuk klien yang sudah memakai header
- * Authorization untuk keperluan lain.
+ * Authorization untuk keperluan lain. Tokennya dibuat super administrator
+ * di Administrasi Sistem, atau — bila belum — dari PANGI_API_TOKEN di .env.
  */
 class TokenApi
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $seharusnya = (string) config('api.token');
+        $seharusnya = Pengaturan::tokenApi()['token'];
 
         // Gagal tertutup: selama token belum dipasang, API menolak semua
         // permintaan. Kalau dibalik — terbuka saat token kosong — satu baris

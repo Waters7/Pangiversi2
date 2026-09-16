@@ -393,6 +393,10 @@ Route::middleware('auth')->group(function () {
         // Kunci tanggal dikeluarkan SPD — super administrator saja, dijaga di pengontrol.
         Route::put('/tanggal-spd', [AdministrasiController::class, 'simpanKunciTanggalSpd'])->name('administrasi.tanggal-spd');
 
+        // Token API dashboard eksekutif (super administrator)
+        Route::post('/token-api', [AdministrasiController::class, 'buatTokenApi'])->name('administrasi.token-api.buat');
+        Route::delete('/token-api', [AdministrasiController::class, 'cabutTokenApi'])->name('administrasi.token-api.cabut');
+
         Route::post('/', [AdministrasiController::class, 'store'])->name('administrasi.store');
         Route::put('/{user}', [AdministrasiController::class, 'update'])->name('administrasi.update');
         Route::put('/{user}/password', [AdministrasiController::class, 'updatePassword'])->name('administrasi.password');

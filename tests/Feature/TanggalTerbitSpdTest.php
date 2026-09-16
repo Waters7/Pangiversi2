@@ -254,11 +254,30 @@ class TanggalTerbitSpdTest extends TestCase
             ->assertOk()
             ->assertDontSee('Tanggal Dikeluarkan SPD');
 
-        $this->actingAs(User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]))
+        // Perubahannya lewat kotak konfirmasi: saat terkunci hanya tombol
+        // membuka yang tampil, saat terbuka hanya tombol mengunci.
+        $admin = User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]);
+
+        $this->actingAs($admin)
             ->get(route('administrasi.pengaturan'))
             ->assertOk()
             ->assertSee('Tanggal Dikeluarkan SPD')
-            ->assertSee('Terkunci');
+            ->assertSee('Terkunci')
+            ->assertSee('Buka Tanggal SPD')
+            ->assertSee('Buka tanggal dikeluarkan SPD untuk seluruh peran?')
+            ->assertSee('Ya, Buka')
+            ->assertDontSee('Kunci Tanggal SPD');
+
+        Pengaturan::simpan([Pengaturan::TANGGAL_SPD_TERBUKA => '1']);
+
+        $this->actingAs($admin)
+            ->get(route('administrasi.pengaturan'))
+            ->assertOk()
+            ->assertSee('Terbuka untuk semua peran')
+            ->assertSee('Kunci Tanggal SPD')
+            ->assertSee('Kunci kembali tanggal dikeluarkan SPD?')
+            ->assertSee('Ya, Kunci')
+            ->assertDontSee('Buka Tanggal SPD');
     }
 
     /** Tanggal pilihan itulah yang tercetak pada dokumennya. */

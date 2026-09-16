@@ -8,7 +8,7 @@
 
     @php
         $judulHalaman = 'Pengaturan Sistem';
-        $subjudulHalaman = 'Pengingat kelengkapan berkas dan kunci tanggal SPD';
+        $subjudulHalaman = 'Pengingat kelengkapan berkas, kunci tanggal SPD, dan token API';
     @endphp
     @include('administrasi.partials.kepala')
 
@@ -158,41 +158,231 @@
                 </span>
             </div>
 
-            <form method="POST" action="{{ route('administrasi.tanggal-spd') }}" class="p-6"
-                  x-data="{ terbuka: {{ $tanggalSpdTerbuka ? 'true' : 'false' }} }"
-                  @submit.prevent="if (confirm(terbuka
-                        ? 'Buka tanggal dikeluarkan SPD untuk seluruh peran? Semua pengguna dapat menerbitkan SPD dengan tanggal mundur sampai dikunci kembali.'
-                        : 'Kunci kembali tanggal dikeluarkan SPD? Peran selain pimpinan akan mengikuti tanggal pembuatan.')) $el.submit()">
-                @csrf
-                @method('PUT')
-
-                <p class="text-xs text-slate-500 leading-relaxed mb-4">
+            <div class="p-6">
+                <p class="text-xs text-slate-500 leading-relaxed">
                     Bawaannya <strong>terkunci</strong>: pimpinan dan administrator dapat menyesuaikan tanggal terbit dengan
                     buku agenda, sedangkan peran lain otomatis mendapat tanggal pembuatan. Buka kuncinya hanya bila ada SPD yang
                     harus diterbitkan dengan tanggal lebih awal oleh pengguna biasa, lalu kunci kembali — setiap perubahan tercatat
                     pada jejak audit.
                 </p>
 
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" name="tanggal_spd_terbuka" value="1" x-model="terbuka"
-                           class="mt-0.5 w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-400">
-                    <span>
-                        <span class="block text-sm font-semibold text-slate-700">Buka tanggal dikeluarkan untuk seluruh peran</span>
-                        <span class="block text-xs text-slate-400 mt-0.5">
-                            Selama terbuka, formulir SPD setiap pengguna menampilkan kolom tanggal yang dapat diisi sendiri.
-                        </span>
-                    </span>
-                </label>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-5 border-t border-slate-100">
+                    <p class="text-xs text-slate-500">
+                        @if ($tanggalSpdTerbuka)
+                            Saat ini formulir SPD <strong class="text-amber-700">setiap pengguna</strong> menampilkan kolom tanggal yang dapat diisi sendiri.
+                        @else
+                            Saat ini hanya <strong class="text-slate-700">pimpinan dan administrator</strong> yang dapat mengisi tanggal dikeluarkan.
+                        @endif
+                    </p>
 
-                <div class="flex justify-end mt-5 pt-5 border-t border-slate-100">
-                    <button type="submit"
-                            class="px-5 py-2.5 text-white text-sm font-semibold rounded-xl transition shadow-sm"
-                            :class="terbuka ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' : 'bg-teal-500 hover:bg-teal-600 shadow-teal-200'"
-                            x-text="terbuka ? 'Buka Tanggal SPD' : 'Kunci Tanggal SPD'">
+                    {{-- Tombolnya membuka kotak konfirmasi; perubahan baru dikirim
+                         setelah dikonfirmasi di sana. --}}
+                    @if ($tanggalSpdTerbuka)
+                        <button type="button" @click="$dispatch('buka-kunci-tanggal-spd')"
+                                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition shadow-sm shadow-teal-200 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                            Kunci Tanggal SPD
+                        </button>
+                    @else
+                        <button type="button" @click="$dispatch('buka-buka-tanggal-spd')"
+                                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition shadow-sm shadow-amber-200 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 017.5-2"/></svg>
+                            Buka Tanggal SPD
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <x-modal-konfirmasi
+            nama="buka-tanggal-spd"
+            judul="Buka tanggal dikeluarkan SPD untuk seluruh peran?"
+            :aksi="route('administrasi.tanggal-spd')"
+            tombol="Ya, Buka"
+            warna="amber"
+            ikon="peringatan">
+            <p>
+                Selama terbuka, <strong class="text-slate-700">semua pengguna</strong> dapat menerbitkan SPD dengan
+                tanggal mundur sampai Anda menguncinya kembali.
+            </p>
+            <p class="text-xs bg-amber-50 text-amber-800 border border-amber-100 rounded-lg px-3 py-2">
+                Perubahan ini tercatat pada jejak audit. Jangan lupa mengunci kembali setelah SPD yang dimaksud terbit.
+            </p>
+            <x-slot:tambahan>
+                <input type="hidden" name="tanggal_spd_terbuka" value="1">
+            </x-slot:tambahan>
+        </x-modal-konfirmasi>
+
+        <x-modal-konfirmasi
+            nama="kunci-tanggal-spd"
+            judul="Kunci kembali tanggal dikeluarkan SPD?"
+            :aksi="route('administrasi.tanggal-spd')"
+            tombol="Ya, Kunci"
+            warna="teal"
+            ikon="peringatan">
+            <p>
+                Peran selain pimpinan dan administrator akan kembali mengikuti
+                <strong class="text-slate-700">tanggal pembuatan</strong> sebagai tanggal dikeluarkan SPD.
+            </p>
+            <p class="text-xs bg-slate-50 text-slate-600 border border-slate-100 rounded-lg px-3 py-2">
+                SPD yang sudah terlanjur terbit dengan tanggal mundur tidak berubah.
+            </p>
+        </x-modal-konfirmasi>
+
+        {{-- Token API dashboard eksekutif: dibuat di sini supaya administrator
+             tidak perlu menyunting .env di server; hanya super administrator. --}}
+        @php
+            $adaToken = $tokenApi['token'] !== '';
+            $dariEnv = $tokenApi['sumber'] === 'env';
+            $tokenTersamar = $adaToken ? str_repeat('•', 24).substr($tokenApi['token'], -4) : '';
+            $asalApi = url('/api/v1/dashboard-eksekutif');
+        @endphp
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5"
+             x-data="{ tampil: false, tersalin: false, token: @js($tokenApi['token']), tersamar: @js($tokenTersamar),
+                       salin() { navigator.clipboard.writeText(this.token).then(() => { this.tersalin = true; setTimeout(() => this.tersalin = false, 2000) }) } }">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg {{ $adaToken ? 'bg-sky-50' : 'bg-slate-100' }} flex items-center justify-center">
+                    <svg class="w-4 h-4 {{ $adaToken ? 'text-sky-600' : 'text-slate-500' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-slate-800 text-sm">Token API Dashboard Eksekutif</h3>
+                    <p class="text-xs text-slate-400">
+                        Kunci yang dibawa aplikasi dashboard untuk membaca ringkasan, realisasi, dan sebaran pegawai PANGI
+                    </p>
+                </div>
+                <span class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full {{ $adaToken ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500' }}">
+                    @if (! $adaToken)
+                        API tertutup — token belum dipasang
+                    @elseif ($dariEnv)
+                        Aktif · dari berkas .env
+                    @else
+                        Aktif
+                    @endif
+                </span>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    API ini <strong>baca-saja</strong> dan hanya dapat dipanggil dengan token di bawah. Bagikan tokennya kepada
+                    pengembang aplikasi dashboard lewat jalur yang aman — jangan lewat grup obrolan bersama. Bila token
+                    diduga bocor, buat yang baru: token lama seketika tidak berlaku.
+                </p>
+
+                @if ($adaToken)
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Token yang berlaku</label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <code class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 break-all select-all"
+                                  x-text="tampil ? token : tersamar">{{ $tokenTersamar }}</code>
+                            <div class="flex gap-2 shrink-0">
+                                <button type="button" @click="tampil = ! tampil"
+                                        class="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition"
+                                        x-text="tampil ? 'Sembunyikan' : 'Tampilkan'">Tampilkan</button>
+                                <button type="button" @click="salin()"
+                                        class="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition"
+                                        x-text="tersalin ? 'Tersalin ✓' : 'Salin'">Salin</button>
+                            </div>
+                        </div>
+                        @if ($dariEnv)
+                            <p class="text-[11px] text-slate-400 mt-1.5">
+                                Token ini berasal dari PANGI_API_TOKEN pada berkas .env server. Membuat token baru di sini akan
+                                menggantikannya tanpa perlu menyunting .env.
+                            </p>
+                        @endif
+                    </div>
+                @endif
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Alamat &amp; header</p>
+                        <p class="text-xs font-mono text-slate-700 break-all">{{ $asalApi }}</p>
+                        <p class="text-xs font-mono text-slate-700 mt-1">Authorization: Bearer &lt;token&gt;</p>
+                        <p class="text-[11px] text-slate-400 mt-2">
+                            Header <span class="font-mono">X-Api-Token</span> juga diterima. Batas 60 permintaan per menit.
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Jalur yang tersedia</p>
+                        <ul class="text-xs font-mono text-slate-700 space-y-0.5">
+                            <li>/ <span class="font-sans text-slate-400">— semua bagian sekaligus</span></li>
+                            <li>/ringkasan</li>
+                            <li>/realisasi</li>
+                            <li>/pegawai</li>
+                            <li>/tahun-anggaran</li>
+                        </ul>
+                        <p class="text-[11px] text-slate-400 mt-2">
+                            Asal peramban yang diizinkan (CORS):
+                            @if (config('api.origins') === [])
+                                <span class="text-slate-500">belum ada — hanya pemanggilan dari sisi server</span>
+                            @else
+                                <span class="font-mono text-slate-500">{{ implode(', ', config('api.origins')) }}</span>
+                            @endif
+                            · diatur lewat PANGI_API_ORIGINS di .env.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-5 border-t border-slate-100">
+                    @if ($tokenApi['sumber'] === 'pengaturan')
+                        <button type="button" @click="$dispatch('buka-cabut-token-api')"
+                                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 text-sm font-semibold rounded-xl transition">
+                            Cabut Token
+                        </button>
+                    @endif
+                    <button type="button" @click="$dispatch('buka-buat-token-api')"
+                            class="inline-flex items-center justify-center gap-2 px-5 py-2.5 {{ $adaToken ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' : 'bg-teal-500 hover:bg-teal-600 shadow-teal-200' }} text-white text-sm font-semibold rounded-xl transition shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5"/><path d="M20 9A8 8 0 006.3 6.3L4 9M4 15a8 8 0 0013.7 2.7L20 15"/></svg>
+                        {{ $adaToken ? 'Ganti Token' : 'Buat Token' }}
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
+
+        <x-modal-konfirmasi
+            nama="buat-token-api"
+            :judul="$adaToken ? 'Ganti token API?' : 'Buat token API?'"
+            :aksi="route('administrasi.token-api.buat')"
+            metode="POST"
+            :tombol="$adaToken ? 'Ya, Ganti' : 'Ya, Buat'"
+            :warna="$adaToken ? 'amber' : 'teal'"
+            ikon="peringatan">
+            @if ($adaToken)
+                <p>
+                    Token baru akan dibuat dan <strong class="text-slate-700">token yang sekarang seketika tidak berlaku</strong>.
+                    Aplikasi dashboard berhenti membaca data sampai tokennya diperbarui.
+                </p>
+            @else
+                <p>Token acak 64 karakter akan dibuat dan API dashboard eksekutif langsung dapat dipanggil dengannya.</p>
+            @endif
+            <p class="text-xs bg-amber-50 text-amber-800 border border-amber-100 rounded-lg px-3 py-2">
+                Kirimkan token yang baru kepada pengembang aplikasi dashboard lewat jalur yang aman. Perubahan ini tercatat
+                pada jejak audit.
+            </p>
+        </x-modal-konfirmasi>
+
+        @if ($tokenApi['sumber'] === 'pengaturan')
+        <x-modal-konfirmasi
+            nama="cabut-token-api"
+            judul="Cabut token API?"
+            :aksi="route('administrasi.token-api.cabut')"
+            metode="DELETE"
+            tombol="Ya, Cabut"
+            warna="red"
+            ikon="peringatan">
+            <p>
+                Token yang dibuat di sini dihapus dan aplikasi dashboard tidak dapat lagi membaca data PANGI dengannya.
+            </p>
+            <p class="text-xs bg-red-50 text-red-700 border border-red-100 rounded-lg px-3 py-2">
+                @if ((string) config('api.token') !== '')
+                    API kembali memakai token dari PANGI_API_TOKEN pada berkas .env server.
+                @else
+                    API tertutup sampai token baru dibuat.
+                @endif
+            </p>
+        </x-modal-konfirmasi>
+        @endif
     @endif
 
 </div>
