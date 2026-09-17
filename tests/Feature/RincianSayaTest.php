@@ -9,6 +9,8 @@ use App\Models\Keuangan;
 use App\Models\PesertaUsulan;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\JalurPersetujuan;
+use App\Services\PemantauBerkas;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -351,5 +353,145 @@ class RincianSayaTest extends TestCase
             ->assertOk()
             ->assertSee('Menunggu Tanggapan Pelaksana')
             ->assertDontSee('Sudah Dicek Tim Keuangan');
+    }
+
+    // ── Pemantauan berkas ──
+
+    /** @return array<string, array<string, mixed>> Butir pemantauan, bertaut labelnya. */
+    private function butirPantau(TestResponse $halaman, string $bagian): array
+    {
+        return collect($halaman->viewData('daftar')->flatten(1)->first()['pantau'][$bagian])
+            ->keyBy('label')->all();
+    }
+
+    /**
+     * Begitu berkas sampai di meja pelaksana, panel pemantauan sudah
+     * menyebut apa yang selesai dan apa yang masih ditunggu — tanda tangan
+     * maupun pembayaran.
+     */
+    public function test_panel_pemantauan_menyebut_tahap_yang_selesai_dan_yang_ditunggu(): void
+    {
+        $this->berkasSampaiKePelaksana();
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Pemantauan Berkas')
+            ->assertSee('Status Tanda Tangan')
+            ->assertSee('Status Pembayaran')
+            ->assertSee('Menunggu tanda tangan Anda')
+            ->assertSee('Laporan belum dikirim ke pimpinan')
+            ->assertSee('Terbit setelah kedua dokumen ditandatangani PPK');
+
+        $tandaTangan = $this->butirPantau($halaman, 'tanda_tangan');
+        $pembayaran = $this->butirPantau($halaman, 'pembayaran');
+
+        $this->assertSame(PemantauBerkas::SELESAI, $tandaTangan['Dicek tim keuangan']['keadaan']);
+        $this->assertSame($this->timKeuangan->nama, $tandaTangan['Dicek tim keuangan']['oleh']);
+        $this->assertSame(PemantauBerkas::SELESAI, $tandaTangan['Dikirim ke Anda']['keadaan']);
+        $this->assertSame(PemantauBerkas::MENUNGGU, $tandaTangan['Rincian biaya · tanda tangan Anda']['keadaan']);
+        $this->assertSame(PemantauBerkas::MENUNGGU, $tandaTangan['Rincian biaya · tanda tangan PPK']['keadaan']);
+        $this->assertSame('Setelah tanda tangan Anda', $tandaTangan['Rincian biaya · tanda tangan PPK']['keterangan']);
+        $this->assertSame(PemantauBerkas::MENUNGGU, $tandaTangan['Daftar riil · tanda tangan Anda']['keadaan']);
+
+        $this->assertSame(PemantauBerkas::MENUNGGU, $pembayaran['Uang muka']['keadaan']);
+        $this->assertSame('Setelah uang muka dibayarkan', $pembayaran['Pelunasan']['keterangan']);
+        $this->assertSame('Setelah daftar riil ditandatangani PPK', $pembayaran['Transport lokal']['keterangan']);
+    }
+
+    /**
+     * Setelah seluruh tahap terlewati — kedua dokumen disahkan PPK, laporan
+     * dikonfirmasi Direktur, nominatif diterima, dan pelunasan dibayarkan —
+     * seluruh butir berkeadaan selesai beserta kode dan tanggalnya.
+     */
+    public function test_panel_pemantauan_lengkap_setelah_seluruh_tahap_terlewati(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $ppk = User::factory()->ppk()->create();
+        $this->terbitkanNominatif($this->usulan, $ppk);
+        $this->konfirmasiLaporan($this->usulan);
+        $this->daftar()->update([
+            'kode_konfirmasi' => 'KNF-UJI1',
+            'rincian_kode_konfirmasi' => 'KNF-UJI2',
+            'kode_verifikasi' => 'PPK-UJI1',
+            'rincian_kode_verifikasi' => 'PPK-UJI2',
+        ]);
+
+        $keuangan = $this->usulan->keuangan;
+        $keuangan->update([
+            'status' => Keuangan::STATUS_LUNAS,
+            'tanggal_transfer' => today()->subDays(5),
+            'tanggal_pelunasan' => today(),
+            'uang_muka' => 1_500_000,
+            'sisa' => 250_000,
+        ]);
+        $keuangan->konfirmasiPelunasan();
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.daftar-riil'))
+            ->assertOk()
+            ->assertSee('Kode verifikasi PPK-UJI1')
+            ->assertSee('Syarat pelunasan terpenuhi')
+            ->assertSee('Anda tercantum di dalamnya')
+            ->assertSee('Dibayar bersama pelunasan')
+            ->assertSee('Rp 1.500.000')
+            ->assertSee('Rp 250.000');
+
+        $tandaTangan = $this->butirPantau($halaman, 'tanda_tangan');
+        $pembayaran = $this->butirPantau($halaman, 'pembayaran');
+
+        foreach (['Rincian biaya · tanda tangan Anda', 'Rincian biaya · tanda tangan PPK', 'Daftar riil · tanda tangan Anda',
+            'Daftar riil · tanda tangan PPK', 'Laporan perjadin · konfirmasi Direktur', 'Daftar nominatif · terbit',
+            'Daftar nominatif · tanda tangan PPK', 'Daftar nominatif · diterima tim keuangan'] as $label) {
+            $this->assertSame(PemantauBerkas::SELESAI, $tandaTangan[$label]['keadaan'], $label);
+        }
+
+        $this->assertSame($ppk->nama, $tandaTangan['Daftar riil · tanda tangan PPK']['oleh']);
+        $this->assertSame(PemantauBerkas::SELESAI, $pembayaran['Uang muka']['keadaan']);
+        $this->assertSame(PemantauBerkas::SELESAI, $pembayaran['Pelunasan']['keadaan']);
+        $this->assertStringStartsWith('Kode bendahara BND-', $pembayaran['Pelunasan']['keterangan']);
+        $this->assertSame(PemantauBerkas::SELESAI, $pembayaran['Transport lokal']['keadaan']);
+    }
+
+    /** Sanggahan dan pengembalian laporan ditandai sebagai perhatian, bukan sekadar menunggu. */
+    public function test_panel_pemantauan_menandai_sanggahan_dan_laporan_yang_dikembalikan(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $this->sanggah(JalurPersetujuan::RINCIAN, 'Uang harian dihitung 4 hari, SPD menyebut 3 hari.');
+
+        $direktur = User::factory()->create(['role' => User::ROLE_PIMPINAN, 'jabatan' => 'Direktur']);
+        $laporan = $this->konfirmasiLaporan($this->usulan, $direktur);
+        $laporan->batalkanKonfirmasi();
+        $laporan->kembalikan($direktur, 'Uraian kegiatan hari kedua kosong.');
+
+        // Uang muka sudah cair, jadi satu-satunya penahan pelunasan adalah laporannya.
+        $this->usulan->keuangan->update(['status' => Keuangan::STATUS_SEBAGIAN, 'tanggal_transfer' => today()->subDays(3)]);
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Anda menyanggah')
+            ->assertSee('Dikembalikan pimpinan');
+
+        $tandaTangan = $this->butirPantau($halaman, 'tanda_tangan');
+
+        $this->assertSame(PemantauBerkas::PERHATIAN, $tandaTangan['Rincian biaya · tanda tangan Anda']['keadaan']);
+        $this->assertSame(PemantauBerkas::PERHATIAN, $tandaTangan['Laporan perjadin · konfirmasi Direktur']['keadaan']);
+        $this->assertSame('Menunggu konfirmasi laporan oleh Direktur', $this->butirPantau($halaman, 'pembayaran')['Pelunasan']['keterangan']);
+    }
+
+    /** Perjalanan tanpa transport lokal: daftar riilnya tidak ditagih tanda tangan maupun pembayaran. */
+    public function test_panel_pemantauan_menandai_transport_lokal_yang_tidak_ada(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $this->daftar()->update(['total_riil' => 0]);
+
+        $halaman = $this->actingAs($this->pelaksana)
+            ->get(route('rincian-saya.rincian-biaya'))
+            ->assertOk()
+            ->assertSee('Tidak ada transport lokal');
+
+        $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'tanda_tangan')['Daftar riil transport lokal']['keadaan']);
+        $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'pembayaran')['Transport lokal']['keadaan']);
     }
 }

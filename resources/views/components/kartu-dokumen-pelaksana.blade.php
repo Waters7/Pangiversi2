@@ -113,6 +113,11 @@
             </div>
         @endif
 
+        {{-- Seluruh tanda tangan dan pembayaran berkas ini, untuk dipantau sendiri --}}
+        @if (isset($entri['pantau']))
+            <x-pantau-berkas :pantau="$entri['pantau']" />
+        @endif
+
         {{-- Sanggahan yang sudah diajukan --}}
         @if ($jalur->sedangDisanggah())
             <div class="mb-5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">

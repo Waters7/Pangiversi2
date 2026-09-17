@@ -7,6 +7,7 @@ use App\Models\DaftarRiil;
 use App\Models\RincianBiaya;
 use App\Models\Usulan;
 use App\Services\JalurPersetujuan;
+use App\Services\PemantauBerkas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -22,6 +23,8 @@ use Illuminate\View\View;
  */
 class RincianSayaController extends Controller
 {
+    public function __construct(private PemantauBerkas $pemantau) {}
+
     /**
      * Kelompok kerja pada kedua daftar, sekaligus label tabnya.
      *
@@ -124,13 +127,17 @@ class RincianSayaController extends Controller
      * tahu berkasnya sudah dicek dan tinggal menunggu dikirim; sebelumnya
      * berkas seperti itu tidak terlihat sama sekali dari sisi pelaksana.
      *
+     * Tiap baris membawa panel pemantauannya — seluruh tanda tangan dan
+     * pembayaran berkas itu — supaya pelaksana tahu berkasnya berhenti di
+     * mana tanpa bertanya ke tim keuangan.
+     *
      * @return Collection<int, array<string, mixed>>
      */
     private function berkasMilik(Request $request, string $jenis): Collection
     {
         $cari = $request->input('cari');
 
-        return DaftarRiil::with(['usulan.keuangan.rincianBiaya', 'peserta', 'rincian'])
+        $berkas = DaftarRiil::with(['usulan.keuangan.rincianBiaya', 'peserta', 'rincian'])
             ->where(fn ($q) => $q
                 ->whereNotNull('dikirim_ke_pegawai_at')
                 ->orWhereNotNull('divalidasi_at')
@@ -144,7 +151,11 @@ class RincianSayaController extends Controller
             ))
             ->orderByDesc('dikirim_ke_pegawai_at')
             ->orderByDesc('updated_at')
-            ->get()
+            ->get();
+
+        $this->pemantau->siapkan($berkas);
+
+        return $berkas
             ->map(function (DaftarRiil $berkas) use ($jenis): array {
                 $jalur = $berkas->jalur($jenis);
                 $mulai = $berkas->usulan?->tanggal_mulai
@@ -160,6 +171,7 @@ class RincianSayaController extends Controller
                     'rincian' => $jenis === JalurPersetujuan::RINCIAN
                         ? $this->rincianTanpaTransportLokal($berkas->usulan)
                         : $berkas->rincian,
+                    'pantau' => $this->pemantau->untuk($berkas),
                 ];
             });
     }

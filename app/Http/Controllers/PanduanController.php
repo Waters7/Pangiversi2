@@ -133,6 +133,7 @@ class PanduanController extends Controller
                     'Pengaturan Sistem: token API dashboard eksekutif dibuat, diganti, atau dicabut langsung dari aplikasi — tanpa menyunting .env di server — lengkap dengan alamat dan jalur API-nya; token yang berlaku dapat ditampilkan dan disalin.',
                     'Pengaturan Sistem: kunci API Anthropic untuk Wawasan AI dan agen tanya-jawab Dashboard Eksekutif dipasang, diganti, atau dihapus dari aplikasi — tersimpan terenkripsi, tanpa menyunting .env di server.',
                     'Membuka atau mengunci tanggal dikeluarkan SPD serta mengelola token API dan kunci AI kini melalui kotak konfirmasi.',
+                    'Rincian Saya: tiap berkas memuat panel Pemantauan Berkas — status seluruh tanda tangan (tim keuangan, pelaksana, PPK, konfirmasi Direktur, daftar nominatif) dan status pembayaran (uang muka, pelunasan, transport lokal) beserta tanggal dan kodenya.',
                 ],
             ],
             [

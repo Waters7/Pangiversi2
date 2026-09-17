@@ -387,7 +387,10 @@
                 berstatus <strong>Sudah Dicek Tim Keuangan</strong> — dan pesan
                 <em>“Berkas menunggu tanda tangan Anda”</em> muncul di lonceng pemberitahuan.
                 Menu <strong>Rincian Saya</strong> di sidebar memuat keduanya, masing-masing pada
-                submenunya sendiri.
+                submenunya sendiri. Tiap kartu berkas memuat panel <strong>Pemantauan Berkas</strong>:
+                seluruh tanda tangan — tim keuangan, Anda, PPK, konfirmasi Direktur atas laporan,
+                daftar nominatif — serta pembayaran uang muka, pelunasan, dan transport lokal,
+                lengkap dengan tanggal dan kodenya, supaya Anda tahu berkas berhenti di mana.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Sikapi tiap dokumen sendiri-sendiri">
