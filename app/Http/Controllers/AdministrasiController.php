@@ -106,7 +106,6 @@ class AdministrasiController extends Controller
         return view('administrasi.pengaturan', [
             'pengaturan' => Pengaturan::semua(),
             'kandidatPengingat' => $pengingat->kandidat()->count(),
-            'tokenApi' => Pengaturan::tokenApi(),
             'kunciAnthropic' => $this->ringkasanKunciAnthropic(),
         ]);
     }

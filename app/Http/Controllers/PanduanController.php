@@ -130,7 +130,8 @@ class PanduanController extends Controller
                 'tanggal' => '15 September 2026',
                 'butir' => [
                     'Impor pengguna: sel yang kosong pada berkas CSV tidak lagi menghapus surel, nomor HP, dan rekening yang sudah diisi pengguna, sehingga data pegawai aman diimpor ulang untuk menambah orang. Wakil Direktur II ditambahkan ke data pegawai bawaan.',
-                    'Pengaturan Sistem: token API dashboard eksekutif dibuat, diganti, atau dicabut langsung dari aplikasi — tanpa menyunting .env di server — lengkap dengan alamat dan jalur API-nya; token yang berlaku dapat ditampilkan dan disalin.',
+                    'Integrasi Data (submenu Administrasi Sistem): token API dashboard eksekutif dibuat, diganti, atau dicabut langsung dari aplikasi — tanpa menyunting .env di server — lengkap dengan alamat dan jalur API-nya; token yang berlaku dapat ditampilkan dan disalin.',
+                    'Integrasi Data: pemantauan setiap permintaan API yang masuk (alamat IP, jalur, token yang dibawa — hanya ujung-ujungnya — diterima atau ditolak) dan pengiriman data dashboard eksekutif terjadwal (tiap jam, harian, atau mingguan) ke aplikasi tujuan memakai token, lengkap dengan riwayat pengirimannya dan tombol Kirim Sekarang.',
                     'Pengaturan Sistem: kunci API Anthropic untuk Wawasan AI dan agen tanya-jawab Dashboard Eksekutif dipasang, diganti, atau dihapus dari aplikasi — tersimpan terenkripsi, tanpa menyunting .env di server.',
                     'Membuka atau mengunci tanggal dikeluarkan SPD serta mengelola token API dan kunci AI kini melalui kotak konfirmasi.',
                     'Rincian Saya: tiap berkas memuat panel Pemantauan Berkas — status seluruh tanda tangan (tim keuangan, pelaksana, PPK, konfirmasi Direktur, daftar nominatif) dan status pembayaran (uang muka, pelunasan, transport lokal) beserta tanggal dan kodenya.',

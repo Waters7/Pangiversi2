@@ -59,6 +59,26 @@ class Pengaturan extends Model
     public const KUNCI_ANTHROPIC = 'kunci_api_anthropic';
 
     /**
+     * Pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan
+     * (menu Integrasi Data): sakelar, alamat tujuan, token yang dibawa
+     * (rahasia, terenkripsi), dan jadwalnya.
+     */
+    public const INTEGRASI_AKTIF = 'integrasi_aktif';
+
+    public const INTEGRASI_URL = 'integrasi_url';
+
+    public const INTEGRASI_TOKEN_TUJUAN = 'integrasi_token_tujuan';
+
+    /** tiap_jam | harian | mingguan */
+    public const INTEGRASI_JADWAL = 'integrasi_jadwal';
+
+    /** Jam kirim (HH:MM) untuk jadwal harian dan mingguan. */
+    public const INTEGRASI_JAM = 'integrasi_jam';
+
+    /** Hari kirim untuk jadwal mingguan: 1 = Senin … 7 = Minggu. */
+    public const INTEGRASI_HARI = 'integrasi_hari';
+
+    /**
      * Nilai bawaan bila belum pernah diatur.
      *
      * @var array<string, string>
@@ -69,6 +89,10 @@ class Pengaturan extends Model
         self::PENGINGAT_ULANG => '7',
         self::PENGINGAT_MAKS => '4',
         self::TANGGAL_SPD_TERBUKA => '0',
+        self::INTEGRASI_AKTIF => '0',
+        self::INTEGRASI_JADWAL => 'harian',
+        self::INTEGRASI_JAM => '06:00',
+        self::INTEGRASI_HARI => '1',
     ];
 
     private const CACHE = 'pengaturan.semua';

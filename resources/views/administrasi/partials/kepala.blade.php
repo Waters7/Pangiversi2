@@ -7,6 +7,11 @@
         ['rute' => 'administrasi.massal', 'aktif' => 'administrasi.massal', 'label' => 'Impor & Ekspor'],
         ['rute' => 'administrasi.pengaturan', 'aktif' => 'administrasi.pengaturan', 'label' => 'Pengaturan Sistem'],
     ];
+
+    // Integrasi Data memuat token dan alamat aplikasi lain — hanya super administrator.
+    if (auth()->user()->isAdmin()) {
+        $bagianAdministrasi[] = ['rute' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data'];
+    }
 @endphp
 
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

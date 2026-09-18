@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\TahunAnggaran;
+use App\Services\PaketDataEksekutif;
 use App\Services\RingkasanEksekutif;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 /**
  * Data dashboard eksekutif untuk dibaca aplikasi lain.
@@ -18,7 +17,7 @@ use Illuminate\Support\Collection;
  */
 class DashboardEksekutifController extends Controller
 {
-    public function __construct(private RingkasanEksekutif $ringkasan) {}
+    public function __construct(private RingkasanEksekutif $ringkasan, private PaketDataEksekutif $paket) {}
 
     /**
      * Seluruh isi dashboard eksekutif dalam satu permintaan.
@@ -26,13 +25,8 @@ class DashboardEksekutifController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tahun = $this->tahun($request);
-        $perKategori = $this->ringkasan->realisasiPerKategori($tahun);
 
-        return $this->balas($tahun, [
-            'ringkasan' => $this->angkaRingkasan($tahun),
-            'realisasi' => $this->angkaRealisasi($tahun, $perKategori),
-            'pegawai' => $this->angkaPegawai($tahun),
-        ]);
+        return $this->balas($tahun, $this->paket->semua($tahun));
     }
 
     /**
@@ -42,7 +36,7 @@ class DashboardEksekutifController extends Controller
     {
         $tahun = $this->tahun($request);
 
-        return $this->balas($tahun, ['ringkasan' => $this->angkaRingkasan($tahun)]);
+        return $this->balas($tahun, ['ringkasan' => $this->paket->ringkasan($tahun)]);
     }
 
     /**
@@ -52,9 +46,7 @@ class DashboardEksekutifController extends Controller
     {
         $tahun = $this->tahun($request);
 
-        return $this->balas($tahun, [
-            'realisasi' => $this->angkaRealisasi($tahun, $this->ringkasan->realisasiPerKategori($tahun)),
-        ]);
+        return $this->balas($tahun, ['realisasi' => $this->paket->realisasi($tahun)]);
     }
 
     /**
@@ -64,7 +56,7 @@ class DashboardEksekutifController extends Controller
     {
         $tahun = $this->tahun($request);
 
-        return $this->balas($tahun, ['pegawai' => $this->angkaPegawai($tahun)]);
+        return $this->balas($tahun, ['pegawai' => $this->paket->pegawai($tahun)]);
     }
 
     /**
@@ -79,69 +71,6 @@ class DashboardEksekutifController extends Controller
                 'tersedia' => $this->ringkasan->tahunTersedia()->map(fn ($t) => (int) $t)->all(),
             ],
         ]);
-    }
-
-    // ── Penyusun bagian ──
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function angkaRingkasan(int $tahun): array
-    {
-        $anggaran = TahunAnggaran::firstWhere('tahun', $tahun);
-        $realisasi = $this->ringkasan->totalRealisasi($tahun);
-        $pagu = (float) ($anggaran?->pagu ?? 0);
-
-        return [
-            'pagu' => $pagu,
-            'total_realisasi' => $realisasi,
-            // Dijaga terhadap pagu nol: tanpa ini pembagiannya melempar galat
-            // pada tahun anggaran yang pagunya belum diisi.
-            'persentase_realisasi' => $pagu > 0 ? round($realisasi / $pagu * 100, 2) : null,
-            'sisa_pagu' => $pagu > 0 ? $pagu - $realisasi : null,
-            'akan_berangkat' => $this->ringkasan->akanBerangkat(),
-            'sedang_berjalan' => $this->ringkasan->sedangBerjalan(),
-            'belum_melapor' => $this->ringkasan->belumMelapor(),
-        ];
-    }
-
-    /**
-     * @param  Collection<string, list<float>>  $perKategori
-     * @return array<string, mixed>
-     */
-    private function angkaRealisasi(int $tahun, $perKategori): array
-    {
-        return [
-            'total' => $this->ringkasan->totalRealisasi($tahun),
-            'per_bulan' => $this->ringkasan->jumlahkanPerBulan($perKategori),
-            'per_kategori' => $perKategori
-                ->map(fn (array $nilai, string $nama) => [
-                    'kategori' => $nama,
-                    'per_bulan' => $nilai,
-                    'total' => array_sum($nilai),
-                ])
-                ->values()
-                ->all(),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function angkaPegawai(int $tahun): array
-    {
-        return [
-            'per_bulan' => $this->ringkasan->pegawaiPerBulan($tahun),
-            'per_unit' => $this->ringkasan->pegawaiPerUnit($tahun)
-                ->map(fn (array $unit) => [
-                    'unit' => $unit['unit'],
-                    'orang' => $unit['orang'],
-                    'perjalanan' => $unit['perjalanan'],
-                    'biaya' => $unit['biaya'],
-                    'per_bulan' => $unit['perBulan'],
-                ])
-                ->all(),
-        ];
     }
 
     /**

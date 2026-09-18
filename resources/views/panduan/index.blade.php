@@ -760,11 +760,12 @@
                     <strong>Administrasi Sistem → Pengaturan Sistem</strong>. Angka tenggang inilah yang
                     dipakai dashboard saat menghitung batas penyerahan laporan. Di halaman yang sama,
                     super administrator dapat membuka atau mengunci tanggal dikeluarkan SPD untuk
-                    kasus tanggal mundur, membuat, mengganti, atau mencabut
-                    <strong>token API dashboard eksekutif</strong>, serta memasang
-                    <strong>kunci API Anthropic</strong> yang menghidupkan Wawasan AI di Dashboard
-                    Eksekutif — setiap perubahan dikonfirmasi lewat kotak dialog dan tercatat pada
-                    jejak audit.
+                    kasus tanggal mundur serta memasang <strong>kunci API Anthropic</strong> yang
+                    menghidupkan Wawasan AI di Dashboard Eksekutif. Submenu
+                    <strong>Integrasi Data</strong> memuat token API yang dibagikan ke aplikasi lain,
+                    pemantauan setiap permintaan yang masuk beserta token yang dibawanya, dan
+                    pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan — setiap
+                    perubahan dikonfirmasi lewat kotak dialog dan tercatat pada jejak audit.
                 </x-panduan-langkah>
             @endif
 

@@ -28,7 +28,7 @@ class TokenApiAdministrasiTest extends TestCase
         config(['api.token' => self::TOKEN_ENV]);
 
         $this->actingAs($this->admin())
-            ->get(route('administrasi.pengaturan'))
+            ->get(route('administrasi.integrasi'))
             ->assertOk()
             ->assertSee('Token API Dashboard Eksekutif')
             ->assertSee('Aktif · dari berkas .env')
@@ -43,7 +43,7 @@ class TokenApiAdministrasiTest extends TestCase
         config(['api.token' => null]);
 
         $this->actingAs($this->admin())
-            ->get(route('administrasi.pengaturan'))
+            ->get(route('administrasi.integrasi'))
             ->assertOk()
             ->assertSee('API tertutup — token belum dipasang')
             ->assertSee('Buat Token')
@@ -75,7 +75,7 @@ class TokenApiAdministrasiTest extends TestCase
 
         // Halaman menampilkan token baru beserta tombol cabut.
         $this->actingAs($this->admin())
-            ->get(route('administrasi.pengaturan'))
+            ->get(route('administrasi.integrasi'))
             ->assertSee($baru['token'])
             ->assertSee('Cabut Token')
             ->assertSee('Ganti token API?');
@@ -113,11 +113,9 @@ class TokenApiAdministrasiTest extends TestCase
         config(['api.token' => self::TOKEN_ENV]);
         $timSdm = User::factory()->create(['role' => PeranPengguna::TimSdm->value]);
 
-        $this->actingAs($timSdm)
-            ->get(route('administrasi.pengaturan'))
-            ->assertOk()
-            ->assertDontSee('Token API Dashboard Eksekutif')
-            ->assertDontSee(self::TOKEN_ENV);
+        // Halaman Integrasi Data tertutup seluruhnya bagi Tim SDM; tabnya pun tidak tampil.
+        $this->actingAs($timSdm)->get(route('administrasi.integrasi'))->assertForbidden();
+        $this->actingAs($timSdm)->get(route('administrasi.pengaturan'))->assertOk()->assertDontSee('Integrasi Data');
 
         $this->actingAs($timSdm)->post(route('administrasi.token-api.buat'))->assertForbidden();
         $this->actingAs($timSdm)->delete(route('administrasi.token-api.cabut'))->assertForbidden();

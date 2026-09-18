@@ -10,6 +10,7 @@ use App\Http\Controllers\DaftarRiilController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardEksekutifController;
 use App\Http\Controllers\DokumenController;
+use App\Http\Controllers\IntegrasiDataController;
 use App\Http\Controllers\JadwalPerjalananController;
 use App\Http\Controllers\KategoriPembiayaanController;
 use App\Http\Controllers\KategoriPerjadinController;
@@ -382,6 +383,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AdministrasiController::class, 'index'])->name('administrasi');
         Route::get('/impor-ekspor', [AdministrasiController::class, 'massal'])->name('administrasi.massal');
         Route::get('/pengaturan', [AdministrasiController::class, 'pengaturan'])->name('administrasi.pengaturan');
+
+        // Integrasi Data (super administrator): token API, pemantauan
+        // permintaan API, dan pengiriman data terjadwal ke aplikasi tujuan.
+        Route::get('/integrasi', [IntegrasiDataController::class, 'index'])->name('administrasi.integrasi');
+        Route::put('/integrasi/jadwal', [IntegrasiDataController::class, 'simpanJadwal'])->name('administrasi.integrasi.jadwal');
+        Route::post('/integrasi/kirim', [IntegrasiDataController::class, 'kirimSekarang'])->name('administrasi.integrasi.kirim');
 
         Route::get('/export', [AdministrasiController::class, 'export'])->name('administrasi.export');
         Route::post('/import', [AdministrasiController::class, 'import'])->name('administrasi.import');
