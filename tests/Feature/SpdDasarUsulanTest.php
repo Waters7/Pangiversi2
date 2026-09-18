@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Usulan perjadin menunjuk SPD yang mendasarinya, dan kolom yang sudah
- * ditulis saat membuat SPD tidak diketik ulang pada formulir usulan.
+ * Usulan perjadin boleh menunjuk SPD dari aplikasi supaya kolom yang sudah
+ * ditulis saat membuat SPD tidak diketik ulang pada formulir usulan —
+ * tetapi menunjuknya tidak wajib.
  */
 class SpdDasarUsulanTest extends TestCase
 {
@@ -128,13 +129,15 @@ class SpdDasarUsulanTest extends TestCase
         $this->assertTrue(Usulan::first()->spd->is($this->spd));
     }
 
-    public function test_usulan_tanpa_spd_ditolak(): void
+    /** SPD dari aplikasi hanya pengisi otomatis: tanpa memilihnya usulan tetap tersimpan. */
+    public function test_usulan_tanpa_spd_dari_aplikasi_tetap_tersimpan(): void
     {
         $this->actingAs($this->pengusul)
             ->post(route('usulan.store'), $this->dataUsulan(['id_spd' => null]))
-            ->assertSessionHasErrors('id_spd');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(0, Usulan::count());
+        $this->assertSame(1, Usulan::count());
+        $this->assertNull(Usulan::first()->id_spd);
     }
 
     /**

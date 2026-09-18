@@ -67,18 +67,18 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">Dasar Penugasan</h3>
-                            <p class="text-xs text-slate-400">Surat Perjalanan Dinas yang mendasari usulan ini</p>
+                            <p class="text-xs text-slate-400">Bila SPD dibuat lewat aplikasi, pilih untuk mengisi formulir otomatis — tidak wajib</p>
                         </div>
                     </div>
 
                     <div class="p-6 space-y-4">
                         <div>
                             <label for="id_spd" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Surat Perjalanan Dinas <span class="text-red-500">*</span>
+                                Surat Perjalanan Dinas dari aplikasi <span class="text-xs font-normal text-slate-400">(opsional)</span>
                             </label>
-                            <select name="id_spd" id="id_spd" x-model="idSpd" @change="salinDariSpd()" required
+                            <select name="id_spd" id="id_spd" x-model="idSpd" @change="salinDariSpd()"
                                     class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('id_spd') ? 'border-red-500' : 'border-slate-200' }}">
-                                <option value="">— Pilih SPD —</option>
+                                <option value="">— Tanpa SPD dari aplikasi, isi data perjalanan sendiri —</option>
                                 @foreach ($spdTerkait as $surat)
                                     <option value="{{ $surat['id'] }}">
                                         {{ $surat['nomor'] }} · {{ $surat['tempat_tujuan'] }}
@@ -87,7 +87,14 @@
                                 @endforeach
                             </select>
                             <p class="text-xs text-slate-400 mt-1.5">
-                                Memilih SPD akan mengisi sendiri tujuan, tanggal, dan uraian di bawah.
+                                @if (count($spdTerkait) > 0)
+                                    Memilih SPD akan mengisi sendiri tujuan, tanggal, dan uraian di bawah. Usulan tetap
+                                    dapat diajukan tanpa memilihnya — yang wajib adalah SPD bertanda tangan pada bagian
+                                    Data Dasar Perjalanan.
+                                @else
+                                    Belum ada SPD yang dibuat lewat aplikasi atas nama Anda. Tidak masalah — isi data
+                                    perjalanan di bawah dan unggah SPD bertanda tangan pada bagian Data Dasar Perjalanan.
+                                @endif
                             </p>
                             @error('id_spd')
                                 <p class="text-red-500 text-xs mt-1.5">{{ $message }}</p>

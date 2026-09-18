@@ -394,8 +394,8 @@
             </div>
             <div class="p-4 space-y-2">
 
-              {{-- SPD didahulukan: ia dasar penugasan, dan usulan perjadin
-                   baru terbuka setelah SPD terbit. --}}
+              {{-- SPD dari aplikasi membantu mengisi usulan, tetapi tidak
+                   lagi menjadi syarat: usulan boleh diajukan langsung. --}}
               <a href="{{ route('spd.create') }}" class="flex items-center gap-3 p-3 rounded-xl bg-teal-50 hover:bg-teal-100 transition group">
                 <div class="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
@@ -406,27 +406,15 @@
                 </div>
               </a>
 
-              @if ($bolehMengajukan)
-                <a href="{{ route('usulan.create') }}" class="flex items-center gap-3 p-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 transition group">
-                  <div class="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-xs font-semibold text-cyan-800 truncate">Buat Usulan Perjadin</p>
-                    <p class="text-xs text-cyan-600 truncate">Ajukan perjalanan dinas</p>
-                  </div>
-                </a>
-              @else
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">
-                  <div class="w-8 h-8 rounded-lg bg-slate-300 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-xs font-semibold text-slate-500 truncate">Buat Usulan Perjadin</p>
-                    <p class="text-xs text-slate-400 leading-snug">Terbuka setelah SPD dibuat</p>
-                  </div>
+              <a href="{{ route('usulan.create') }}" class="flex items-center gap-3 p-3 rounded-xl bg-cyan-50 hover:bg-cyan-100 transition group">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </div>
-              @endif
+                <div class="min-w-0">
+                  <p class="text-xs font-semibold text-cyan-800 truncate">Buat Usulan Perjadin</p>
+                  <p class="text-xs text-cyan-600 truncate">Ajukan perjalanan dinas</p>
+                </div>
+              </a>
 
               <a href="{{ route('usulan.list') }}" class="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition group">
                 <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">

@@ -133,10 +133,6 @@ class UsulanController extends Controller
 
     public function create(Request $request)
     {
-        if ($belumPunyaSpd = $this->cegahTanpaSpd($request)) {
-            return $belumPunyaSpd;
-        }
-
         $lokasiTujuan = LokasiTujuan::aktif()->orderBy('nama')->get();
 
         return view('usulan.add-usulan', compact('lokasiTujuan') + [
@@ -196,22 +192,6 @@ class UsulanController extends Controller
             ])
             ->values()
             ->all();
-    }
-
-    /**
-     * Usulan perjadin baru boleh diajukan setelah Surat Perjalanan Dinas
-     * terbit, karena SPD itulah dasar penugasannya.
-     */
-    private function cegahTanpaSpd(Request $request): ?RedirectResponse
-    {
-        if ($this->spdMilik($request->user())->exists()) {
-            return null;
-        }
-
-        return redirect()
-            ->route('spd.create')
-            ->with('error', 'Buat Surat Perjalanan Dinas lebih dulu. Usulan perjalanan dinas '
-                .'diajukan setelah SPD terbit, karena SPD menjadi dasar penugasannya.');
     }
 
     public function show(Usulan $usulan)
@@ -347,14 +327,10 @@ class UsulanController extends Controller
 
     public function store(Request $request)
     {
-        // Dijaga juga di sini, bukan hanya pada formulir: tanpa ini usulan
-        // masih bisa dikirim langsung ke alamat penyimpanan.
-        if ($belumPunyaSpd = $this->cegahTanpaSpd($request)) {
-            return $belumPunyaSpd;
-        }
-
         $request->validate([
-            'id_spd' => ['required', Rule::in($this->spdMilik($request->user())->pluck('id'))],
+            // SPD dari aplikasi tidak wajib: memilihnya hanya menyalin isian.
+            // Dasar penugasannya adalah SPD bertanda tangan yang diunggah.
+            'id_spd' => ['nullable', Rule::in($this->spdMilik($request->user())->pluck('id'))],
             // SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
             // resminya — dasar persetujuan PPK yang tercatat pada jejak audit.
             'no_spd' => ['required', 'string', 'max:255'],
@@ -371,7 +347,6 @@ class UsulanController extends Controller
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ], [
-            'id_spd.required' => 'Pilih Surat Perjalanan Dinas yang menjadi dasar usulan ini.',
             'id_spd.in' => 'Surat Perjalanan Dinas itu bukan milik Anda.',
             'no_spd.required' => 'Nomor Surat Perjalanan Dinas wajib diisi sebelum usulan dikirim.',
             'spd_ditandatangani.required' => 'Unggah Surat Perjalanan Dinas yang sudah ditandatangani sebelum usulan dikirim.',
@@ -448,7 +423,7 @@ class UsulanController extends Controller
             'uraian' => $request->uraian,
             'id_kegiatan' => $request->id_kegiatan,
             'id_kategori_perjadin' => $request->id_kategori_perjadin,
-            'id_spd' => $request->id_spd,
+            'id_spd' => $request->id_spd ?: null,
             'no_spd' => $request->no_spd,
             'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
             'id_user' => $pemilik->id,

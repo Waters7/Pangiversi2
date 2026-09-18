@@ -2,17 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Models\Kegiatan;
 use App\Models\KategoriPerjadin;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
+use App\Models\Usulan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Surat Perjalanan Dinas adalah dasar penugasan, jadi usulan perjalanan
- * dinas baru boleh diajukan setelah SPD-nya terbit.
+ * SPD yang dibuat lewat aplikasi hanya membantu mengisi usulan — bukan
+ * syarat. Usulan boleh diajukan tanpa SPD dari aplikasi; dasar
+ * penugasannya adalah SPD bertanda tangan yang diunggah bersama usulan.
  */
-class AlurSpdSebelumUsulanTest extends TestCase
+class UsulanTanpaSpdAplikasiTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -52,7 +57,7 @@ class AlurSpdSebelumUsulanTest extends TestCase
         return $spd;
     }
 
-    // ── Syarat SPD ──
+    // ── SPD dari aplikasi tidak wajib ──
 
     /**
      * Usulan yang diajukan menggerakkan SPD, biaya, dan pembayaran, jadi
@@ -71,45 +76,81 @@ class AlurSpdSebelumUsulanTest extends TestCase
             ->assertSee('Ya, Kirim');
     }
 
-    public function test_formulir_usulan_tertutup_sebelum_spd_dibuat(): void
+    public function test_formulir_usulan_terbuka_tanpa_spd_dari_aplikasi(): void
     {
         $this->actingAs($this->pengguna)
             ->get(route('usulan.create'))
-            ->assertRedirect(route('spd.create'))
-            ->assertSessionHas('error');
+            ->assertOk()
+            ->assertSee('Buat Usulan Perjalanan Dinas')
+            ->assertSee('Belum ada SPD yang dibuat lewat aplikasi atas nama Anda')
+            ->assertSee('Tanpa SPD dari aplikasi, isi data perjalanan sendiri');
     }
 
-    public function test_pesan_pengalihan_menjelaskan_alasannya(): void
-    {
-        $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
-            ->assertSessionHas('error', fn (string $pesan) => str_contains($pesan, 'Surat Perjalanan Dinas'));
-    }
-
-    public function test_formulir_usulan_terbuka_setelah_spd_ada(): void
+    public function test_formulir_menawarkan_spd_dari_aplikasi_sebagai_pengisi_otomatis(): void
     {
         $this->buatkanSpd();
 
         $this->actingAs($this->pengguna)
             ->get(route('usulan.create'))
             ->assertOk()
-            ->assertSee('Buat Usulan Perjalanan Dinas');
+            ->assertSee('KU.02.04/F.XXX.8/1/2026')
+            ->assertSee('(opsional)')
+            ->assertSee('Usulan tetap');
     }
 
     /**
-     * Penjagaan tidak boleh hanya di formulir: tanpa penjagaan pada
-     * penyimpanan, usulan masih bisa dikirim langsung ke alamatnya.
+     * Usulan tersimpan tanpa id_spd; yang wajib tetap SPD bertanda tangan
+     * beserta nomornya.
      */
-    public function test_penyimpanan_usulan_ikut_dijaga(): void
+    public function test_usulan_dapat_diajukan_tanpa_spd_dari_aplikasi(): void
     {
+        Storage::fake('public');
+        Kegiatan::factory()->create();
+
         $this->actingAs($this->pengguna)
-            ->post(route('usulan.store'), ['lokasi' => 'Jakarta'])
-            ->assertRedirect(route('spd.create'));
+            ->post(route('usulan.store'), $this->isianUsulan())
+            ->assertRedirect(route('usulan.list'))
+            ->assertSessionHas('success');
+
+        $usulan = Usulan::sole();
+        $this->assertNull($usulan->id_spd);
+        $this->assertSame('AR.05.02/F.XXX/99/2026', $usulan->no_spd);
+        $this->assertTrue($usulan->punyaSpdBertandaTangan());
+    }
+
+    public function test_spd_bertanda_tangan_dan_nomornya_tetap_wajib(): void
+    {
+        Storage::fake('public');
+        Kegiatan::factory()->create();
+
+        $this->actingAs($this->pengguna)
+            ->from(route('usulan.create'))
+            ->post(route('usulan.store'), array_diff_key($this->isianUsulan(), array_flip(['no_spd', 'spd_ditandatangani'])))
+            ->assertRedirect(route('usulan.create'))
+            ->assertSessionHasErrors(['no_spd', 'spd_ditandatangani']);
 
         $this->assertDatabaseCount('usulan', 0);
     }
 
-    public function test_spd_yang_mencantumkan_pengguna_sebagai_pelaksana_ikut_dihitung(): void
+    /** @return array<string, mixed> */
+    private function isianUsulan(): array
+    {
+        return [
+            'no_spd' => 'AR.05.02/F.XXX/99/2026',
+            'spd_ditandatangani' => UploadedFile::fake()->create('spd.pdf', 120, 'application/pdf'),
+            'id_kegiatan' => Kegiatan::first()->id,
+            'id_kategori_perjadin' => KategoriPerjadin::first()->id,
+            'no_tugas' => 'KP.01.02/F.XXX/99/2026',
+            'lokasi' => 'Jakarta',
+            'instansi' => 'Kementerian Kesehatan',
+            'tanggal_mulai' => today()->addDays(7)->toDateString(),
+            'tanggal_selesai' => today()->addDays(9)->toDateString(),
+            'uraian' => 'Rapat koordinasi.',
+            'surat_tugas' => UploadedFile::fake()->create('surat-tugas.pdf', 120, 'application/pdf'),
+        ];
+    }
+
+    public function test_spd_yang_mencantumkan_pengguna_sebagai_pelaksana_ikut_ditawarkan(): void
     {
         $penyusun = User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]);
 
@@ -122,16 +163,24 @@ class AlurSpdSebelumUsulanTest extends TestCase
             'nip' => $this->pengguna->nip,
         ]);
 
-        $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk();
+        $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk()->assertSee('KU.02.04/F.XXX.8/1/2026');
     }
 
-    public function test_spd_milik_orang_lain_tidak_membuka_formulir(): void
+    public function test_spd_milik_orang_lain_tidak_dapat_dipilih(): void
     {
-        $this->buatkanSpd(User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]));
+        Storage::fake('public');
+        Kegiatan::factory()->create();
+        $spdOrangLain = $this->buatkanSpd(User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]));
 
         $this->actingAs($this->pengguna)
             ->get(route('usulan.create'))
-            ->assertRedirect(route('spd.create'));
+            ->assertOk()
+            ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
+
+        $this->actingAs($this->pengguna)
+            ->from(route('usulan.create'))
+            ->post(route('usulan.store'), $this->isianUsulan() + ['id_spd' => $spdOrangLain->id])
+            ->assertSessionHasErrors('id_spd');
     }
 
     // ── Dashboard ──
@@ -157,22 +206,13 @@ class AlurSpdSebelumUsulanTest extends TestCase
             ->assertSee('Buat SPD Pertama');
     }
 
-    public function test_aksi_cepat_mengunci_usulan_sebelum_spd_ada(): void
+    public function test_aksi_cepat_usulan_selalu_terbuka(): void
     {
-        $this->actingAs($this->pengguna)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertSee('Terbuka setelah SPD dibuat');
-    }
-
-    public function test_aksi_cepat_membuka_usulan_setelah_spd_ada(): void
-    {
-        $this->buatkanSpd();
-
         $this->actingAs($this->pengguna)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Buat Usulan Perjadin')
+            ->assertSee(route('usulan.create'), false)
             ->assertDontSee('Terbuka setelah SPD dibuat');
     }
 

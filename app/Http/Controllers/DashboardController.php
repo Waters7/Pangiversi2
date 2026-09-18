@@ -123,8 +123,6 @@ class DashboardController extends Controller
             // sendiri. Kosong bagi pelaksana biasa, dan panelnya menghilang.
             'antrean' => $this->antrean->panel($user),
             'pembayaran' => $this->ringkasanPembayaran($perjalanan),
-            // Usulan perjadin baru boleh diajukan setelah SPD terbit.
-            'bolehMengajukan' => $totalSpd > 0,
         ]);
     }
 

@@ -85,7 +85,7 @@
             @php
                 $tahap = [
                     ['1', 'SPD terbit', 'Penugasan disahkan lewat Surat Perjalanan Dinas', 'bg-slate-200 text-slate-700'],
-                    ['2', 'Usulan diajukan', 'Pelaksana mengisi usulan yang mengacu pada SPD', 'bg-blue-100 text-blue-700'],
+                    ['2', 'Usulan diajukan', 'Pelaksana mengisi usulan dan mengunggah SPD bertanda tangan', 'bg-blue-100 text-blue-700'],
                     ['3', 'Berangkat', 'Uang muka cair, perjalanan dilaksanakan', 'bg-teal-100 text-teal-700'],
                     ['4', 'Dipertanggungjawabkan', 'Berkas diunggah, rincian disusun dan divalidasi', 'bg-amber-100 text-amber-700'],
                     ['5', 'Ditandatangani & lunas', 'Pelaksana dan PPK menandatangani, bendahara melunasi', 'bg-purple-100 text-purple-700'],
@@ -121,15 +121,16 @@
     <div x-show="bagian === 'spd'" x-transition class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-100">
             <h2 class="font-bold text-slate-800 text-sm">Menerbitkan Surat Perjalanan Dinas</h2>
-            <p class="text-xs text-slate-400">Langkah pertama — tanpa SPD, usulan belum dapat diajukan</p>
+            <p class="text-xs text-slate-400">Menerbitkan SPD lewat aplikasi — tidak wajib, tetapi memudahkan pengisian usulan</p>
         </div>
 
         <div class="p-6">
             <div class="mb-6 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl">
                 <p class="text-xs text-indigo-900 leading-relaxed">
-                    <strong>Mengapa SPD lebih dulu:</strong> SPD adalah dasar penugasannya. Selama
-                    Anda belum tercantum pada satu SPD pun, tombol Buat Usulan akan menolak dan
-                    mengarahkan Anda ke sini.
+                    <strong>Tidak wajib lewat aplikasi:</strong> SPD yang dibuat di sini menyalin
+                    isiannya ke formulir usulan dan memberi tahu pelaksana yang tercantum. Bila SPD
+                    diterbitkan di luar aplikasi, Anda tetap dapat langsung mengajukan usulan —
+                    cukup unggah SPD bertanda tangannya beserta nomornya.
                 </p>
             </div>
 
@@ -188,9 +189,10 @@
                 <strong>Buat Usulan Perjadin</strong>.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="2" judul="Pilih SPD yang mendasari">
-                Daftar SPD Anda muncul di bagian atas formulir. Begitu satu dipilih, tujuan,
-                tanggal, dan maksud perjalanan terisi sendiri dari SPD tersebut.
+            <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
+                Bila SPD-nya dibuat lewat aplikasi, daftarnya muncul di bagian atas formulir;
+                begitu satu dipilih, tujuan, tanggal, dan maksud perjalanan terisi sendiri. Bila
+                tidak ada, lewati dan isi data perjalanan secara manual.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Unggah SPD bertanda tangan dan salin nomornya">
