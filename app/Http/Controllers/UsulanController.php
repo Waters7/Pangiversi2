@@ -13,6 +13,7 @@ use App\Models\SuratPerjalananDinas;
 use App\Models\TahunAnggaran;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Rules\NomorSpdUnik;
 use App\Services\AuditService;
 use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
@@ -250,7 +251,7 @@ class UsulanController extends Controller
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
             'no_tugas' => ['required', 'string', 'max:255'],
-            'no_spd' => ['required', 'string', 'max:255'],
+            'no_spd' => ['required', 'string', 'max:255', new NomorSpdUnik($usulan)],
             'spd_ditandatangani' => [$sudahAdaSpd ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
@@ -270,7 +271,7 @@ class UsulanController extends Controller
 
         $usulan->update([
             'no_tugas' => $request->no_tugas,
-            'no_spd' => $request->no_spd,
+            'no_spd' => trim($request->no_spd),
             'status' => StatusUsulan::Draft->value,
             'lokasi' => $request->lokasi,
             'id_lokasi' => $this->resolveLokasi($request->lokasi),
@@ -333,7 +334,8 @@ class UsulanController extends Controller
             'id_spd' => ['nullable', Rule::in($this->spdMilik($request->user())->pluck('id'))],
             // SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
             // resminya — dasar persetujuan PPK yang tercatat pada jejak audit.
-            'no_spd' => ['required', 'string', 'max:255'],
+            // Nomornya unik: nomor yang sudah dipakai usulan lain ditolak.
+            'no_spd' => ['required', 'string', 'max:255', new NomorSpdUnik],
             'spd_ditandatangani' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
@@ -424,7 +426,7 @@ class UsulanController extends Controller
             'id_kegiatan' => $request->id_kegiatan,
             'id_kategori_perjadin' => $request->id_kategori_perjadin,
             'id_spd' => $request->id_spd ?: null,
-            'no_spd' => $request->no_spd,
+            'no_spd' => trim($request->no_spd),
             'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
             'id_user' => $pemilik->id,
             'id_pembuat' => $pengusul->id,

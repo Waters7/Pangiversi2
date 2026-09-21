@@ -253,6 +253,7 @@
                                        placeholder="cth: KU.02.04/F.XXX.8/1234/2026">
                                 <p class="text-xs text-slate-400 mt-1.5">
                                     Nomor naskah yang diterbitkan SRIKANDI saat SPD diregistrasi — salin persis seperti pada dokumen.
+                                    Satu nomor hanya untuk satu usulan; nomor yang sudah dipakai usulan lain ditolak.
                                 </p>
                                 @error('no_spd')
                                     <p class="text-red-500 text-xs mt-1.5">{{ $message }}</p>

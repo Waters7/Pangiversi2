@@ -198,7 +198,8 @@
             <x-panduan-langkah nomor="3" judul="Unggah SPD bertanda tangan dan salin nomornya">
                 Pada <strong>Data Dasar Perjalanan</strong>, unggah SPD yang sudah ditandatangani
                 PPK dan Direktur lewat SRIKANDI, lalu salin <strong>nomor naskahnya</strong> persis
-                seperti pada dokumen. Keduanya wajib — pengajuan tidak dapat dikirim tanpanya,
+                seperti pada dokumen. Satu nomor hanya untuk satu usulan — nomor yang sudah dipakai
+                usulan lain ditolak. Keduanya wajib — pengajuan tidak dapat dikirim tanpanya,
                 dan nomor itulah yang tercatat sebagai dasar persetujuan PPK pada jejak audit.
                 Pengajuan selalu atas nama Anda sendiri; rekan seperjalanan mengajukan
                 usulannya masing-masing dengan SPD bertanda tangannya sendiri.
