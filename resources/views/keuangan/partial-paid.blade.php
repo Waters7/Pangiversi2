@@ -37,7 +37,7 @@
                 <div>
                     <p class="text-xs text-slate-500 mb-0.5">Bukti Transfer</p>
                     @if($usulan->keuangan->dokumenKeuangan?->transfer_uang_muka)
-                        <a href="{{ asset('storage/' . $usulan->keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
+                        <a href="{{ route('berkas.lihat', $usulan->keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
                            class="text-sm text-teal-600 font-semibold hover:underline flex items-center gap-1">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13A9 9 0 1112 3"/></svg>
                             Lihat File

@@ -25,7 +25,7 @@
             <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
             </svg>
-            <a href="{{ Storage::url($berkas) }}" target="_blank"
+            <a href="{{ route('berkas.lihat', $berkas) }}" target="_blank"
                class="text-xs font-semibold text-emerald-800 hover:underline truncate">
                 Berkas tersimpan — lihat
             </a>

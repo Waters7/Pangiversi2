@@ -379,7 +379,7 @@
                                         <span class="font-normal text-slate-400">— wajib bila nominalnya diisi</span>
                                     </label>
                                     @if ($baris?->bukti)
-                                        <a href="{{ Storage::url($baris->bukti) }}" target="_blank"
+                                        <a href="{{ route('berkas.lihat', $baris->bukti) }}" target="_blank"
                                            class="inline-block mb-2 text-xs font-semibold text-teal-600 hover:underline">Lihat berkas tersimpan →</a>
                                     @endif
                                     <input type="file" name="ruas[{{ $ruas->value }}][bukti]" accept=".pdf,.jpg,.jpeg,.png" @disabled($terkunci)

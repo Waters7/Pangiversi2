@@ -188,7 +188,7 @@
                                 <td class="px-4 py-3.5 text-right font-semibold text-slate-800">Rp {{ number_format($keuangan?->uang_muka ?? 0, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3.5 text-center">
                                     @if($dokKeuangan?->transfer_uang_muka)
-                                        <a href="{{ asset('storage/' . $dokKeuangan->transfer_uang_muka) }}" target="_blank"
+                                        <a href="{{ route('berkas.lihat', $dokKeuangan->transfer_uang_muka) }}" target="_blank"
                                            class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
                                     @else
                                         <span class="text-xs text-slate-400">—</span>
@@ -209,7 +209,7 @@
                                 <td class="px-4 py-3.5 text-right font-semibold text-slate-800">Rp {{ number_format($keuangan?->sisa ?? 0, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3.5 text-center">
                                     @if($dokKeuangan?->transfer_sisa)
-                                        <a href="{{ asset('storage/' . $dokKeuangan->transfer_sisa) }}" target="_blank"
+                                        <a href="{{ route('berkas.lihat', $dokKeuangan->transfer_sisa) }}" target="_blank"
                                            class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
                                     @else
                                         <span class="text-xs text-slate-400">—</span>
@@ -369,7 +369,7 @@
                                         <span class="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
                                             <svg class="w-2.5 h-2.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                                         </span>
-                                        <a href="{{ asset('storage/' . $value) }}" target="_blank" class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
+                                        <a href="{{ route('berkas.lihat', $value) }}" target="_blank" class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
                                     </div>
                                 @else
                                     <span class="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center">

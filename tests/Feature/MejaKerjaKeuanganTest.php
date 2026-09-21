@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -137,7 +136,7 @@ class MejaKerjaKeuanganTest extends TestCase
 
         $this->buka()
             ->assertSee('Lihat')
-            ->assertSee(Storage::url($dokumen->surat_tugas));
+            ->assertSee(route('berkas.lihat', $dokumen->surat_tugas));
     }
 
     /**

@@ -434,7 +434,7 @@
                                 </div>
                             </div>
                             @if($path)
-                                <a href="{{ asset('storage/' . $path) }}" target="_blank"
+                                <a href="{{ route('berkas.lihat', $path) }}" target="_blank"
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold rounded-lg transition border border-teal-100">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -551,7 +551,7 @@
                         @if($keuangan->dokumenKeuangan?->transfer_uang_muka)
                         <div>
                             <p class="text-xs text-slate-400 mb-0.5">Bukti Uang Muka</p>
-                            <a href="{{ asset('storage/' . $keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
+                            <a href="{{ route('berkas.lihat', $keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
                                class="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 Lihat File
@@ -561,7 +561,7 @@
                         @if($keuangan->dokumenKeuangan?->transfer_sisa)
                         <div>
                             <p class="text-xs text-slate-400 mb-0.5">Bukti Pelunasan</p>
-                            <a href="{{ asset('storage/' . $keuangan->dokumenKeuangan->transfer_sisa) }}" target="_blank"
+                            <a href="{{ route('berkas.lihat', $keuangan->dokumenKeuangan->transfer_sisa) }}" target="_blank"
                                class="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 Lihat File

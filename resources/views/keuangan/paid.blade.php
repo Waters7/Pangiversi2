@@ -43,11 +43,11 @@
                     <p class="text-xs text-slate-500 mb-0.5">Bukti Transfer</p>
                     <div class="flex items-center gap-3">
                         @if($usulan->keuangan->dokumenKeuangan?->transfer_uang_muka)
-                            <a href="{{ asset('storage/' . $usulan->keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
+                            <a href="{{ route('berkas.lihat', $usulan->keuangan->dokumenKeuangan->transfer_uang_muka) }}" target="_blank"
                                class="text-xs text-emerald-600 font-semibold hover:underline">UM</a>
                         @endif
                         @if($usulan->keuangan->dokumenKeuangan?->transfer_sisa)
-                            <a href="{{ asset('storage/' . $usulan->keuangan->dokumenKeuangan->transfer_sisa) }}" target="_blank"
+                            <a href="{{ route('berkas.lihat', $usulan->keuangan->dokumenKeuangan->transfer_sisa) }}" target="_blank"
                                class="text-xs text-emerald-600 font-semibold hover:underline">Sisa</a>
                         @endif
                     </div>

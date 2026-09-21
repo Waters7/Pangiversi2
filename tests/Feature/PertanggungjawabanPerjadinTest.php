@@ -565,7 +565,7 @@ class PertanggungjawabanPerjadinTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
             ->get(route('keuangan.detail', $this->usulan))
             ->assertOk()
-            ->assertSee(Storage::url($tiket->boarding_pass))
-            ->assertSee(Storage::url($tiket->invoice));
+            ->assertSee(route('berkas.lihat', $tiket->boarding_pass))
+            ->assertSee(route('berkas.lihat', $tiket->invoice));
     }
 }

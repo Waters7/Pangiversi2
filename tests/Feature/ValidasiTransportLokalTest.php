@@ -12,7 +12,6 @@ use App\Models\Usulan;
 use App\Services\PenagihDokumen;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -181,7 +180,7 @@ class ValidasiTransportLokalTest extends TestCase
             ->get(route('keuangan.transport-lokal'))
             ->assertOk()
             ->assertSee('Nota')
-            ->assertSee(Storage::url('dokumen/nota-ruas-1.pdf'))
+            ->assertSee(route('berkas.lihat', 'dokumen/nota-ruas-1.pdf'))
             ->assertSee('target="_blank" rel="noopener"', false);
     }
 

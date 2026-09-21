@@ -6,6 +6,7 @@ use App\Http\Controllers\AsistenAiController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BantuanController;
+use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\DaftarRiilController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardEksekutifController;
@@ -53,6 +54,10 @@ Route::get('/verifikasi/{kode}', VerifikasiController::class)
 
 // ── Authenticated Routes ──
 Route::middleware('auth')->group(function () {
+    // Berkas unggahan disajikan lewat aplikasi, bukan tautan simbolik
+    // public/storage yang kerap tidak diikuti peladen hosting bersama.
+    Route::get('/berkas/{path}', [BerkasController::class, 'lihat'])->name('berkas.lihat')->where('path', '.*');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/', DashboardController::class)->name('dashboard');

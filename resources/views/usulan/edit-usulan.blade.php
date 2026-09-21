@@ -105,7 +105,7 @@
                                             <span class="font-semibold text-slate-700">File saat ini:</span>
                                             <span class="text-slate-500 truncate max-w-40">{{ basename($dokumen->spd_ditandatangani) }}</span>
                                         </div>
-                                        <a href="{{ asset('storage/' . $dokumen->spd_ditandatangani) }}" target="_blank"
+                                        <a href="{{ route('berkas.lihat', $dokumen->spd_ditandatangani) }}" target="_blank"
                                            class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline shrink-0">Lihat</a>
                                     </div>
                                 @endif
@@ -258,7 +258,7 @@
                                         <span class="font-semibold text-slate-700">File saat ini:</span>
                                         <span class="text-slate-500 truncate max-w-40">{{ basename($dokumen->surat_tugas) }}</span>
                                     </div>
-                                    <a href="{{ asset('storage/' . $dokumen->surat_tugas) }}" target="_blank"
+                                    <a href="{{ route('berkas.lihat', $dokumen->surat_tugas) }}" target="_blank"
                                        class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
                                 </div>
                             @endif
@@ -287,7 +287,7 @@
                                         <span class="font-semibold text-slate-700">File saat ini:</span>
                                         <span class="text-slate-500 truncate max-w-40">{{ basename($dokumen->rundown) }}</span>
                                     </div>
-                                    <a href="{{ asset('storage/' . $dokumen->rundown) }}" target="_blank"
+                                    <a href="{{ route('berkas.lihat', $dokumen->rundown) }}" target="_blank"
                                        class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
                                 </div>
                             @endif
@@ -316,7 +316,7 @@
                                         <span class="font-semibold text-slate-700">File saat ini:</span>
                                         <span class="text-slate-500 truncate max-w-40">{{ basename($dokumen->dokumen_pendukung) }}</span>
                                     </div>
-                                    <a href="{{ asset('storage/' . $dokumen->dokumen_pendukung) }}" target="_blank"
+                                    <a href="{{ route('berkas.lihat', $dokumen->dokumen_pendukung) }}" target="_blank"
                                        class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline shrink-0">Lihat</a>
                                 </div>
                             @endif

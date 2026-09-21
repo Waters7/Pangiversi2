@@ -136,7 +136,7 @@
 
                                 <td class="px-5 py-3.5">
                                     @if ($item->bukti_bayar)
-                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($item->bukti_bayar) }}"
+                                        <a href="{{ route('berkas.lihat', $item->bukti_bayar) }}"
                                            target="_blank" rel="noopener"
                                            class="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-700">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

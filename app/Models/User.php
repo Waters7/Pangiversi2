@@ -351,10 +351,10 @@ class User extends Authenticatable
             return null;
         }
 
-        // asset() mengikuti host yang sedang dipakai, sedangkan Storage::url()
-        // terkunci pada APP_URL — foto akan gagal dimuat bila aplikasi dibuka
-        // lewat localhost padahal APP_URL berisi alamat IP jaringan lokal.
-        return asset('storage/'.$this->foto);
+        // Disajikan lewat aplikasi (bukan tautan simbolik public/storage) dan
+        // dengan host yang sedang dipakai, supaya tetap termuat baik lewat
+        // localhost maupun alamat LAN, di hosting bersama sekalipun.
+        return route('berkas.lihat', $this->foto);
     }
 
     public function punyaFoto(): bool

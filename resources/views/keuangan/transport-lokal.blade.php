@@ -107,7 +107,7 @@
                                         </p>
 
                                         @if ($bukti)
-                                            <a href="{{ Storage::url($bukti) }}" target="_blank" rel="noopener"
+                                            <a href="{{ route('berkas.lihat', $bukti) }}" target="_blank" rel="noopener"
                                                class="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-teal-300 text-slate-500 hover:text-teal-700 text-[10px] font-bold rounded transition"
                                                title="Buka nota {{ $baris->uraian }} di tab baru">
                                                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

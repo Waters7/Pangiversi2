@@ -435,7 +435,7 @@
                             <td class="px-4 py-3.5 text-right font-semibold text-slate-700">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</td>
                             <td class="px-4 py-3.5 text-center">
                                 @if($dokKeuangan && $dokKeuangan->transfer_uang_muka)
-                                    <a href="{{ asset('storage/' . $dokKeuangan->transfer_uang_muka) }}" target="_blank"
+                                    <a href="{{ route('berkas.lihat', $dokKeuangan->transfer_uang_muka) }}" target="_blank"
                                        class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
                                 @else
                                     <span class="text-xs text-slate-400">—</span>
@@ -462,7 +462,7 @@
                             <td class="px-4 py-3.5 text-right font-semibold text-slate-700">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</td>
                             <td class="px-4 py-3.5 text-center">
                                 @if($dokKeuangan && $dokKeuangan->transfer_sisa)
-                                    <a href="{{ asset('storage/' . $dokKeuangan->transfer_sisa) }}" target="_blank"
+                                    <a href="{{ route('berkas.lihat', $dokKeuangan->transfer_sisa) }}" target="_blank"
                                        class="text-xs text-teal-600 font-semibold hover:underline">Lihat</a>
                                 @else
                                     <span class="text-xs text-slate-400">—</span>
@@ -543,7 +543,7 @@
                             {{-- Satu baris bisa membawa beberapa berkas: tiket punya boarding
                                  pass dan invoice, nota punya bukti per ruas. --}}
                             @foreach ($check['berkas'] as $berkas)
-                                <a href="{{ Storage::url($berkas['path']) }}" target="_blank" rel="noopener"
+                                <a href="{{ route('berkas.lihat', $berkas['path']) }}" target="_blank" rel="noopener"
                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 hover:border-teal-300 text-slate-600 hover:text-teal-700 text-[11px] font-bold rounded-lg transition"
                                    title="Buka {{ $berkas['label'] }} di tab baru">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
