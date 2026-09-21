@@ -28,7 +28,7 @@ class ProfilPenggunaTest extends TestCase
 
     public function test_setiap_peran_dapat_membuka_panel_profilnya(): void
     {
-        foreach (PeranPengguna::cases() as $peran) {
+        foreach (PeranPengguna::bermodul() as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran->value]))
                 ->get(route('profil.index'))
                 ->assertOk();

@@ -126,6 +126,16 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.3',
+                'tanggal' => '21 September 2026',
+                'butir' => [
+                    'Formulir SPD: surat tugas dilampirkan sejak SPD dibuat — nomor dan berkasnya diisi pada kartu Surat Tugas (tidak wajib). Usulan perjadin yang memilih SPD itu mengambil keduanya secara otomatis; berkas surat tugas tidak diunggah lagi dan nomornya tidak disalin ulang.',
+                    'Formulir SPD: kolom Akun pembebanan dihapus — akun diisi PPK saat verifikasi dan tanda tangan, bukan oleh pembuat SPD.',
+                    'Berkas pertanggungjawaban: unggahan dan ceklist "Kuitansi" kini disebut "Kuitansi penyelenggara / hotel" agar jelas kuitansi mana yang dimaksud — dari penyelenggara kegiatan atau dari hotel tempat menginap.',
+                    'Pegawai eksternal dan mahasiswa/outsourcing: modul perjalanan dinasnya dikembangkan terpisah. Sementara itu, setelah masuk mereka melihat halaman pemberitahuan "fitur masih dikembangkan" dengan tombol keluar; menu lain belum dapat dibuka.',
+                ],
+            ],
+            [
                 'versi' => '2.5.2',
                 'tanggal' => '15 September 2026',
                 'butir' => [

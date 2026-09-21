@@ -34,13 +34,16 @@ class PanduanPeranTest extends TestCase
     // ── Bagian yang berlaku bagi semua ──
 
     /**
+     * Peran yang sudah dapat membuka aplikasi; yang modulnya masih
+     * dikembangkan ditahan pada halaman pemberitahuan, belum sampai ke panduan.
+     *
      * @return list<array{0: PeranPengguna, 1: string}>
      */
     public static function peran(): array
     {
         return array_map(
             fn (PeranPengguna $peran) => [$peran, $peran->value],
-            PeranPengguna::cases(),
+            PeranPengguna::bermodul(),
         );
     }
 
@@ -182,7 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
-            ->assertSee('Versi 2.5.2')
+            ->assertSee('Versi 2.5.3')
+            ->assertSee('surat tugas dilampirkan sejak SPD dibuat')
             ->assertSee('aman diimpor ulang')
             ->assertSee('Biaya penyelenggaraan')
             ->assertSee('PANGI '.app(VersiAplikasi::class)->label());
@@ -248,7 +252,7 @@ class PanduanPeranTest extends TestCase
 
     public function test_saluran_bantuan_terbuka_bagi_seluruh_peran(): void
     {
-        $this->bukaSebagai(PeranPengguna::Outsourcing)->assertSee('Melapor Kendala');
+        $this->bukaSebagai(PeranPengguna::DosenTendik)->assertSee('Melapor Kendala');
         $this->bukaSebagai(PeranPengguna::Pimpinan)->assertSee('Melapor Kendala');
     }
 }

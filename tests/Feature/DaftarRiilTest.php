@@ -73,11 +73,9 @@ class DaftarRiilTest extends TestCase
 
     public function test_pengusul_biasa_tidak_dapat_membuka_detail_daftar_riil(): void
     {
-        foreach ([PeranPengguna::DosenTendik, PeranPengguna::Outsourcing] as $peran) {
-            $this->actingAs($this->pengguna($peran))
-                ->get(route('daftar-riil.show', $this->usulan))
-                ->assertForbidden();
-        }
+        $this->actingAs($this->pengguna(PeranPengguna::DosenTendik))
+            ->get(route('daftar-riil.show', $this->usulan))
+            ->assertForbidden();
     }
 
     public function test_halaman_kelola_menampilkan_satu_baris_per_peserta(): void

@@ -26,7 +26,7 @@
     @endif
 
     <form method="POST" action="{{ $ubah ? route('spd.update', $spd) : route('spd.store') }}" id="formSpd"
-          x-data="formulirSpd()" class="space-y-5">
+          enctype="multipart/form-data" x-data="formulirSpd()" class="space-y-5">
         @csrf
         @if ($ubah) @method('PUT') @endif
 
@@ -313,24 +313,53 @@
         </div>
         @endcan
 
+        {{-- ── Surat tugas ── --}}
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <h3 class="font-bold text-slate-800 text-sm">Surat Tugas</h3>
+                <p class="text-xs text-slate-400 mt-0.5">
+                    Dilampirkan sekali di sini; usulan perjadin yang mengacu pada SPD ini tidak perlu mengunggah dan menyalin nomornya lagi.
+                </p>
+            </div>
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">Nomor Surat Tugas</label>
+                    <input type="text" name="no_tugas" id="no_tugas" value="{{ old('no_tugas', $ubah ? $spd->no_tugas : '') }}"
+                           placeholder="cth: KP.01.02/F.XXX/1557/2026"
+                           class="w-full px-4 py-2.5 rounded-xl text-sm border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }} focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    <p class="text-xs text-slate-400 mt-1">Salin persis seperti tertulis pada surat, termasuk garis miring dan tahunnya.</p>
+                    @error('no_tugas') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">Berkas Surat Tugas</label>
+                    <input type="file" name="surat_tugas" id="surat_tugas" accept=".pdf,.jpg,.jpeg,.png"
+                           data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
+                           class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}
+                                  file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200">
+                    <p class="text-xs text-slate-400 mt-1">
+                        PDF, JPG, atau PNG — maks. 5 MB.
+                        @if ($ubah && $spd->punyaSuratTugas())
+                            Sudah ada: <a href="{{ route('berkas.lihat', $spd->surat_tugas) }}" target="_blank" class="text-teal-600 font-semibold hover:underline">lihat berkas</a> — biarkan kosong untuk mempertahankannya.
+                        @endif
+                    </p>
+                    <p class="file-error hidden text-red-500 text-xs mt-1"></p>
+                    @error('surat_tugas') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </div>
+
         {{-- ── Pembebanan ── --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
                 <h3 class="font-bold text-slate-800 text-sm">Pembebanan Anggaran &amp; Keterangan</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Akun pembebanan diisi PPK saat verifikasi dan tanda tangan.</p>
             </div>
             <div class="p-6 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="instansi_pembebanan" class="block text-sm font-semibold text-slate-700 mb-1.5">Instansi</label>
-                        <input type="text" name="instansi_pembebanan" id="instansi_pembebanan"
-                               value="{{ old('instansi_pembebanan', $ubah ? $spd->instansi_pembebanan : 'Politeknik Kesehatan Kemenkes Manado') }}"
-                               class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                    </div>
-                    <div>
-                        <label for="akun_pembebanan" class="block text-sm font-semibold text-slate-700 mb-1.5">Akun</label>
-                        <input type="text" name="akun_pembebanan" id="akun_pembebanan" value="{{ old('akun_pembebanan', $ubah ? $spd->akun_pembebanan : '') }}"
-                               class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                    </div>
+                <div>
+                    <label for="instansi_pembebanan" class="block text-sm font-semibold text-slate-700 mb-1.5">Instansi</label>
+                    <input type="text" name="instansi_pembebanan" id="instansi_pembebanan"
+                           value="{{ old('instansi_pembebanan', $ubah ? $spd->instansi_pembebanan : 'Politeknik Kesehatan Kemenkes Manado') }}"
+                           class="w-full px-4 py-2.5 rounded-xl text-sm border border-slate-200 focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
                 <div>
                     <label for="keterangan_lain" class="block text-sm font-semibold text-slate-700 mb-1.5">Keterangan Lain</label>

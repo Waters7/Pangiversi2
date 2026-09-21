@@ -101,7 +101,7 @@ class PanelAkunTopbarTest extends TestCase
 
     public function test_semua_peran_melihat_panel_akunnya(): void
     {
-        foreach (PeranPengguna::cases() as $peran) {
+        foreach (PeranPengguna::bermodul() as $peran) {
             $pengguna = User::factory()->create(['role' => $peran->value]);
 
             $this->actingAs($pengguna)

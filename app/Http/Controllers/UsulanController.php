@@ -25,6 +25,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UsulanController extends Controller
@@ -175,6 +177,9 @@ class UsulanController extends Controller
                 // Nomor milik pengguna ini sendiri — orang kedua pada SPD
                 // yang sama punya nomornya sendiri, bukan nomor orang pertama.
                 'nomor' => $spd->nomorUntuk($pengguna) ?? 'Tanpa nomor',
+                // Surat tugas yang sudah dilampirkan pada SPD tidak diminta lagi.
+                'no_tugas' => $spd->no_tugas,
+                'surat_tugas' => $spd->punyaSuratTugas() ? route('berkas.lihat', $spd->surat_tugas) : null,
                 'tempat_berangkat' => $spd->tempat_berangkat,
                 'tempat_tujuan' => $spd->tempat_tujuan,
                 'tanggal_berangkat' => $spd->tanggal_berangkat?->toDateString(),
@@ -328,6 +333,13 @@ class UsulanController extends Controller
 
     public function store(Request $request)
     {
+        // SPD dari aplikasi yang dipilih — bila sudah melampirkan surat
+        // tugas, berkas dan nomornya diambil dari sana, tidak diminta lagi.
+        $spdTerpilih = $request->filled('id_spd')
+            ? $this->spdMilik($request->user())->find($request->integer('id_spd'))
+            : null;
+        $suratTugasDariSpd = $spdTerpilih?->punyaSuratTugas() ?? false;
+
         $request->validate([
             // SPD dari aplikasi tidak wajib: memilihnya hanya menyalin isian.
             // Dasar penugasannya adalah SPD bertanda tangan yang diunggah.
@@ -339,17 +351,18 @@ class UsulanController extends Controller
             'spd_ditandatangani' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
             'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
-            'no_tugas' => ['required', 'string', 'max:255'],
+            'no_tugas' => [filled($spdTerpilih?->no_tugas) ? 'nullable' : 'required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'uraian' => ['nullable', 'string'],
-            'surat_tugas' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'surat_tugas' => [$suratTugasDariSpd ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ], [
             'id_spd.in' => 'Surat Perjalanan Dinas itu bukan milik Anda.',
+            'surat_tugas.required' => 'Unggah surat tugas, atau pilih SPD yang sudah melampirkannya.',
             'no_spd.required' => 'Nomor Surat Perjalanan Dinas wajib diisi sebelum usulan dikirim.',
             'spd_ditandatangani.required' => 'Unggah Surat Perjalanan Dinas yang sudah ditandatangani sebelum usulan dikirim.',
             'id_kegiatan.required' => 'Pilih jenis kegiatan perjalanan dinas ini.',
@@ -361,7 +374,12 @@ class UsulanController extends Controller
         // Pengajuan selalu perorangan: tiap pelaksana mengunggah SPD bertanda
         // tangannya sendiri, jadi tidak ada lagi usulan yang dibuatkan untuk
         // orang lain dan menunggu konfirmasi pemiliknya.
-        $berkas = $this->simpanBerkasPengajuan($request);
+        $berkas = $this->simpanBerkasPengajuan($request, $spdTerpilih);
+
+        // Nomor surat tugas mengikuti SPD bila kolomnya dibiarkan kosong.
+        if ($spdTerpilih?->no_tugas && ! $request->filled('no_tugas')) {
+            $request->merge(['no_tugas' => $spdTerpilih->no_tugas]);
+        }
 
         $usulan = DB::transaction(
             fn () => $this->buatUsulanUntuk($request, $pengusul, $pengusul, null, $berkas)
@@ -380,12 +398,18 @@ class UsulanController extends Controller
     /**
      * Simpan berkas pengajuan sekali, lalu dipakai ulang oleh tiap usulan.
      *
+     * Surat tugas yang tidak diunggah diambil dari SPD terpilih — disalin,
+     * bukan ditunjuk bersama, supaya usulan tetap utuh bila SPD-nya kelak
+     * disunting atau dihapus.
+     *
      * @return array<string, string|null>
      */
-    private function simpanBerkasPengajuan(Request $request): array
+    private function simpanBerkasPengajuan(Request $request, ?SuratPerjalananDinas $spd = null): array
     {
         return [
-            'surat_tugas' => $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public'),
+            'surat_tugas' => $request->hasFile('surat_tugas')
+                ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
+                : $this->salinSuratTugasDariSpd($spd),
             'spd_ditandatangani' => $request->file('spd_ditandatangani')->store('dokumen/spd', 'public'),
             'rundown' => $request->hasFile('rundown')
                 ? $request->file('rundown')->store('dokumen/rundown', 'public')
@@ -394,6 +418,21 @@ class UsulanController extends Controller
                 ? $request->file('dokumen_pendukung')->store('dokumen/dokumen-pendukung', 'public')
                 : null,
         ];
+    }
+
+    /**
+     * Salinan surat tugas SPD untuk usulan ini; null bila SPD tidak melampirkannya.
+     */
+    private function salinSuratTugasDariSpd(?SuratPerjalananDinas $spd): ?string
+    {
+        if (! $spd?->punyaSuratTugas()) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+        $tujuan = 'dokumen/surat-tugas/'.Str::uuid().'.'.pathinfo($spd->surat_tugas, PATHINFO_EXTENSION);
+
+        return $disk->exists($spd->surat_tugas) && $disk->copy($spd->surat_tugas, $tujuan) ? $tujuan : null;
     }
 
     /**

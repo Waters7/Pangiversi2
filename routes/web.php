@@ -23,6 +23,7 @@ use App\Http\Controllers\LaporanPerjadinController;
 use App\Http\Controllers\LaporanPimpinanController;
 use App\Http\Controllers\LokasiTujuanController;
 use App\Http\Controllers\MasterDataController;
+use App\Http\Controllers\ModulDalamPengembanganController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PembayaranController;
@@ -59,6 +60,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/berkas/{path}', [BerkasController::class, 'lihat'])->name('berkas.lihat')->where('path', '.*');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Pegawai eksternal dan mahasiswa/outsourcing: modulnya masih dikembangkan.
+    Route::get('/dalam-pengembangan', ModulDalamPengembanganController::class)->name('modul.dalam-pengembangan');
 
     Route::get('/', DashboardController::class)->name('dashboard');
 

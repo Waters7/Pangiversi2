@@ -23,7 +23,7 @@ class PanduanTest extends TestCase
 
     public function test_semua_peran_dapat_membuka_panduan(): void
     {
-        foreach (PeranPengguna::cases() as $peran) {
+        foreach (PeranPengguna::bermodul() as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran->value]))
                 ->get(route('panduan'))
                 ->assertOk()

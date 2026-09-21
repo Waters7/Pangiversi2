@@ -150,10 +150,20 @@
 
             <x-panduan-langkah nomor="3" judul="Lengkapi maksud, tujuan, dan tanggal">
                 Isian ini akan tersalin sendiri ke formulir usulan nanti, sehingga tanggal pada SPD
-                dan pada usulan tidak pernah berselisih.
+                dan pada usulan tidak pernah berselisih. Kolom <strong>akun pembebanan</strong>
+                tidak ada di formulir ini — akunnya diisi PPK saat verifikasi dan tanda tangan.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="4" judul="Tambahkan pengikut bila ada">
+            <x-panduan-langkah nomor="4" judul="Lampirkan surat tugas dan nomornya">
+                Pada kartu <strong>Surat Tugas</strong>, unggah berkas surat tugas (PDF, JPG, atau
+                PNG, maks. 5 MB) dan salin nomornya persis seperti tertulis. Tidak wajib, tetapi
+                bila diisi di sini, usulan perjadin yang memilih SPD ini
+                <strong>tidak perlu mengunggah dan menyalin nomornya lagi</strong> — keduanya
+                diambil dari SPD. Saat menyunting SPD, biarkan kolom berkasnya kosong untuk
+                mempertahankan yang sudah ada.
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="5" judul="Tambahkan pengikut bila ada">
                 Pengikut adalah orang yang ikut berangkat tanpa menjadi pelaksana — namanya
                 tercantum pada SPD, tetapi ia tidak mengajukan usulan sendiri.
                 @can('mengisi-pengikut-spd')
@@ -167,7 +177,7 @@
                 @endcan
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="5" judul="Pratinjau, lalu simpan" :terakhir="true">
+            <x-panduan-langkah nomor="6" judul="Pratinjau, lalu simpan" :terakhir="true">
                 Tombol <strong>Pratinjau</strong> menampilkan dokumennya persis seperti yang akan
                 tercetak, tanpa menyimpan apa pun. Setelah disimpan, setiap pelaksana yang
                 tercantum menerima pemberitahuan bahwa SPD-nya sudah terbit dan usulan sudah
@@ -191,8 +201,11 @@
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
                 Bila SPD-nya dibuat lewat aplikasi, daftarnya muncul di bagian atas formulir;
-                begitu satu dipilih, tujuan, tanggal, dan maksud perjalanan terisi sendiri. Bila
-                tidak ada, lewati dan isi data perjalanan secara manual.
+                begitu satu dipilih, tujuan, tanggal, maksud perjalanan, dan nomor SPD Anda
+                terisi sendiri. Bila SPD itu sudah melampirkan surat tugas, berkas dan nomor
+                surat tugasnya ikut diambil — <strong>tidak perlu diunggah maupun disalin
+                lagi</strong>. Bila tidak ada SPD dari aplikasi, lewati dan isi data perjalanan
+                secara manual, termasuk mengunggah surat tugas beserta nomornya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Unggah SPD bertanda tangan dan salin nomornya">
@@ -207,7 +220,8 @@
 
             <x-panduan-langkah nomor="4" judul="Pilih kategori perjalanan dengan benar">
                 Kategori menentukan berkas apa yang nanti ditagih sistem. Perjalanan
-                <strong>dalam kota</strong> tidak akan diminta tiket, penginapan, maupun kuitansi;
+                <strong>dalam kota</strong> tidak akan diminta tiket, penginapan, maupun kuitansi
+                penyelenggara / hotel;
                 <strong>luar kota</strong> diminta lengkap. Salah memilih di sini berarti ditagih
                 berkas yang tidak pernah ada.
             </x-panduan-langkah>
@@ -291,7 +305,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}

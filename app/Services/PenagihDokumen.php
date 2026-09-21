@@ -23,7 +23,7 @@ class PenagihDokumen
      */
     private const LABEL = [
         'sppd' => 'SPPD bertanda tangan',
-        'kwintasi' => 'Kuitansi',
+        'kwintasi' => 'Kuitansi penyelenggara / hotel',
         'bill_hotel' => 'Bill hotel',
     ];
 
@@ -151,7 +151,7 @@ class PenagihDokumen
                     : 'Nomor transaksi dan nominalnya wajib diisi',
             ];
 
-            $baris[] = $this->barisChecklist('Kuitansi', $dokumen?->kwintasi);
+            $baris[] = $this->barisChecklist('Kuitansi penyelenggara / hotel', $dokumen?->kwintasi);
         }
 
         // Seksi 5 — biaya penyelenggaraan, hanya bila pelaksana menyatakan ada.

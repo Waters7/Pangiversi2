@@ -101,6 +101,7 @@ class SuratPerjalananDinasController extends Controller
             $spd = SuratPerjalananDinas::create($this->kolomPokok($data) + [
                 'id_pembuat' => $request->user()->id,
                 'tanggal_surat' => today(),
+                'surat_tugas' => $this->simpanSuratTugas($request),
             ]);
 
             $this->simpanPelaksana($spd, $data);
@@ -176,8 +177,11 @@ class SuratPerjalananDinasController extends Controller
         $bolehPengikut = $request->user()->punyaKemampuan(Kemampuan::MengisiPengikutSpd);
         $sudahDikabari = $spd->pelaksana()->pluck('id_user')->filter()->values()->all();
 
-        DB::transaction(function () use ($spd, $data, $bolehPengikut) {
-            $spd->update($this->kolomPokok($data));
+        $suratTugasBaru = $this->simpanSuratTugas($request);
+
+        DB::transaction(function () use ($spd, $data, $bolehPengikut, $suratTugasBaru) {
+            // Berkas lama dipertahankan bila tidak ada unggahan baru.
+            $spd->update($this->kolomPokok($data) + ($suratTugasBaru ? ['surat_tugas' => $suratTugasBaru] : []));
 
             // Pelaksana disusun ulang seluruhnya: barisnya dapat bertambah,
             // berkurang, atau berpindah urutan, sehingga menyamakan satu per
@@ -283,13 +287,25 @@ class SuratPerjalananDinasController extends Controller
                 $data['tanggal_kembali'],
             ),
             'instansi_pembebanan' => $data['instansi_pembebanan'] ?? null,
-            'akun_pembebanan' => $data['akun_pembebanan'] ?? null,
+            // Akun pembebanan diisi PPK saat verifikasi dan tanda tangan,
+            // bukan oleh pembuat SPD.
             'keterangan_lain' => $data['keterangan_lain'] ?? null,
+            'no_tugas' => filled($data['no_tugas'] ?? null) ? trim($data['no_tugas']) : null,
         ]
         // Kuncinya hanya ada bila periksa() meloloskannya, yaitu ketika
         // penggunanya berwenang. Peran lain tidak menyentuh kolom ini sama
         // sekali, sehingga tanggal terbitnya tetap seperti semula.
         + (isset($data['tanggal_surat']) ? ['tanggal_surat' => $data['tanggal_surat']] : []);
+    }
+
+    /**
+     * Simpan unggahan surat tugas; null bila tidak ada berkas baru.
+     */
+    private function simpanSuratTugas(Request $request): ?string
+    {
+        return $request->hasFile('surat_tugas')
+            ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
+            : null;
     }
 
     /**
@@ -397,9 +413,15 @@ class SuratPerjalananDinasController extends Controller
             'pengikut.*.keterangan' => ['nullable', 'string', 'max:255'],
 
             'instansi_pembebanan' => ['nullable', 'string', 'max:255'],
-            'akun_pembebanan' => ['nullable', 'string', 'max:100'],
             'keterangan_lain' => ['nullable', 'string'],
+
+            // Surat tugas dilampirkan di sini supaya usulan perjadin tidak
+            // perlu mengunggah dan menyalin nomornya lagi.
+            'no_tugas' => ['nullable', 'string', 'max:255'],
+            'surat_tugas' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ], [
+            'surat_tugas.mimes' => 'Surat tugas harus berupa PDF, JPG, atau PNG.',
+            'surat_tugas.max' => 'Ukuran surat tugas paling besar 5 MB.',
             'pelaksana.max' => 'Paling banyak '.SuratPerjalananDinas::MAKS_PELAKSANA.' pelaksana dalam satu SPD.',
             'pengikut.max' => 'Paling banyak '.SuratPerjalananDinas::MAKS_PENGIKUT.' pengikut.',
             'tanggal_kembali.after_or_equal' => 'Tanggal kembali tidak boleh mendahului tanggal berangkat.',

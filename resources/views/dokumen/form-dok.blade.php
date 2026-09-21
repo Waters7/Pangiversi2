@@ -418,7 +418,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">4. Akomodasi & Bukti Biaya</h3>
-                            <p class="text-xs text-slate-400">Bill hotel dan kuitansi</p>
+                            <p class="text-xs text-slate-400">Bill hotel dan kuitansi penyelenggara / hotel</p>
                         </div>
                     </div>
 
@@ -451,10 +451,10 @@
 
                         <x-unggah-berkas
                             nama="kwintasi"
-                            label="Kuitansi"
+                            label="Kuitansi penyelenggara / hotel"
                             :berkas="$dokumen?->kwintasi"
                             terima=".pdf,.jpg,.jpeg,.png"
-                            keterangan="PDF, JPG, atau PNG — maks. 2 MB."
+                            keterangan="Kuitansi resmi dari penyelenggara kegiatan atau dari hotel tempat menginap — PDF, JPG, atau PNG, maks. 2 MB."
                             :terkunci="$terkunci" />
 
                         @unless ($terkunci)

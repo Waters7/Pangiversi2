@@ -101,7 +101,7 @@ class PelacakUsulan
             ),
             $this->langkah(
                 'Dokumen pertanggungjawaban diunggah',
-                'Tiket, nota transportasi, bill hotel, dan kuitansi.',
+                'Tiket, nota transportasi, bill hotel, dan kuitansi penyelenggara / hotel.',
                 $usulan->dokumen->last()?->updated_at,
                 $usulan->user?->nama,
             ),

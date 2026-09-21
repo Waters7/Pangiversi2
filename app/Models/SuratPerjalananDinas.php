@@ -35,6 +35,8 @@ class SuratPerjalananDinas extends Model
         'instansi_pembebanan',
         'akun_pembebanan',
         'keterangan_lain',
+        'no_tugas',
+        'surat_tugas',
     ];
 
     /**
@@ -131,6 +133,12 @@ class SuratPerjalananDinas extends Model
      * bukan pelaksana (misalnya Tim SDM yang membuatkannya), nomor
      * pelaksana pertama yang dipakai.
      */
+    /** Surat tugas sudah dilampirkan sejak SPD dibuat. */
+    public function punyaSuratTugas(): bool
+    {
+        return filled($this->surat_tugas);
+    }
+
     public function nomorUntuk(User $pengguna): ?string
     {
         return $this->pelaksana->firstWhere('id_user', $pengguna->id)?->nomor_surat

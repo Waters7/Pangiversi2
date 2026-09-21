@@ -344,7 +344,7 @@
                             'Boarding Pass' => $dokumen->boarding_pass,
                             'Faktur/Invoice' => $dokumen->faktur,
                             'Bill Hotel' => $dokumen->bill_hotel,
-                            'Kwitansi' => $dokumen->kwintasi,
+                            'Kuitansi penyelenggara / hotel' => $dokumen->kwintasi,
                             'Laporan Hasil' => $dokumen->laporan_hasil,
                         ];
                         $filled = collect($dokFields)->filter()->count();

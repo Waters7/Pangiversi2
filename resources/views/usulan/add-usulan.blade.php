@@ -51,7 +51,14 @@
               if (s.nomor && s.nomor !== 'Tanpa nomor' && ! this.$refs.noSpd.value) {
                 this.$refs.noSpd.value = s.nomor;
               }
+
+              // Surat tugas yang sudah dilampirkan pada SPD tidak diminta lagi.
+              if (s.no_tugas && ! this.$refs.noTugas.value) {
+                this.$refs.noTugas.value = s.no_tugas;
+              }
             },
+            // Berkas surat tugas diambil dari SPD terpilih bila SPD itu melampirkannya.
+            get suratTugasDariSpd() { return !! (this.spd && this.spd.surat_tugas); },
           }">
         @csrf
 
@@ -173,11 +180,18 @@
                                 </div>
                             </div>
 
+                            {{-- Surat tugas sudah ada pada SPD terpilih: cukup ditunjukkan, tidak diunggah ulang. --}}
+                            <div x-show="suratTugasDariSpd" x-cloak class="mb-4 px-4 py-3 bg-white border border-teal-200 rounded-xl text-xs text-teal-800 leading-relaxed">
+                                Berkas surat tugas <strong>diambil dari SPD yang dipilih</strong> — tidak perlu diunggah lagi.
+                                <a :href="spd && spd.surat_tugas" target="_blank" rel="noopener" class="font-semibold underline">Lihat berkasnya</a>.
+                                Unggah di bawah hanya bila ingin menggantinya.
+                            </div>
+
                             {{-- 1. Unggah berkas --}}
                             <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Berkas Surat Tugas <span class="text-red-500">*</span>
+                                Berkas Surat Tugas <span class="text-red-500" x-show="! suratTugasDariSpd">*</span>
                             </label>
-                            <input type="file" name="surat_tugas" id="surat_tugas" required
+                            <input type="file" name="surat_tugas" id="surat_tugas" :required="! suratTugasDariSpd"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
                                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
@@ -195,7 +209,7 @@
                                     Nomor Surat Tugas <span class="text-red-500">*</span>
                                 </label>
 
-                                <input type="text" name="no_tugas" id="no_tugas" required
+                                <input type="text" name="no_tugas" id="no_tugas" required x-ref="noTugas"
                                        value="{{ old('no_tugas') }}"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
                                        placeholder="cth: KP.01.02/F.XXX/1557/2026">

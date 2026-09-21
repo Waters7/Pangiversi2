@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ApproverMiddleware;
+use App\Http\Middleware\ModulDalamPengembangan;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TokenApi;
 use Illuminate\Foundation\Application;
@@ -15,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Peran yang modulnya masih dikembangkan ditahan pada halaman
+        // pemberitahuan; berlaku untuk seluruh rute web setelah masuk.
+        $middleware->web(append: [ModulDalamPengembangan::class]);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'approver' => ApproverMiddleware::class,

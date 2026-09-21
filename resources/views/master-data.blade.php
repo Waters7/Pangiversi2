@@ -260,7 +260,7 @@
                             'sppd' => 'SPPD',
                             'boarding_pass' => 'Boarding Pass',
                             'faktur' => 'Faktur',
-                            'kwintasi' => 'Kwitansi',
+                            'kwintasi' => 'Kuitansi penyelenggara / hotel',
                             'bill_hotel' => 'Bill Hotel',
                             'laporan_hasil' => 'Laporan Hasil',
                         ];

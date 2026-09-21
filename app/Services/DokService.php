@@ -182,7 +182,7 @@ class DokService
             'kwintasi' => [$this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ], [
             'bill_hotel.required' => 'Unggah bill hotel.',
-            'kwintasi.required' => 'Unggah kuitansi.',
+            'kwintasi.required' => 'Unggah kuitansi penyelenggara atau hotel.',
         ]);
 
         // Faktur sengaja tidak ditagih: satuan kerja tidak menerbitkannya dan

@@ -59,6 +59,28 @@ enum PeranPengguna: string
     }
 
     /**
+     * Modul untuk peran ini sudah dapat dipakai.
+     *
+     * Pegawai eksternal dan mahasiswa/outsourcing akan dilayani modul
+     * tersendiri yang masih dikembangkan; sampai siap, setelah masuk mereka
+     * hanya melihat halaman pemberitahuan.
+     */
+    public function modulTersedia(): bool
+    {
+        return ! in_array($this, [self::PegawaiEksternal, self::Outsourcing], true);
+    }
+
+    /**
+     * Peran yang modulnya sudah tersedia — yang benar-benar memakai aplikasi.
+     *
+     * @return list<self>
+     */
+    public static function bermodul(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $peran) => $peran->modulTersedia()));
+    }
+
+    /**
      * Hak akses yang melekat pada peran ini.
      *
      * @return list<Kemampuan>

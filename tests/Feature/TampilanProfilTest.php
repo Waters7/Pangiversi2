@@ -154,7 +154,7 @@ class TampilanProfilTest extends TestCase
 
     public function test_semua_peran_dapat_membuka_profilnya(): void
     {
-        foreach (PeranPengguna::cases() as $peran) {
+        foreach (PeranPengguna::bermodul() as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran->value]))
                 ->get(route('profil.index'))
                 ->assertOk();
@@ -167,7 +167,7 @@ class TampilanProfilTest extends TestCase
      */
     public function test_dashboard_menyebut_peran_pengguna_dengan_benar(): void
     {
-        foreach (PeranPengguna::cases() as $peran) {
+        foreach (PeranPengguna::bermodul() as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran->value]))
                 ->get(route('dashboard'))
                 ->assertOk()

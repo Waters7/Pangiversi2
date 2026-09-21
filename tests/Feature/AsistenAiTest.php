@@ -34,7 +34,7 @@ class AsistenAiTest extends TestCase
                 ->assertOk();
         }
 
-        foreach ([PeranPengguna::DosenTendik, PeranPengguna::TimSdm, PeranPengguna::Outsourcing] as $peran) {
+        foreach ([PeranPengguna::DosenTendik, PeranPengguna::TimSdm] as $peran) {
             $this->actingAs($this->pengguna($peran))
                 ->getJson(route('asisten-ai.wawasan'))
                 ->assertForbidden();

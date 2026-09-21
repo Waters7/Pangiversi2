@@ -305,7 +305,7 @@ class MasaSanggahTest extends TestCase
 
     public function test_seluruh_peran_dapat_membuka_rincian_miliknya(): void
     {
-        foreach ([PeranPengguna::Outsourcing, PeranPengguna::TimSdm, PeranPengguna::Pimpinan] as $peran) {
+        foreach ([PeranPengguna::DosenTendik, PeranPengguna::TimSdm, PeranPengguna::Pimpinan] as $peran) {
             $this->actingAs(User::factory()->create(['role' => $peran->value]))
                 ->get(route('rincian-saya.daftar-riil'))
                 ->assertOk();

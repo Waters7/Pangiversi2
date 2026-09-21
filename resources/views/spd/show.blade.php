@@ -73,13 +73,27 @@
                 'Lamanya' => $spd->lama_hari.' hari',
                 'Dikeluarkan di' => $spd->dikeluarkan_di.' · '.$spd->tanggal_surat?->translatedFormat('d F Y'),
                 'Instansi pembebanan' => $spd->instansi_pembebanan ?: '—',
-                'Akun' => $spd->akun_pembebanan ?: '—',
+                'Nomor surat tugas' => $spd->no_tugas ?: '—',
             ] as $label => $nilai)
                 <div>
                     <dt class="text-xs text-slate-400 uppercase tracking-wide">{{ $label }}</dt>
                     <dd class="text-slate-700 mt-0.5">{{ $nilai }}</dd>
                 </div>
             @endforeach
+            <div>
+                <dt class="text-xs text-slate-400 uppercase tracking-wide">Berkas surat tugas</dt>
+                <dd class="text-slate-700 mt-0.5">
+                    @if ($spd->punyaSuratTugas())
+                        <a href="{{ route('berkas.lihat', $spd->surat_tugas) }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1.5 text-teal-600 font-semibold hover:underline">
+                            Lihat berkas
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                        </a>
+                    @else
+                        <span class="text-slate-400">Belum dilampirkan — usulan perjadin akan meminta unggahannya.</span>
+                    @endif
+                </dd>
+            </div>
         </dl>
 
         @if ($spd->pengikut->isNotEmpty())
