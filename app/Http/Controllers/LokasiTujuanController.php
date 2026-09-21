@@ -83,6 +83,10 @@ class LokasiTujuanController extends Controller
             'nama' => ['required', 'string', 'max:255'],
             'provinsi' => ['nullable', 'string', 'max:255'],
             'jenis' => ['required', Rule::in(array_keys(LokasiTujuan::jenisOptions()))],
+            // Koordinat untuk peta perjalanan dinas; kota yang dikenal daftar
+            // bawaan boleh dibiarkan kosong.
+            'lintang' => ['nullable', 'numeric', 'between:-90,90', 'required_with:bujur'],
+            'bujur' => ['nullable', 'numeric', 'between:-180,180', 'required_with:lintang'],
             'is_aktif' => ['nullable', 'boolean'],
         ];
     }

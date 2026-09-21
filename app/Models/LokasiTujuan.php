@@ -19,6 +19,8 @@ class LokasiTujuan extends Model
         'nama',
         'provinsi',
         'jenis',
+        'lintang',
+        'bujur',
         'is_aktif',
     ];
 
@@ -29,6 +31,8 @@ class LokasiTujuan extends Model
     {
         return [
             'is_aktif' => 'boolean',
+            'lintang' => 'float',
+            'bujur' => 'float',
         ];
     }
 

@@ -6,12 +6,12 @@
      x-data="{
         showForm: {{ $errors->any() ? 'true' : 'false' }},
         mode: 'tambah',
-        form: { id: null, nama: '', provinsi: '', jenis: 'luar_kota', is_aktif: true },
+        form: { id: null, nama: '', provinsi: '', jenis: 'luar_kota', lintang: '', bujur: '', is_aktif: true },
         buka(mode, data = null) {
             this.mode = mode;
             this.form = data
-                ? { ...data }
-                : { id: null, nama: '', provinsi: '', jenis: 'luar_kota', is_aktif: true };
+                ? { ...data, lintang: data.lintang ?? '', bujur: data.bujur ?? '' }
+                : { id: null, nama: '', provinsi: '', jenis: 'luar_kota', lintang: '', bujur: '', is_aktif: true };
             this.showForm = true;
         }
      }">
@@ -85,6 +85,25 @@
                     </select>
                     @error('jenis') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
+            </div>
+
+            {{-- Koordinat untuk peta perjalanan dinas; kota besar sudah dikenal sistem. --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Lintang</label>
+                    <input type="number" step="any" min="-90" max="90" name="lintang" x-model="form.lintang" placeholder="1.4748"
+                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @error('lintang') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Bujur</label>
+                    <input type="number" step="any" min="-180" max="180" name="bujur" x-model="form.bujur" placeholder="124.8421"
+                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @error('bujur') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed md:self-end md:pb-2">
+                    Untuk peta perjalanan dinas. Kota-kota besar sudah dikenal sistem — kosongkan saja; isi hanya bila kota belum tampil di peta.
+                </p>
             </div>
 
             <div class="flex items-center justify-between gap-3 mt-4">
@@ -171,7 +190,7 @@
                             </td>
                             <td class="px-4 py-4">
                                 <div class="flex items-center justify-center gap-1">
-                                    <button @click="buka('ubah', {{ Js::from($item->only(['id', 'nama', 'provinsi', 'jenis', 'is_aktif'])) }})"
+                                    <button @click="buka('ubah', {{ Js::from($item->only(['id', 'nama', 'provinsi', 'jenis', 'lintang', 'bujur', 'is_aktif'])) }})"
                                             class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 flex items-center justify-center transition" title="Ubah">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>

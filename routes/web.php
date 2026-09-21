@@ -31,6 +31,7 @@ use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PersetujuanController;
 use App\Http\Controllers\PersetujuanPpkController;
 use App\Http\Controllers\PesertaUsulanController;
+use App\Http\Controllers\PetaPerjalananController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RincianSayaController;
 use App\Http\Controllers\StatusHasilController;
@@ -208,6 +209,11 @@ Route::middleware('auth')->group(function () {
             ->name('jadwal-perjalanan');
         Route::get('/jadwal-perjalanan/ekspor', [JadwalPerjalananController::class, 'ekspor'])
             ->name('jadwal-perjalanan.ekspor');
+
+        // Peta kota tujuan: dalam kota & sekitarnya, atau luar kota.
+        Route::get('/jadwal-perjalanan/peta/{jenis}', PetaPerjalananController::class)
+            ->whereIn('jenis', ['dalam-kota', 'luar-kota'])
+            ->name('jadwal-perjalanan.peta');
     });
 
     // Menu Pembayaran khusus bendahara: daftar tahap dan jurnal riwayatnya.

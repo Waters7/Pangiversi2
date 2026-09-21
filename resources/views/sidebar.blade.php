@@ -365,13 +365,39 @@
       </div>
 
       @can('melihat-jadwal-perjalanan')
-      <a href="{{ route('jadwal-perjalanan') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('jadwal-perjalanan') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Jadwal Perjalanan
-      </a>
+      {{-- Jadwal keberangkatan beserta peta kota tujuan: dalam kota & sekitarnya, dan luar kota. --}}
+      <div x-data="{ jadwalOpen: {{ request()->routeIs('jadwal-perjalanan', 'jadwal-perjalanan.*') ? 'true' : 'false' }} }">
+        <button
+          type="button"
+          @click.stop="jadwalOpen = !jadwalOpen"
+          class="nav-item w-full {{ request()->routeIs('jadwal-perjalanan', 'jadwal-perjalanan.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Jadwal Perjalanan
+          <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+              :class="jadwalOpen ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div x-show="jadwalOpen" x-transition class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+          @foreach ([
+            ['url' => route('jadwal-perjalanan'), 'aktif' => request()->routeIs('jadwal-perjalanan'), 'label' => 'Jadwal Keberangkatan'],
+            ['url' => route('jadwal-perjalanan.peta', 'dalam-kota'), 'aktif' => request()->routeIs('jadwal-perjalanan.peta') && request()->route('jenis') === 'dalam-kota', 'label' => 'Peta Dalam Kota & Sekitarnya'],
+            ['url' => route('jadwal-perjalanan.peta', 'luar-kota'), 'aktif' => request()->routeIs('jadwal-perjalanan.peta') && request()->route('jenis') === 'luar-kota', 'label' => 'Peta Luar Kota'],
+          ] as $menu)
+            <a href="{{ $menu['url'] }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ $menu['aktif'] ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+              {{ $menu['label'] }}
+            </a>
+          @endforeach
+        </div>
+      </div>
       @endcan
 
       {{-- Menu kerja bendahara: daftar tahap, lalu jurnal riwayatnya --}}

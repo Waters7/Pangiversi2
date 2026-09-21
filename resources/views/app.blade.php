@@ -58,6 +58,7 @@
       width: 100%;
     }
   </style>
+  @stack('head')
 </head>
 <body class="bg-slate-100 font-sans" x-data="{ sidebarOpen: false }" @keydown.escape="sidebarOpen = false">
 

@@ -721,11 +721,22 @@
                 pemeriksa — tanpa menunggu daftar nominatif.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="4" judul="List Daftar Nominatif" :terakhir="true">
+            <x-panduan-langkah nomor="4" judul="List Daftar Nominatif">
                 Seluruh daftar nominatif yang terbit — menunggu PPK, sudah ditandatangani, sudah
                 diterima tim keuangan — dengan saringan status dan keterangan siapa saja pelaksana
                 yang sudah menandatangani berkasnya. Di sini pula pembebanan kategori dan akun
                 anggarannya ditetapkan setelah daftar diterima.
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="5" judul="Jadwal Perjalanan dan peta kota tujuan" :terakhir="true">
+                Menu <strong>Jadwal Perjalanan</strong> memuat siapa berangkat kapan, tanpa nominal
+                biaya, dan dua peta: <strong>Peta Dalam Kota &amp; Sekitarnya</strong> (tujuan di
+                Sulawesi Utara — Manado beserta kota dan kabupaten di sekelilingnya) dan
+                <strong>Peta Luar Kota</strong>. Tiap penanda menyebut jumlah perjalanan; klik untuk
+                melihat pegawai, tanggal, dan kegiatannya, atau klik baris pada daftar kota untuk
+                menyorotnya. Saring per tahun bila perlu. Kota besar sudah dikenal sistem; kota
+                yang belum tampil dicantumkan pada panel <em>Belum Terpetakan</em> dan diberi
+                lintang-bujur oleh administrator pada Master Data → Lokasi Tujuan.
             </x-panduan-langkah>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl">
