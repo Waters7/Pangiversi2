@@ -26,3 +26,6 @@ Thumbs.db
 
 # Konfigurasi peladen pengembangan setempat: memuat jalur mesin masing-masing
 .claude/launch.json
+
+# Seeder akun uji coba setempat/LAN: tidak pernah masuk repositori
+/database/seeders/DataLokalSeeder.php
