@@ -472,7 +472,7 @@
                   NIP: {{ $user->nip }}
                 </span>
                 @php
-                    // Label peran diambil dari enum agar kesembilan peran tampil benar.
+                    // Label peran diambil dari enum agar seluruh peran tampil benar.
                     $warnaPeran = match($user->peran) {
                         \App\Enums\PeranPengguna::SuperAdministrator => 'bg-red-50 text-red-700 border-red-100',
                         \App\Enums\PeranPengguna::Pimpinan => 'bg-violet-50 text-violet-700 border-violet-100',

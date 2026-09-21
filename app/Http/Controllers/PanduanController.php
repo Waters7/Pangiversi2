@@ -49,6 +49,7 @@ class PanduanController extends Controller
             // data maupun jejak audit.
             'boleh' => [
                 'masterData' => $pengguna->punyaKemampuan(Kemampuan::MengelolaMasterData),
+                'peran' => $pengguna->punyaKemampuan(Kemampuan::MengelolaPeran),
                 'jejakAudit' => $pengguna->punyaKemampuan(Kemampuan::MelihatJejakAudit),
             ],
             'hariSanggah' => DaftarRiil::HARI_MASA_SANGGAH,
@@ -132,7 +133,9 @@ class PanduanController extends Controller
                     'Formulir SPD: surat tugas dilampirkan sejak SPD dibuat — nomor dan berkasnya diisi pada kartu Surat Tugas (tidak wajib). Usulan perjadin yang memilih SPD itu mengambil keduanya secara otomatis; berkas surat tugas tidak diunggah lagi dan nomornya tidak disalin ulang.',
                     'Formulir SPD: kolom Akun pembebanan dihapus — akun diisi PPK saat verifikasi dan tanda tangan, bukan oleh pembuat SPD.',
                     'Berkas pertanggungjawaban: unggahan dan ceklist "Kuitansi" kini disebut "Kuitansi penyelenggara / hotel" agar jelas kuitansi mana yang dimaksud — dari penyelenggara kegiatan atau dari hotel tempat menginap.',
-                    'Pegawai eksternal dan mahasiswa/outsourcing: modul perjalanan dinasnya dikembangkan terpisah. Sementara itu, setelah masuk mereka melihat halaman pemberitahuan "fitur masih dikembangkan" dengan tombol keluar; menu lain belum dapat dibuka.',
+                    'Peran baru Mahasiswa, dapat dipilih saat membuat akun atau diimpor lewat kolom role bernilai "mahasiswa".',
+                    'Peran & Hak Akses (submenu Administrasi Sistem, super administrator): menambah peran baru dan mengatur, per menu, kemampuan yang boleh dilihat, diubah, dan dihapus tiap peran — termasuk peran bawaan. Perubahan berlaku seketika dan tercatat pada jejak audit; Super Administrator selalu memegang seluruh akses. Hak menghapus master data dan menghapus pengguna kini kemampuan tersendiri, sehingga dapat diberikan atau dicabut terpisah dari hak mengelolanya.',
+                    'Pegawai eksternal, mahasiswa, dan outsourcing: modul perjalanan dinasnya dikembangkan terpisah. Sementara itu, setelah masuk mereka melihat halaman pemberitahuan "fitur masih dikembangkan" dengan tombol keluar; menu lain belum dapat dibuka.',
                 ],
             ],
             [

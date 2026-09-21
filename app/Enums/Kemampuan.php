@@ -84,6 +84,22 @@ enum Kemampuan: string
      */
     case MengonfirmasiLaporanPerjadin = 'mengonfirmasi-laporan-perjadin';
 
+    /**
+     * Menghapus baris master data. Dipisahkan dari MengelolaMasterData supaya
+     * sebuah peran dapat diberi hak menambah dan menyunting referensi tanpa
+     * hak menghapusnya.
+     */
+    case MenghapusMasterData = 'menghapus-master-data';
+
+    /** Menghapus akun pengguna — dipisahkan dari MengelolaPengguna dengan alasan yang sama. */
+    case MenghapusPengguna = 'menghapus-pengguna';
+
+    /**
+     * Mengelola peran dan hak aksesnya: menambah peran baru serta mengatur
+     * menu mana yang boleh dilihat, diubah, dan dihapus tiap peran.
+     */
+    case MengelolaPeran = 'mengelola-peran';
+
     public function label(): string
     {
         return match ($this) {
@@ -107,6 +123,33 @@ enum Kemampuan: string
             self::MengelolaMasterData => 'Mengelola master data',
             self::MengelolaPengguna => 'Mengelola pengguna',
             self::MelihatJejakAudit => 'Melihat jejak audit',
+            self::MenghapusMasterData => 'Menghapus master data',
+            self::MenghapusPengguna => 'Menghapus pengguna',
+            self::MengelolaPeran => 'Mengelola peran dan hak akses',
+        };
+    }
+
+    /**
+     * Sifat kemampuan ini pada menunya — kolom tempatnya berada pada matriks
+     * hak akses.
+     */
+    public function jenis(): JenisAkses
+    {
+        return match ($this) {
+            self::MelihatSemuaUsulan,
+            self::MelihatSemuaSpd,
+            self::MelihatKeuangan,
+            self::MelihatPembayaran,
+            self::MelihatJadwalPerjalanan,
+            self::MelihatDashboardEksekutif,
+            self::MelihatLaporan,
+            self::MelihatArsipPerjadin,
+            self::MelihatJejakAudit => JenisAkses::Lihat,
+
+            self::MenghapusMasterData,
+            self::MenghapusPengguna => JenisAkses::Hapus,
+
+            default => JenisAkses::Ubah,
         };
     }
 }

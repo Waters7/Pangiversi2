@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Kemampuan;
 use App\Enums\PeranPengguna;
+use App\Services\PenentuHakAkses;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -42,6 +43,8 @@ class User extends Authenticatable
     public const ROLE_PEGAWAI_EKSTERNAL = 'pegawai_eksternal';
 
     public const ROLE_OUTSOURCING = 'outsourcing';
+
+    public const ROLE_MAHASISWA = 'mahasiswa';
 
     /**
      * Get the attributes that should be cast.
@@ -126,10 +129,13 @@ class User extends Authenticatable
 
     /**
      * Apakah pengguna ini memiliki sebuah kemampuan.
+     *
+     * Hak akses peran yang sudah dikelola dari Administrasi Sistem dibaca
+     * dari tabel peran; selebihnya mengikuti bawaan enum.
      */
     public function punyaKemampuan(Kemampuan $kemampuan): bool
     {
-        return $this->peran->punya($kemampuan);
+        return app(PenentuHakAkses::class)->punya($this->role, $kemampuan);
     }
 
     public function isSuperAdmin(): bool
@@ -282,12 +288,12 @@ class User extends Authenticatable
      */
     public static function roleOptions(): array
     {
-        return PeranPengguna::options();
+        return Peran::pilihan();
     }
 
     public function getRoleLabelAttribute(): string
     {
-        return $this->peran->label();
+        return app(PenentuHakAkses::class)->label($this->role);
     }
 
     /**

@@ -634,6 +634,7 @@
             ['route' => 'administrasi', 'aktif' => 'administrasi', 'label' => 'Pengguna'],
             ['route' => 'administrasi.massal', 'aktif' => 'administrasi.massal', 'label' => 'Impor & Ekspor'],
             ['route' => 'administrasi.pengaturan', 'aktif' => 'administrasi.pengaturan', 'label' => 'Pengaturan Sistem'],
+            ...(auth()->user()->can('mengelola-peran') ? [['route' => 'administrasi.peran', 'aktif' => 'administrasi.peran', 'label' => 'Peran & Hak Akses']] : []),
             ...(auth()->user()->isAdmin() ? [['route' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data']] : []),
           ] as $menu)
             <a href="{{ route($menu['route']) }}"

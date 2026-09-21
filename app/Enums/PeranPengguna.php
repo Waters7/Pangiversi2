@@ -28,6 +28,8 @@ enum PeranPengguna: string
 
     case Outsourcing = 'outsourcing';
 
+    case Mahasiswa = 'mahasiswa';
+
     public function label(): string
     {
         return match ($this) {
@@ -40,6 +42,7 @@ enum PeranPengguna: string
             self::DosenTendik => 'Dosen / Tendik Internal',
             self::PegawaiEksternal => 'Pegawai Kemenkes Eksternal',
             self::Outsourcing => 'Outsourcing',
+            self::Mahasiswa => 'Mahasiswa',
         };
     }
 
@@ -55,19 +58,20 @@ enum PeranPengguna: string
             self::DosenTendik => 'Pengusul perjalanan dinas',
             self::PegawaiEksternal => 'Pengusul perjalanan dinas',
             self::Outsourcing => 'Pengusul perjalanan dinas',
+            self::Mahasiswa => 'Pengusul perjalanan dinas',
         };
     }
 
     /**
      * Modul untuk peran ini sudah dapat dipakai.
      *
-     * Pegawai eksternal dan mahasiswa/outsourcing akan dilayani modul
+     * Pegawai eksternal, mahasiswa, dan outsourcing akan dilayani modul
      * tersendiri yang masih dikembangkan; sampai siap, setelah masuk mereka
      * hanya melihat halaman pemberitahuan.
      */
     public function modulTersedia(): bool
     {
-        return ! in_array($this, [self::PegawaiEksternal, self::Outsourcing], true);
+        return ! in_array($this, [self::PegawaiEksternal, self::Mahasiswa, self::Outsourcing], true);
     }
 
     /**
@@ -160,10 +164,11 @@ enum PeranPengguna: string
                 Kemampuan::MelihatJadwalPerjalanan,
                 Kemampuan::MelihatSemuaSpd,
                 Kemampuan::MengelolaPengguna,
+                Kemampuan::MenghapusPengguna,
                 Kemampuan::MelihatArsipPerjadin,
             ],
 
-            self::DosenTendik, self::PegawaiEksternal, self::Outsourcing => $dasar,
+            self::DosenTendik, self::PegawaiEksternal, self::Mahasiswa, self::Outsourcing => $dasar,
         };
     }
 
@@ -177,7 +182,7 @@ enum PeranPengguna: string
      */
     public function pengusulBiasa(): bool
     {
-        return in_array($this, [self::DosenTendik, self::PegawaiEksternal, self::Outsourcing], true);
+        return in_array($this, [self::DosenTendik, self::PegawaiEksternal, self::Mahasiswa, self::Outsourcing], true);
     }
 
     /**

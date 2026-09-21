@@ -210,13 +210,15 @@ class PanduanPeranTest extends TestCase
         $this->bukaSebagai(PeranPengguna::TimSdm)
             ->assertSee('Mengelola Pengguna')
             ->assertSee('Pantau siapa yang sedang aktif')
+            ->assertDontSee('Atur peran dan hak akses')
             ->assertDontSee('Master Data menentukan perilaku sistem')
             ->assertDontSee('Telusuri lewat Jejak Audit');
     }
 
-    public function test_administrator_tetap_dibacakan_master_data_dan_jejak_audit(): void
+    public function test_administrator_tetap_dibacakan_peran_master_data_dan_jejak_audit(): void
     {
         $this->bukaSebagai(PeranPengguna::SuperAdministrator)
+            ->assertSee('Atur peran dan hak akses')
             ->assertSee('Master Data menentukan perilaku sistem')
             ->assertSee('Telusuri lewat Jejak Audit');
     }

@@ -8,6 +8,10 @@
         ['rute' => 'administrasi.pengaturan', 'aktif' => 'administrasi.pengaturan', 'label' => 'Pengaturan Sistem'],
     ];
 
+    if (auth()->user()->can('mengelola-peran')) {
+        $bagianAdministrasi[] = ['rute' => 'administrasi.peran', 'aktif' => 'administrasi.peran', 'label' => 'Peran & Hak Akses'];
+    }
+
     // Integrasi Data memuat token dan alamat aplikasi lain — hanya super administrator.
     if (auth()->user()->isAdmin()) {
         $bagianAdministrasi[] = ['rute' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data'];

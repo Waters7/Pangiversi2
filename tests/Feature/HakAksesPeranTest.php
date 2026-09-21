@@ -43,7 +43,7 @@ class HakAksesPeranTest extends TestCase
 
     public function test_pengusul_biasa_tidak_punya_kewenangan_tambahan(): void
     {
-        $pengusul = [PeranPengguna::DosenTendik, PeranPengguna::PegawaiEksternal, PeranPengguna::Outsourcing];
+        $pengusul = [PeranPengguna::DosenTendik, PeranPengguna::PegawaiEksternal, PeranPengguna::Mahasiswa, PeranPengguna::Outsourcing];
 
         foreach ($pengusul as $peran) {
             $this->assertSame([Kemampuan::MengajukanUsulan], $peran->kemampuan());

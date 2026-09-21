@@ -62,6 +62,7 @@ class AdministrasiController extends Controller
         $totalPegawai = User::whereIn('role', [
             PeranPengguna::DosenTendik->value,
             PeranPengguna::PegawaiEksternal->value,
+            PeranPengguna::Mahasiswa->value,
             PeranPengguna::Outsourcing->value,
         ])->count();
 

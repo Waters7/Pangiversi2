@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\Kemampuan;
 use App\Models\User;
+use App\Services\PenentuHakAkses;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Tabel peran dibaca sekali per permintaan, bukan pada tiap @can.
+        $this->app->singleton(PenentuHakAkses::class);
     }
 
     /**

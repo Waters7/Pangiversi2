@@ -759,20 +759,37 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pantau siapa yang sedang aktif"
-                               :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                               :terakhir="! $boleh['peran'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                 Jumlah pengguna yang sedang masuk ditampilkan di halaman yang sama, dan daftarnya
                 dapat disaring menjadi hanya yang aktif atau hanya yang belum pernah masuk.
             </x-panduan-langkah>
 
+            @php $nomorLangkah = 3; @endphp
+
+            @if ($boleh['peran'])
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur peran dan hak akses"
+                                   :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                    Submenu <strong>Administrasi Sistem → Peran &amp; Hak Akses</strong> memuat seluruh
+                    peran — bawaan maupun buatan — beserta matriks menu: tiap kemampuan berada pada
+                    kolom <strong>Lihat</strong>, <strong>Ubah</strong>, atau <strong>Hapus</strong>
+                    menunya. Centang yang diizinkan, lalu simpan; perubahan berlaku seketika bagi
+                    semua pengguna berperan itu dan tercatat pada jejak audit. Tombol
+                    <strong>Tambah Peran</strong> membuat peran baru (kodenya dibuat dari nama) yang
+                    langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
+                    tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh
+                    akses dan tidak dapat dikurangi.
+                </x-panduan-langkah>
+            @endif
+
             @if ($boleh['masterData'])
-                <x-panduan-langkah nomor="3" judul="Master Data menentukan perilaku sistem">
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Master Data menentukan perilaku sistem">
                     Kategori perjadin menentukan berkas apa yang ditagih — penanda
                     <strong>dalam kota</strong> pada tiap kategori itulah yang memilah. Komponen
                     biaya, lokasi tujuan, unit kerja, jenis kegiatan, dan akun pembiayaan juga
                     diatur di sini.
                 </x-panduan-langkah>
 
-                <x-panduan-langkah nomor="4" judul="Atur pengingat dokumen" :terakhir="! $boleh['jejakAudit']">
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur pengingat dokumen" :terakhir="! $boleh['jejakAudit']">
                     Tenggang hari, jeda antar pengingat, dan batas jumlahnya diatur pada
                     <strong>Administrasi Sistem → Pengaturan Sistem</strong>. Angka tenggang inilah yang
                     dipakai dashboard saat menghitung batas penyerahan laporan. Di halaman yang sama,
@@ -787,7 +804,7 @@
             @endif
 
             @if ($boleh['jejakAudit'])
-                <x-panduan-langkah :nomor="$boleh['masterData'] ? '5' : '3'" judul="Telusuri lewat Jejak Audit" :terakhir="true">
+                <x-panduan-langkah :nomor="$nomorLangkah" judul="Telusuri lewat Jejak Audit" :terakhir="true">
                     Setiap tindakan yang mengubah data tercatat beserta pelakunya dan waktunya.
                 </x-panduan-langkah>
             @endif

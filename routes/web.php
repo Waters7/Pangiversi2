@@ -27,6 +27,7 @@ use App\Http\Controllers\ModulDalamPengembanganController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PersetujuanController;
 use App\Http\Controllers\PersetujuanPpkController;
 use App\Http\Controllers\PesertaUsulanController;
@@ -61,7 +62,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Pegawai eksternal dan mahasiswa/outsourcing: modulnya masih dikembangkan.
+    // Pegawai eksternal, mahasiswa, dan outsourcing: modulnya masih dikembangkan.
     Route::get('/dalam-pengembangan', ModulDalamPengembanganController::class)->name('modul.dalam-pengembangan');
 
     Route::get('/', DashboardController::class)->name('dashboard');
@@ -337,50 +338,50 @@ Route::middleware('auth')->group(function () {
         Route::get('/unit-kerja', [UnitKerjaController::class, 'index'])->name('unit-kerja');
         Route::post('/unit-kerja', [UnitKerjaController::class, 'store'])->name('unit-kerja.store');
         Route::put('/unit-kerja/{unitKerja}', [UnitKerjaController::class, 'update'])->name('unit-kerja.update');
-        Route::delete('/unit-kerja/{unitKerja}', [UnitKerjaController::class, 'destroy'])->name('unit-kerja.destroy');
+        Route::delete('/unit-kerja/{unitKerja}', [UnitKerjaController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('unit-kerja.destroy');
 
         Route::get('/lokasi', [LokasiTujuanController::class, 'index'])->name('lokasi');
         Route::post('/lokasi', [LokasiTujuanController::class, 'store'])->name('lokasi.store');
         Route::put('/lokasi/{lokasi}', [LokasiTujuanController::class, 'update'])->name('lokasi.update');
-        Route::delete('/lokasi/{lokasi}', [LokasiTujuanController::class, 'destroy'])->name('lokasi.destroy');
+        Route::delete('/lokasi/{lokasi}', [LokasiTujuanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('lokasi.destroy');
 
         Route::get('/kategori-perjadin', [KategoriPerjadinController::class, 'index'])->name('kategori-perjadin');
         Route::post('/kategori-perjadin', [KategoriPerjadinController::class, 'store'])->name('kategori-perjadin.store');
         Route::put('/kategori-perjadin/{kategoriPerjadin}', [KategoriPerjadinController::class, 'update'])->name('kategori-perjadin.update');
-        Route::delete('/kategori-perjadin/{kategoriPerjadin}', [KategoriPerjadinController::class, 'destroy'])->name('kategori-perjadin.destroy');
+        Route::delete('/kategori-perjadin/{kategoriPerjadin}', [KategoriPerjadinController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('kategori-perjadin.destroy');
 
         Route::get('/kategori-pembiayaan', [KategoriPembiayaanController::class, 'index'])->name('kategori-pembiayaan');
         Route::post('/kategori-pembiayaan', [KategoriPembiayaanController::class, 'store'])->name('kategori-pembiayaan.store');
         Route::put('/kategori-pembiayaan/{kategoriPembiayaan}', [KategoriPembiayaanController::class, 'update'])->name('kategori-pembiayaan.update');
-        Route::delete('/kategori-pembiayaan/{kategoriPembiayaan}', [KategoriPembiayaanController::class, 'destroy'])->name('kategori-pembiayaan.destroy');
+        Route::delete('/kategori-pembiayaan/{kategoriPembiayaan}', [KategoriPembiayaanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('kategori-pembiayaan.destroy');
 
         Route::get('/akun-pembiayaan', [AkunPembiayaanController::class, 'index'])->name('akun-pembiayaan');
         Route::post('/akun-pembiayaan', [AkunPembiayaanController::class, 'store'])->name('akun-pembiayaan.store');
         Route::put('/akun-pembiayaan/{akunPembiayaan}', [AkunPembiayaanController::class, 'update'])->name('akun-pembiayaan.update');
-        Route::delete('/akun-pembiayaan/{akunPembiayaan}', [AkunPembiayaanController::class, 'destroy'])->name('akun-pembiayaan.destroy');
+        Route::delete('/akun-pembiayaan/{akunPembiayaan}', [AkunPembiayaanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('akun-pembiayaan.destroy');
 
         Route::get('/status-hasil', [StatusHasilController::class, 'index'])->name('status-hasil');
         Route::post('/status-hasil', [StatusHasilController::class, 'store'])->name('status-hasil.store');
         Route::put('/status-hasil/{statusHasil}', [StatusHasilController::class, 'update'])->name('status-hasil.update');
-        Route::delete('/status-hasil/{statusHasil}', [StatusHasilController::class, 'destroy'])->name('status-hasil.destroy');
+        Route::delete('/status-hasil/{statusHasil}', [StatusHasilController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('status-hasil.destroy');
 
         Route::get('/komponen-biaya', [KomponenBiayaController::class, 'index'])->name('komponen-biaya');
         Route::post('/komponen-biaya', [KomponenBiayaController::class, 'store'])->name('komponen-biaya.store');
         Route::put('/komponen-biaya/{komponenBiaya}', [KomponenBiayaController::class, 'update'])->name('komponen-biaya.update');
-        Route::delete('/komponen-biaya/{komponenBiaya}', [KomponenBiayaController::class, 'destroy'])->name('komponen-biaya.destroy');
+        Route::delete('/komponen-biaya/{komponenBiaya}', [KomponenBiayaController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('komponen-biaya.destroy');
 
         Route::get('/tahun-anggaran', [TahunAnggaranController::class, 'index'])->name('tahun-anggaran');
         Route::post('/tahun-anggaran', [TahunAnggaranController::class, 'store'])->name('tahun-anggaran.store');
         Route::put('/tahun-anggaran/{tahunAnggaran}', [TahunAnggaranController::class, 'update'])->name('tahun-anggaran.update');
         Route::put('/tahun-anggaran/{tahunAnggaran}/aktifkan', [TahunAnggaranController::class, 'aktifkan'])->name('tahun-anggaran.aktifkan');
-        Route::delete('/tahun-anggaran/{tahunAnggaran}', [TahunAnggaranController::class, 'destroy'])->name('tahun-anggaran.destroy');
+        Route::delete('/tahun-anggaran/{tahunAnggaran}', [TahunAnggaranController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('tahun-anggaran.destroy');
     });
 
     Route::middleware('can:mengelola-master-data')->prefix('kegiatan')->group(function () {
         Route::get('/', [KegiatanController::class, 'index'])->name('kegiatan.index');
         Route::post('/', [KegiatanController::class, 'store'])->name('kegiatan.store');
         Route::put('/{kegiatan}', [KegiatanController::class, 'update'])->name('kegiatan.update');
-        Route::delete('/{kegiatan}', [KegiatanController::class, 'destroy'])->name('kegiatan.destroy');
+        Route::delete('/{kegiatan}', [KegiatanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('kegiatan.destroy');
     });
 
     // Jejak audit
@@ -398,6 +399,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/integrasi', [IntegrasiDataController::class, 'index'])->name('administrasi.integrasi');
         Route::put('/integrasi/jadwal', [IntegrasiDataController::class, 'simpanJadwal'])->name('administrasi.integrasi.jadwal');
         Route::post('/integrasi/kirim', [IntegrasiDataController::class, 'kirimSekarang'])->name('administrasi.integrasi.kirim');
+
+        // Peran & Hak Akses (super administrator): tambah peran dan atur
+        // menu yang boleh dilihat, diubah, dan dihapus tiap peran.
+        Route::middleware('can:mengelola-peran')->group(function () {
+            Route::get('/peran', [PeranController::class, 'index'])->name('administrasi.peran');
+            Route::post('/peran', [PeranController::class, 'store'])->name('administrasi.peran.store');
+            Route::put('/peran/{peran}', [PeranController::class, 'update'])->name('administrasi.peran.update');
+            Route::delete('/peran/{peran}', [PeranController::class, 'destroy'])->name('administrasi.peran.destroy');
+        });
 
         Route::get('/export', [AdministrasiController::class, 'export'])->name('administrasi.export');
         Route::post('/import', [AdministrasiController::class, 'import'])->name('administrasi.import');
@@ -420,6 +430,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [AdministrasiController::class, 'store'])->name('administrasi.store');
         Route::put('/{user}', [AdministrasiController::class, 'update'])->name('administrasi.update');
         Route::put('/{user}/password', [AdministrasiController::class, 'updatePassword'])->name('administrasi.password');
-        Route::delete('/{user}', [AdministrasiController::class, 'destroy'])->name('administrasi.destroy');
+        Route::delete('/{user}', [AdministrasiController::class, 'destroy'])->middleware('can:menghapus-pengguna')->name('administrasi.destroy');
     });
 });
