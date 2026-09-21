@@ -59,7 +59,7 @@
                     @forelse ($spd as $item)
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-4 py-3 font-mono text-xs text-slate-700">
-                                {{ $item->pelaksana_utama?->nomor_surat ?? '—' }}
+                                {{ $item->nomorUntuk(auth()->user()) ?? '—' }}
                             </td>
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-slate-800 text-xs sm:text-sm">{{ $item->ringkasan }}</p>

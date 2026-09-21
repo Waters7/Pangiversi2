@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Kegiatan;
 use App\Models\KategoriPerjadin;
+use App\Models\Kegiatan;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
 use App\Models\Usulan;
@@ -163,7 +163,25 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
             'nip' => $this->pengguna->nip,
         ]);
 
-        $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk()->assertSee('KU.02.04/F.XXX.8/1/2026');
+        // Yang ditawarkan adalah nomor SPD pengguna ini sendiri, bukan nomor orang pertama.
+        $halaman = $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk()
+            ->assertSee('KU.02.04/F.XXX.8/2/2026')
+            ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
+        $this->assertSame('KU.02.04/F.XXX.8/2/2026', $halaman->viewData('spdTerkait')[0]['nomor']);
+    }
+
+    /** SPD yang dibuatkan untuk orang lain — pembuatnya bukan pelaksana — bukan miliknya untuk diusulkan. */
+    public function test_spd_yang_dibuat_untuk_orang_lain_tidak_ditawarkan_kepada_pembuatnya(): void
+    {
+        $orangLain = User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]);
+        $spd = $this->buatkanSpd($orangLain);
+        $spd->update(['id_pembuat' => $this->pengguna->id]);
+
+        $this->actingAs($this->pengguna)
+            ->get(route('usulan.create'))
+            ->assertOk()
+            ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
+        $this->assertSame([], $this->actingAs($this->pengguna)->get(route('usulan.create'))->viewData('spdTerkait'));
     }
 
     public function test_spd_milik_orang_lain_tidak_dapat_dipilih(): void

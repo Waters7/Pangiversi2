@@ -124,6 +124,20 @@ class SuratPerjalananDinas extends Model
     }
 
     /**
+     * Nomor SPD bagi pengguna tertentu.
+     *
+     * Nomor melekat pada tiap pelaksana, jadi orang kedua pada satu SPD
+     * punya nomornya sendiri — bukan nomor orang pertama. Bila pengguna
+     * bukan pelaksana (misalnya Tim SDM yang membuatkannya), nomor
+     * pelaksana pertama yang dipakai.
+     */
+    public function nomorUntuk(User $pengguna): ?string
+    {
+        return $this->pelaksana->firstWhere('id_user', $pengguna->id)?->nomor_surat
+            ?? $this->pelaksana_utama?->nomor_surat;
+    }
+
+    /**
      * SPD ini milik pengguna tersebut — dibuatnya sendiri, atau namanya
      * tercantum sebagai pelaksana.
      */

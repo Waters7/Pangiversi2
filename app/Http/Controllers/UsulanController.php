@@ -144,17 +144,15 @@ class UsulanController extends Controller
     }
 
     /**
-     * Surat Perjalanan Dinas yang berkaitan dengan pengguna ini, entah
-     * dibuatnya sendiri atau mencantumkan namanya sebagai pelaksana.
+     * Surat Perjalanan Dinas yang mencantumkan pengguna ini sebagai
+     * pelaksana — itulah yang boleh mendasari usulannya. SPD yang ia
+     * buatkan untuk orang lain bukan miliknya untuk diusulkan.
      *
      * @return Builder<SuratPerjalananDinas>
      */
     private function spdMilik(User $pengguna)
     {
-        return SuratPerjalananDinas::where(function ($query) use ($pengguna) {
-            $query->where('id_pembuat', $pengguna->id)
-                ->orWhereHas('pelaksana', fn ($q) => $q->where('id_user', $pengguna->id));
-        });
+        return SuratPerjalananDinas::whereHas('pelaksana', fn ($q) => $q->where('id_user', $pengguna->id));
     }
 
     /**
@@ -174,7 +172,9 @@ class UsulanController extends Controller
             ->get()
             ->map(fn (SuratPerjalananDinas $spd) => [
                 'id' => $spd->id,
-                'nomor' => $spd->pelaksana_utama?->nomor_surat ?? 'Tanpa nomor',
+                // Nomor milik pengguna ini sendiri — orang kedua pada SPD
+                // yang sama punya nomornya sendiri, bukan nomor orang pertama.
+                'nomor' => $spd->nomorUntuk($pengguna) ?? 'Tanpa nomor',
                 'tempat_berangkat' => $spd->tempat_berangkat,
                 'tempat_tujuan' => $spd->tempat_tujuan,
                 'tanggal_berangkat' => $spd->tanggal_berangkat?->toDateString(),

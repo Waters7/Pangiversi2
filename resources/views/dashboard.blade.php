@@ -301,7 +301,7 @@
                   <a href="{{ route('spd.show', $surat) }}"
                      class="block px-4 md:px-5 py-3 hover:bg-slate-50/70 transition">
                     <p class="font-mono text-xs text-teal-700 truncate">
-                      {{ $surat->pelaksana_utama?->nomor_surat ?? 'Tanpa nomor' }}
+                      {{ $surat->nomorUntuk(auth()->user()) ?? 'Tanpa nomor' }}
                     </p>
                     <p class="text-xs text-slate-600 mt-0.5 truncate">
                       {{ $surat->tempat_tujuan }}
