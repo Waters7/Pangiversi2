@@ -194,6 +194,11 @@ class HakAksesPeranTest extends TestCase
 
     public function test_jadwal_memuat_perjalanan_yang_fix_maupun_yang_masih_diajukan(): void
     {
+        // Kartu ringkasan hanya menghitung bulan berjalan, jadi tanggalnya
+        // dipatok ke pertengahan bulan agar perjalanan +3 hari tidak jatuh
+        // ke bulan berikutnya saat uji dijalankan pada akhir bulan.
+        $this->travelTo(today()->startOfMonth()->addDays(9));
+
         $disetujui = Usulan::factory()->create([
             'status' => StatusUsulan::Disetujui->value,
             'tanggal_mulai' => today()->toDateString(),
@@ -219,6 +224,11 @@ class HakAksesPeranTest extends TestCase
 
     public function test_jadwal_dapat_disaring_hanya_yang_sudah_fix(): void
     {
+        // Kartu ringkasan hanya menghitung bulan berjalan, jadi tanggalnya
+        // dipatok ke pertengahan bulan agar perjalanan +3 hari tidak jatuh
+        // ke bulan berikutnya saat uji dijalankan pada akhir bulan.
+        $this->travelTo(today()->startOfMonth()->addDays(9));
+
         $disetujui = Usulan::factory()->create([
             'status' => StatusUsulan::Disetujui->value,
             'tanggal_mulai' => today()->toDateString(),
