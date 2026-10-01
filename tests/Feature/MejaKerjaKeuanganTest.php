@@ -62,6 +62,29 @@ class MejaKerjaKeuanganTest extends TestCase
             ->firstOrFail();
     }
 
+    public function test_kepala_halaman_menyebut_tujuan_perjalanan(): void
+    {
+        $this->usulan->update(['lokasi' => 'Kota Bitung']);
+
+        $this->buka()->assertSeeInOrder(['Tujuan', 'Kota Bitung', 'Periode']);
+    }
+
+    /** Hasil tiap tindakan — berhasil atau tertahan — terbaca di halaman yang sama. */
+    public function test_hasil_tindakan_diberitahukan_di_halaman_keuangan(): void
+    {
+        $this->actingAs($this->timKeuangan)
+            ->followingRedirects()
+            ->post(route('keuangan.rincian.store', $this->usulan->no_usulan), [
+                'kategori' => KategoriBiaya::UangHarian->value,
+                'komponen' => 'Uang Harian Dalam Kota',
+                'volume' => 1,
+                'satuan' => 'OH',
+                'harga_satuan' => 150_000,
+            ])
+            ->assertOk()
+            ->assertSee('Rincian biaya berhasil ditambahkan.');
+    }
+
     // ── Aksi validasi ──
 
     public function test_kolom_validasi_tampil_pada_tabel_rincian(): void

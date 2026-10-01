@@ -92,7 +92,7 @@ class PenguncianBerkas
 
         if ($jalur->sudahDisetujui()) {
             return "{$nama} sudah ditandatangani pelaksana dan tidak dapat diubah. "
-                .'Kirim ulang berkasnya dari menu Keuangan bila nominalnya memang perlu diperbaiki.';
+                .'Bila nominalnya memang perlu diperbaiki, mintalah PPK mengembalikan berkasnya ke tim keuangan.';
         }
 
         return null;

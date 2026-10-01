@@ -416,9 +416,15 @@ class DaftarRiil extends Model
             'dikembalikan_at' => null,
         ]);
 
-        // Kedua dokumen dikirim sepaket, jadi keduanya dibuka kembali.
-        $this->jalur()->bukaUlang();
-        $this->jalurRincian()->bukaUlang();
+        // Kedua dokumen dikirim sepaket, tetapi yang sudah ditandatangani
+        // pelaksana tetap berlaku saat berkas dikirim ulang: nominalnya
+        // terkunci sejak itu, jadi tidak mungkin berubah. Hanya dokumen yang
+        // belum disetujui — termasuk yang disanggah — dibuka dari awal.
+        foreach ([$this->jalur(), $this->jalurRincian()] as $jalur) {
+            if (! $jalur->sudahDisetujui()) {
+                $jalur->bukaUlang();
+            }
+        }
     }
 
     /**

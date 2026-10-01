@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\PeranPengguna;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarRiil;
+use App\Models\Keuangan;
 use App\Models\PesertaUsulan;
+use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -183,9 +185,11 @@ class MasaSanggahTest extends TestCase
                 'sanggahan' => 'Uang penginapan belum dihitung untuk malam kedua.',
             ]);
 
+        // Tautannya ke halaman Keuangan, tempat sanggahan tampil dan diperbaiki.
         $this->assertDatabaseHas('notifikasi', [
             'id_user' => $this->timKeuangan->id,
             'judul' => 'Rincian biaya disanggah',
+            'url' => route('keuangan.detail', $this->usulan),
         ]);
     }
 
@@ -206,6 +210,107 @@ class MasaSanggahTest extends TestCase
         $this->assertFalse($daftar->sedangDisanggah());
         $this->assertNull($daftar->sanggahan);
         $this->assertTrue($daftar->masaSanggahBerjalan());
+    }
+
+    // ── Sanggahan rincian biaya ditindaklanjuti tim keuangan ──
+
+    private function rincianUangHarian(float $harga = 100_000): void
+    {
+        $keuangan = Keuangan::factory()->create([
+            'id_usulan' => $this->usulan->id,
+            'status' => Keuangan::STATUS_BELUM,
+            'uang_muka' => 0,
+            'sisa' => 0,
+        ]);
+
+        RincianBiaya::factory()->create([
+            'id_keuangan' => $keuangan->id,
+            'kategori' => 'uang_harian',
+            'komponen' => 'Uang Harian Dalam Kota',
+            'volume' => 1,
+            'satuan' => 'OH',
+            'harga_satuan' => $harga,
+            'jumlah' => $harga,
+            'sumber' => RincianBiaya::SUMBER_KEUANGAN,
+        ]);
+    }
+
+    private function sanggahRincian(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->put(route('daftar-riil.sanggah', [$this->usulan, $this->peserta, 'rincian']), [
+                'sanggahan' => 'Uang harian dalam kota sesuai SBM Rp150.000, bukan Rp100.000.',
+            ])
+            ->assertSessionHas('success');
+    }
+
+    /**
+     * Sanggahan atas rincian biaya tampil di halaman Keuangan — tempat
+     * nominalnya diperbaiki — bersama tombol pengiriman ulangnya. Tanpa itu
+     * berkasnya buntu: pelaksana menunggu, PPK tidak dapat menandatangani.
+     */
+    public function test_sanggahan_rincian_tampil_di_halaman_keuangan_beserta_kirim_ulang(): void
+    {
+        $this->rincianUangHarian();
+        $this->kirimKePelaksana();
+        $this->sanggahRincian();
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertSee('Disanggah pelaksana — Rincian Biaya Perjalanan Dinas')
+            ->assertSee('Uang harian dalam kota sesuai SBM Rp150.000, bukan Rp100.000.')
+            ->assertSee('Kirim Ulang ke Pelaksana')
+            ->assertDontSee('Sudah dikirim ke pelaksana');
+    }
+
+    /**
+     * Pengiriman ulang hanya membuka dokumen yang belum disetujui: daftar riil
+     * yang sudah ditandatangani pelaksana tetap berlaku, sesuai panduan
+     * "dokumen satunya tetap berjalan".
+     */
+    public function test_kirim_ulang_mempertahankan_dokumen_yang_sudah_ditandatangani_pelaksana(): void
+    {
+        $this->rincianUangHarian();
+        $daftar = $this->kirimKePelaksana();
+
+        $this->actingAs($this->pelaksana)
+            ->put(route('daftar-riil.setuju', [$this->usulan, $this->peserta, 'riil']))
+            ->assertSessionHas('success');
+        $this->sanggahRincian();
+        $kodeRiil = $daftar->fresh()->jalur()->kodeKonfirmasi();
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('daftar-riil.kirim-pegawai', [$this->usulan, $this->peserta]))
+            ->assertSessionHas('success');
+
+        $daftar->refresh();
+        $this->assertTrue($daftar->jalur()->sudahDisetujui());
+        $this->assertSame($kodeRiil, $daftar->jalur()->kodeKonfirmasi());
+        $this->assertFalse($daftar->jalurRincian()->sedangDisanggah());
+        $this->assertNull($daftar->jalurRincian()->sanggahan());
+        $this->assertTrue($daftar->jalurRincian()->masaSanggahBerjalan());
+
+        // Pemberitahuannya hanya menyebut dokumen yang perlu disikapi lagi.
+        $pemberitahuan = $this->pelaksana->notifikasi()->latest('id')->first();
+        $this->assertSame(route('rincian-saya.rincian-biaya'), $pemberitahuan->url);
+        $this->assertStringStartsWith('Rincian biaya (Rp 100.000) perjalanan dinas', $pemberitahuan->pesan);
+        $this->assertStringNotContainsString('daftar pengeluaran riil', $pemberitahuan->pesan);
+    }
+
+    /** Dokumen tanpa nominal tidak disebut, jadi tautannya menuju dokumen yang perlu disikapi. */
+    public function test_pemberitahuan_hanya_menyebut_dokumen_bernominal(): void
+    {
+        $this->rincianUangHarian(150_000);
+        $this->daftarDenganNominal(0);
+        $this->validasiSeluruhNominal($this->usulan, $this->timKeuangan);
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('daftar-riil.kirim-pegawai', [$this->usulan, $this->peserta]))
+            ->assertSessionHas('success');
+
+        $pemberitahuan = $this->pelaksana->notifikasi()->first();
+        $this->assertSame(route('rincian-saya.rincian-biaya'), $pemberitahuan->url);
+        $this->assertStringNotContainsString('daftar pengeluaran riil', $pemberitahuan->pesan);
     }
 
     // ── Gerbang tanda tangan PPK ──

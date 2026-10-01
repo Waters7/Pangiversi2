@@ -193,17 +193,29 @@ class PenguncianBerkasTest extends TestCase
         );
     }
 
-    public function test_berkas_terbuka_kembali_setelah_dikirim_ulang(): void
+    /**
+     * Mengirim ulang hanya membuka dokumen yang belum disetujui, jadi rincian
+     * yang sudah ditandatangani pelaksana tetap terkunci. Jalan membukanya
+     * adalah pengembalian oleh PPK, sebagaimana disebut pesan kuncinya.
+     */
+    public function test_berkas_terbuka_kembali_setelah_dikembalikan_ppk(): void
     {
         $berkas = $this->berkasSampaiKePelaksana();
         $berkas->jalurRincian()->setujui();
 
-        // Tim keuangan mengirim ulang, sikap pelaksana tercabut, kuncinya terbuka.
         $this->actingAs($this->timKeuangan)
             ->put(route('daftar-riil.kirim-pegawai', [$this->usulan, $this->peserta]))
             ->assertSessionHas('success');
+        $this->suntingRincian($this->rincianDokumen())->assertForbidden();
 
-        $this->suntingRincian($this->rincianDokumen())->assertSessionHasNoErrors();
+        $this->actingAs($this->ppk)
+            ->put(route('daftar-riil.kembalikan', [$this->usulan, $this->peserta, 'rincian']), [
+                'alasan_kembali' => 'Harga satuan uang harian belum sesuai SBM.',
+            ])
+            ->assertSessionHas('success');
+
+        $this->suntingRincian($this->rincianDokumen())->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(99_000_000.0, (float) $this->rincianDokumen()->harga_satuan);
     }
 
     public function test_kirim_ulang_tertutup_setelah_ppk_menandatangani(): void

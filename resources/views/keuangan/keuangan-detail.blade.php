@@ -6,6 +6,7 @@
 
     <div class="flex-1 px-4 md:px-8 py-7">
 
+        <x-flash />
 
         {{-- Page Header --}}
         <div class="mb-6 flex items-center gap-3">
@@ -64,7 +65,7 @@
             </div>
             <div>
                 <p class="text-xs text-slate-400">Tujuan</p>
-                <p class="text-sm font-semibold text-slate-700">{{ $usulan->tujuan }}</p>
+                <p class="text-sm font-semibold text-slate-700">{{ $usulan->lokasi ?? '—' }}</p>
             </div>
             <div>
                 <p class="text-xs text-slate-400">Periode</p>

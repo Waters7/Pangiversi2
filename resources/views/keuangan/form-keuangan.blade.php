@@ -590,17 +590,41 @@
 
             @can('mengelola-biaya')
                 @if ($pesertaUtama && ! ($berkasRiil?->sudah_ditandatangani))
-                    @if ($berkasRiil?->sudahDikirimKePegawai())
-                        <div class="w-full mb-3 px-4 py-2.5 bg-teal-50 border border-teal-100 rounded-xl text-center">
-                            <p class="text-xs font-bold text-teal-800">Sudah dikirim ke pelaksana</p>
-                            <p class="text-[11px] text-teal-700 mt-0.5">{{ $berkasRiil->status_label }}</p>
+                    @php
+                        // Dokumen yang disanggah pelaksana kembali ke tim keuangan.
+                        // Sanggahannya ditampilkan di sini — tempat nominalnya
+                        // diperbaiki — beserta pengiriman ulangnya; tanpa itu berkas
+                        // buntu: pelaksana menunggu dan PPK tidak dapat menandatangani.
+                        $jalurBerkas = $berkasRiil ? [$berkasRiil->jalurRincian(), $berkasRiil->jalur()] : [];
+                        $jalurDisanggah = collect($jalurBerkas)->filter(fn ($jalur) => $jalur->sedangDisanggah());
+                        $kirimUlang = (bool) $berkasRiil?->sudahDikirimKePegawai();
+                    @endphp
+
+                    @if ($kirimUlang && $jalurDisanggah->isEmpty())
+                        <div class="w-full mb-3 px-4 py-2.5 bg-teal-50 border border-teal-100 rounded-xl">
+                            <p class="text-xs font-bold text-teal-800 text-center">Sudah dikirim ke pelaksana</p>
+                            @foreach ($jalurBerkas as $jalur)
+                                <p class="mt-1 flex items-start justify-between gap-2 text-[11px] text-teal-700">
+                                    <span>{{ $jalur->nama() }}</span>
+                                    <span class="font-semibold text-right">{{ $jalur->statusLabel() }}</span>
+                                </p>
+                            @endforeach
                         </div>
                     @else
+                        @foreach ($jalurDisanggah as $jalur)
+                            <div class="w-full mb-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
+                                <p class="text-xs font-bold text-red-800">Disanggah pelaksana — {{ $jalur->nama() }}</p>
+                                <p class="text-[11px] text-red-600 mt-0.5">{{ $jalur->waktu('disanggah')?->translatedFormat('d M Y, H:i') }}</p>
+                                <p class="text-xs text-red-700 leading-relaxed mt-1.5">{{ $jalur->sanggahan() }}</p>
+                                <p class="text-[11px] text-red-600 mt-2">Perbaiki nominalnya, lalu kirim ulang untuk diperiksa kembali.</p>
+                            </div>
+                        @endforeach
+
                         <form method="POST"
                               action="{{ route('daftar-riil.kirim-pegawai', [$usulan->no_usulan, $pesertaUtama]) }}"
                               class="mb-3"
                               x-data
-                              @submit.prevent="if (confirm('Kirim rincian biaya dan daftar pengeluaran riil ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
+                              @submit.prevent="if (confirm('{{ $kirimUlang ? 'Kirim ulang berkas yang sudah diperbaiki' : 'Kirim rincian biaya dan daftar pengeluaran riil' }} ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
                             @csrf @method('PUT')
                             <button type="submit" @disabled($alasanTertahan !== null)
                                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition
@@ -610,13 +634,17 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
                                 </svg>
-                                Kirim ke Pelaksana
+                                {{ $kirimUlang ? 'Kirim Ulang ke Pelaksana' : 'Kirim ke Pelaksana' }}
                             </button>
                         </form>
 
                         @if ($alasanTertahan !== null)
                             <p class="-mt-1 mb-3 text-[11px] text-amber-700 text-center">
                                 {{ $alasanTertahan }}
+                            </p>
+                        @elseif ($kirimUlang)
+                            <p class="-mt-1 mb-3 text-[11px] text-slate-400 text-center">
+                                Dokumen yang sudah ditandatangani pelaksana tetap berlaku; hanya yang disanggah dibuka kembali.
                             </p>
                         @else
                             <p class="-mt-1 mb-3 text-[11px] text-slate-400 text-center">

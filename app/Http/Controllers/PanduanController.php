@@ -136,6 +136,15 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.9',
+                'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Sanggahan pelaksana atas rincian biaya kini tampil di halaman Keuangan — tempat nominalnya diperbaiki — lengkap dengan alasan dan waktunya, beserta tombol Kirim Ulang ke Pelaksana. Sebelumnya berkas yang rinciannya disanggah tidak dapat dikirim ulang.',
+                    'Mengirim ulang hanya membuka dokumen yang disanggah: dokumen yang sudah ditandatangani pelaksana tetap berlaku beserta kode konfirmasinya, dan pemberitahuannya hanya menyebut dokumen yang perlu disikapi lagi.',
+                    'Halaman Detail Keuangan kini menampilkan pesan hasil tiap tindakan — komponen tersimpan, berkas terkirim, atau alasan tertahan — dan menyebut tujuan perjalanan pada kepalanya. Pemberitahuan sanggahan kepada tim keuangan langsung membuka halaman ini.',
+                ],
+            ],
+            [
                 'versi' => '2.5.8',
                 'tanggal' => '1 Oktober 2026',
                 'butir' => [

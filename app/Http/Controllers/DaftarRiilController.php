@@ -93,8 +93,9 @@ class DaftarRiilController extends Controller
 
         $daftar = $this->daftarUntuk($usulan, $peserta);
 
-        // Mengirim ulang mencabut sikap pelaksana atas kedua dokumen, jadi
-        // ia tertutup begitu salah satunya disahkan PPK.
+        // Mengirim ulang membuka masa sanggah baru bagi kedua dokumen, jadi
+        // ia tertutup begitu salah satunya disahkan PPK: dokumen yang sudah
+        // disahkan tidak boleh dapat disanggah lagi.
         abort_if(
             $daftar->sudah_ditandatangani || $daftar->jalurRincian()->sudahDitandatangani(),
             403,
@@ -107,7 +108,7 @@ class DaftarRiilController extends Controller
 
         $this->pengiriman->kirim($usulan, $peserta, $daftar);
 
-        return back()->with('success', "Berkas dikirim ke {$peserta->nama}. Masa sanggah ".DaftarRiil::HARI_MASA_SANGGAH.' hari.');
+        return back()->with('success', "Berkas dikirim ke {$peserta->nama} — masa sanggah ".DaftarRiil::HARI_MASA_SANGGAH.' hari.');
     }
 
     /**
@@ -303,11 +304,14 @@ class DaftarRiilController extends Controller
             ['usulan' => $usulan, 'catatan' => $validated['sanggahan']],
         );
 
+        // Sanggahan diperbaiki dari halaman Keuangan — di sanalah alasannya
+        // tampil dan berkasnya dikirim ulang — jadi pemberitahuannya ke sana.
         $this->beritahuPengelolaBiaya(
             $usulan,
             'Rincian biaya disanggah',
             "{$peserta->nama} menyanggah {$jalur->nama()} usulan {$usulan->no_usulan}: {$validated['sanggahan']}",
             Notifikasi::TIPE_BAHAYA,
+            route('keuangan.detail', $usulan->no_usulan),
         );
 
         return back()->with('success', "Sanggahan Anda atas {$jalur->nama()} terkirim ke tim keuangan.");
@@ -433,7 +437,7 @@ class DaftarRiilController extends Controller
     /**
      * Beri tahu pihak yang menyusun biaya bahwa ada tanggapan pelaksana.
      */
-    private function beritahuPengelolaBiaya(Usulan $usulan, string $judul, string $pesan, string $tipe): void
+    private function beritahuPengelolaBiaya(Usulan $usulan, string $judul, string $pesan, string $tipe, ?string $url = null): void
     {
         $this->notifikasi->kirimKePeran(
             [User::ROLE_TIM_KEUANGAN, User::ROLE_BENDAHARA, User::ROLE_PPK],
@@ -442,7 +446,7 @@ class DaftarRiilController extends Controller
             [
                 'usulan' => $usulan,
                 'tipe' => $tipe,
-                'url' => route('daftar-riil.show', $usulan->no_usulan),
+                'url' => $url ?? route('daftar-riil.show', $usulan->no_usulan),
             ],
         );
     }

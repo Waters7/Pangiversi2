@@ -154,13 +154,36 @@ class KonfirmasiPelaksanaQrTest extends TestCase
         $this->assertNull($daftar->fresh()->kode_konfirmasi);
     }
 
-    public function test_kirim_ulang_dari_tim_keuangan_mencabut_kode_konfirmasi(): void
+    /**
+     * Kirim ulang hanya membuka dokumen yang belum disetujui pelaksana, jadi
+     * daftar riil yang sudah ditandatangani tetap sah beserta QR cetakannya.
+     */
+    public function test_kirim_ulang_dari_tim_keuangan_mempertahankan_kode_dokumen_yang_disetujui(): void
     {
         $daftar = $this->pelaksanaMenyetujui();
         $kode = $daftar->kode_konfirmasi;
 
         $this->actingAs($this->timKeuangan)
             ->put(route('daftar-riil.kirim-pegawai', [$this->usulan, $this->peserta]));
+
+        $this->assertSame($kode, $daftar->fresh()->kode_konfirmasi);
+        $this->get(route('verifikasi.tampil', $kode))
+            ->assertOk()
+            ->assertSee('Dokumen Terverifikasi')
+            ->assertDontSee('Dokumen Tidak Terverifikasi');
+    }
+
+    /** Pengembalian PPK membuka dokumennya dari awal, dan kodenya ikut gugur. */
+    public function test_pengembalian_ppk_mencabut_kode_konfirmasi(): void
+    {
+        $daftar = $this->pelaksanaMenyetujui();
+        $kode = $daftar->kode_konfirmasi;
+
+        $this->actingAs($this->ppk)
+            ->put(route('daftar-riil.kembalikan', [$this->usulan, $this->peserta]), [
+                'alasan_kembali' => 'Nominal transport lokal belum sesuai nota.',
+            ])
+            ->assertSessionHas('success');
 
         $this->assertNull($daftar->fresh()->kode_konfirmasi);
 

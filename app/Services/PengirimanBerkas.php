@@ -80,18 +80,30 @@ class PengirimanBerkas
             ['usulan' => $usulan],
         );
 
-        if ($peserta->user) {
+        // Pada pengiriman ulang, dokumen yang sudah ditandatangani pelaksana
+        // tetap berlaku. Pemberitahuannya hanya menyebut dokumen yang perlu
+        // disikapi — sudah bernominal dan belum disetujui — dan menautkan
+        // halamannya.
+        $menunggu = collect([$daftar->jalurRincian(), $daftar->jalur()])
+            ->reject(fn (JalurPersetujuan $jalur) => $jalur->sudahDisetujui() || $jalur->total() <= 0);
+
+        if ($peserta->user && $menunggu->isNotEmpty()) {
+            $dokumen = $menunggu->map(fn (JalurPersetujuan $jalur) => $jalur->jenis() === JalurPersetujuan::RINCIAN
+                ? 'rincian biaya (Rp '.number_format($total, 0, ',', '.').')'
+                : 'daftar pengeluaran riil (Rp '.number_format($daftar->total_riil, 0, ',', '.').')');
+
             $this->notifikasi->kirim(
                 $peserta->user,
                 'Berkas pertanggungjawaban menunggu tanda tangan Anda',
-                'Rincian biaya (Rp '.number_format($total, 0, ',', '.').') dan daftar pengeluaran riil (Rp '
-                    .number_format($daftar->total_riil, 0, ',', '.').') perjalanan dinas '.$usulan->no_usulan
+                ucfirst($dokumen->implode(' dan ')).' perjalanan dinas '.$usulan->no_usulan
                     .' menunggu persetujuan Anda. Bila nominalnya tidak sesuai, ajukan sanggahan paling lambat '
                     .$daftar->batas_sanggah->translatedFormat('d F Y').'.',
                 [
                     'usulan' => $usulan,
                     'tipe' => Notifikasi::TIPE_PERINGATAN,
-                    'url' => route('rincian-saya.daftar-riil'),
+                    'url' => $menunggu->count() === 1 && $menunggu->first()->jenis() === JalurPersetujuan::RINCIAN
+                        ? route('rincian-saya.rincian-biaya')
+                        : route('rincian-saya.daftar-riil'),
                 ],
             );
         }
@@ -101,8 +113,9 @@ class PengirimanBerkas
      * Kirim sendiri begitu seluruh pemeriksaan tim keuangan rampung.
      *
      * Dipanggil setelah tiap validasi. Berkas yang sudah pernah dikirim
-     * tidak dikirim ulang dari sini — mengirim ulang mencabut sikap
-     * pelaksana, dan itu keputusan yang harus diambil sengaja lewat tombol.
+     * tidak dikirim ulang dari sini — mengirim ulang membuka kembali dokumen
+     * yang disanggah dan memulai masa sanggah baru, dan itu keputusan yang
+     * harus diambil sengaja lewat tombol.
      *
      * @return bool Berkas benar-benar terkirim pada panggilan ini.
      */

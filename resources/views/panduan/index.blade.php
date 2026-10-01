@@ -501,9 +501,10 @@
 
             <x-panduan-langkah nomor="4" judul="Setujui, atau ajukan sanggahan">
                 Bila nominalnya sesuai, tekan <strong>Setuju &amp; Tandatangani</strong>. Bila ada
-                yang keliru, tekan <strong>Sanggah</strong> dan jelaskan bagian mana yang tidak
+                yang keliru, tekan <strong>Sanggah Nominal</strong> dan jelaskan bagian mana yang tidak
                 sesuai — berkas itu dikembalikan ke tim keuangan untuk diperbaiki, sementara
-                dokumen satunya tetap berjalan.
+                dokumen satunya tetap berjalan. Setelah diperbaiki, hanya dokumen yang disanggah
+                yang perlu Anda sikapi lagi.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="PPK membubuhkan tanda tangan" :terakhir="true">
@@ -587,7 +588,14 @@
                 menyebutkan komponen mana yang menahan.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="6" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
+            <x-panduan-langkah nomor="6" judul="Tindak lanjuti sanggahan pelaksana">
+                Pemberitahuan sanggahan membuka halaman rincian biaya usulannya; sanggahan beserta
+                alasan dan waktunya tampil di panel kanan. Perbaiki nominalnya, lalu tekan
+                <strong>Kirim Ulang ke Pelaksana</strong>. Hanya dokumen yang disanggah yang dibuka
+                kembali — dokumen yang sudah ditandatangani pelaksana tetap berlaku.
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="7" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
                 Menu <strong>Laporan → List Daftar Nominatif</strong> memuat seluruh daftar yang
                 terbit — menunggu PPK, sudah ditandatangani, sudah diterima — beserta siapa saja
                 pelaksana yang sudah menandatangani berkasnya; kategori dan akun pembiayaan
@@ -603,8 +611,9 @@
                     <p class="font-bold mb-1">Berkas bertanda tangan terkunci</p>
                     <p>
                         Setelah pelaksana atau PPK menandatangani, rincian tidak dapat disunting
-                        lagi. Bila memang perlu diperbaiki, mintalah PPK membatalkan tanda
-                        tangannya lebih dulu — bukan mengubah angkanya diam-diam.
+                        lagi. Bila memang perlu diperbaiki, mintalah PPK mengembalikan berkasnya ke
+                        tim keuangan — atau mencabut tanda tangannya bila sudah disahkan — bukan
+                        mengubah angkanya diam-diam.
                     </p>
                 </div>
             </div>
