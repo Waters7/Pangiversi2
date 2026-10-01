@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.8')
+            ->assertSee('Panduan bergambar')
             ->assertSee('Versi 2.5.6')
             ->assertSee('Berkas Pertanggungjawaban')
             ->assertSee('Supervisi Kerja Praktek')
@@ -231,8 +233,11 @@ class PanduanPeranTest extends TestCase
     public function test_buku_panduan_dapat_diunduh_dari_dalam_sistem(): void
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
-            ->assertSee('Unduh Buku Panduan')
-            ->assertSee(route('panduan.unduh'), escape: false);
+            ->assertSee('Unduh Buku Panduan (PDF)')
+            ->assertSee('Versi Word')
+            ->assertSee(route('panduan.unduh', ['format' => 'pdf']), escape: false)
+            ->assertSee(route('panduan.unduh'), escape: false)
+            ->assertSee('images/panduan/sampul.webp', escape: false);
 
         $unduhan = $this->actingAs(User::factory()->create())
             ->get(route('panduan.unduh'))
@@ -249,10 +254,65 @@ class PanduanPeranTest extends TestCase
         );
     }
 
+    /** Versi PDF memuat sampul dan gambar yang sama, terbuka di perangkat apa pun. */
+    public function test_buku_panduan_dapat_diunduh_sebagai_pdf(): void
+    {
+        $unduhan = $this->actingAs(User::factory()->create())
+            ->get(route('panduan.unduh', ['format' => 'pdf']))
+            ->assertOk()
+            ->assertDownload(PanduanController::BERKAS_PDF);
+
+        $this->assertSame('application/pdf', $unduhan->headers->get('content-type'));
+        $this->assertStringStartsWith('%PDF-', file_get_contents($unduhan->getFile()->getPathname()));
+    }
+
+    /** Format yang tidak dikenal kembali ke bawaannya, berkas Word. */
+    public function test_format_unduhan_yang_tidak_dikenal_memberikan_berkas_word(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('panduan.unduh', ['format' => 'exe']))
+            ->assertDownload(PanduanController::BERKAS_BUKU);
+    }
+
     /** Buku panduan bukan berkas terbuka; pengunjung tanpa akun tidak menerimanya. */
     public function test_unduhan_tertutup_bagi_yang_belum_masuk(): void
     {
         $this->get(route('panduan.unduh'))->assertRedirect(route('login'));
+        $this->get(route('panduan.unduh', ['format' => 'pdf']))->assertRedirect(route('login'));
+    }
+
+    // ── Langkah bergambar ──
+
+    /** Langkah membuat SPD sampai mengajukan perjadin disertai tangkapan layar. */
+    public function test_langkah_spd_dan_pengajuan_bergambar(): void
+    {
+        $this->bukaSebagai(PeranPengguna::DosenTendik)
+            ->assertSeeInOrder([
+                'Menerbitkan Surat Perjalanan Dinas',
+                'images/panduan/spd-01-menu.webp',
+                'images/panduan/spd-02-identitas.webp',
+                'images/panduan/spd-07-dokumen.webp',
+                'Tandatangani lewat SRIKANDI',
+                'Mengajukan Perjalanan Dinas untuk Diri Sendiri',
+                'images/panduan/usulan-01-jalur.webp',
+                'images/panduan/usulan-06-konfirmasi.webp',
+                'images/panduan/usulan-07-daftar.webp',
+            ], escape: false)
+            ->assertSee('Gambar memakai data contoh dengan pegawai fiktif.');
+    }
+
+    /** Gambar yang dirujuk halaman panduan benar-benar ikut terpasang. */
+    public function test_setiap_gambar_panduan_tersedia(): void
+    {
+        $halaman = $this->bukaSebagai(PeranPengguna::SuperAdministrator)->getContent();
+
+        preg_match_all('#images/panduan/([a-z0-9-]+\.webp)#', $halaman, $temuan);
+        $gambar = array_unique($temuan[1]);
+
+        $this->assertGreaterThanOrEqual(16, count($gambar));
+        foreach ($gambar as $berkas) {
+            $this->assertFileExists(public_path('images/panduan/'.$berkas));
+        }
     }
 
     public function test_saluran_bantuan_terbuka_bagi_seluruh_peran(): void

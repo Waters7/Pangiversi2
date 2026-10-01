@@ -14,31 +14,44 @@
                 <span class="ml-1 font-mono text-[11px] text-slate-400">PANGI {{ $versi }}</span>
             </p>
         </div>
-
-        {{-- Yang di layar menyesuaikan peran pembacanya; berkas unduhan memuat
-             seluruh peran sekaligus, untuk dicetak atau dibagikan. --}}
-        @if ($bukuTersedia)
-            <a href="{{ route('panduan.unduh') }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition whitespace-nowrap self-start">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                </svg>
-                Unduh Buku Panduan
-            </a>
-        @endif
     </div>
 
-    @if ($bukuTersedia)
-        <div class="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
-            <svg class="w-5 h-5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-            </svg>
-            <p class="text-xs text-slate-600 leading-relaxed">
-                Halaman ini hanya menampilkan bagian yang berlaku bagi peran Anda.
-                <strong>Buku panduan lengkap</strong> memuat seluruh peran sekaligus beserta
-                rujukan kategori, status, penomoran, dan kendala umum &mdash; berkas Word,
-                siap dicetak. <span class="font-mono text-[11px] text-slate-400">{{ $namaBuku }}</span>
-            </p>
+    @if ($bukuTersedia || $pdfTersedia)
+        {{-- Yang di layar menyesuaikan peran pembacanya; buku unduhannya memuat
+             seluruh peran sekaligus, bersampul dan bergambar, untuk dicetak atau
+             dibagikan. PDF terbuka di perangkat apa pun; Word dapat disunting. --}}
+        <div class="mb-5 bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
+            <img src="{{ asset('images/panduan/sampul.webp') }}" alt="Sampul Buku Panduan PANGI"
+                 class="w-24 sm:w-28 shrink-0 self-start rounded-lg border border-slate-200 shadow-sm">
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-slate-800">Buku Panduan PANGI {{ $versi }}</p>
+                <p class="text-xs text-slate-600 leading-relaxed mt-1">
+                    Halaman ini hanya menampilkan bagian yang berlaku bagi peran Anda.
+                    <strong>Buku panduan lengkap</strong> memuat seluruh peran sekaligus, bergambar langkah
+                    demi langkah dari membuat SPD sampai mengajukan perjadin, beserta rujukan kategori,
+                    status, penomoran, dan kendala umum &mdash; siap dicetak.
+                </p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    @if ($pdfTersedia)
+                        <a href="{{ route('panduan.unduh', ['format' => 'pdf']) }}"
+                           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold transition whitespace-nowrap">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                            </svg>
+                            Unduh Buku Panduan (PDF)
+                        </a>
+                    @endif
+                    @if ($bukuTersedia)
+                        <a href="{{ route('panduan.unduh') }}"
+                           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition whitespace-nowrap">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>
+                            </svg>
+                            {{ $pdfTersedia ? 'Versi Word' : 'Unduh Buku Panduan' }}
+                        </a>
+                    @endif
+                </div>
+            </div>
         </div>
     @endif
 
@@ -134,37 +147,56 @@
                 </p>
             </div>
 
+            <p class="mb-6 -mt-3 text-[11px] text-slate-400 leading-relaxed">
+                Gambar memakai data contoh dengan pegawai fiktif. Angka merah menandai bagian yang dibahas
+                pada langkah itu &mdash; ketuk gambar untuk memperbesar.
+            </p>
+
             <x-panduan-langkah nomor="1" judul="Buka menu Buat SPD → Pembuatan SPD">
                 Seluruh peran boleh menerbitkan SPD, dan tiap SPD hanya dapat disunting oleh yang
-                membuatnya atau yang namanya tercantum di dalamnya.
+                membuatnya atau yang namanya tercantum di dalamnya. Tombol <strong>+ Buat SPD</strong> pada
+                Daftar SPD membuka formulir yang sama.
+                <x-panduan-gambar berkas="spd-01-menu"
+                    judul="Menu Buat SPD → Pembuatan SPD (1), atau tombol + Buat SPD pada Daftar SPD (2)." />
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="2" judul="Nomor surat terbit sendiri">
-                Nomor tidak perlu diketik. Sistem merakitnya mengikuti pola nomor perjadin —
-                <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">PJ-[UNIT]-[tahun]-[bulan]-[urut]</span>
-                — dengan bulan mengikuti tanggal keberangkatan, sehingga tidak pernah ada dua
-                SPD bernomor sama. Pada dokumen cetaknya, baris Nomor diisi penanda
-                <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">${nomor_naskah}</span>
-                yang diganti SRIKANDI saat surat diregistrasi.
+            <x-panduan-langkah nomor="2" judul="Periksa identitas surat dan pelaksana">
+                Isi kota tempat SPD dikeluarkan; tanggalnya mengikuti hari pembuatan. Pelaksana pertama terisi
+                sendiri dari akun Anda, dan <strong>nomor suratnya terbit sendiri</strong> mengikuti pola nomor
+                perjadin &mdash; <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">PJ-[UNIT]-[tahun]-[bulan]-[urut]</span> &mdash; dengan bulan
+                mengikuti tanggal keberangkatan, sehingga tidak pernah ada dua SPD bernomor sama. Pada dokumen
+                cetaknya, baris Nomor diisi penanda <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">${nomor_naskah}</span> yang diganti
+                SRIKANDI saat surat diregistrasi. Bila berangkat bersama rekan, tekan
+                <strong>Tambah Pelaksana</strong> lalu pilih namanya dari daftar pegawai &mdash; nama, NIP, pangkat,
+                dan jabatannya terisi sendiri. Satu SPD memuat paling banyak lima pelaksana.
+                <x-panduan-gambar berkas="spd-02-identitas" ukuran="sedang"
+                    judul="Identitas surat (1), pelaksana pertama dari akun yang sedang masuk (2), dan tombol Tambah Pelaksana (3)." />
+                <x-panduan-gambar berkas="spd-03-pelaksana-tambahan" ukuran="sedang"
+                    judul="Pelaksana tambahan dipilih dari daftar pegawai (1); data kepegawaiannya terisi sendiri (2)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Lengkapi maksud, tujuan, dan tanggal">
                 Isian ini akan tersalin sendiri ke formulir usulan nanti, sehingga tanggal pada SPD
-                dan pada usulan tidak pernah berselisih. Kolom <strong>akun pembebanan</strong>
-                tidak ada di formulir ini — akunnya diisi PPK saat verifikasi dan tanda tangan.
+                dan pada usulan tidak pernah berselisih. Lamanya perjalanan dihitung sendiri dari tanggal
+                berangkat dan kembali. Kolom <strong>akun pembebanan</strong> tidak ada di formulir ini &mdash;
+                akunnya diisi PPK saat verifikasi dan tanda tangan.
+                <x-panduan-gambar berkas="spd-04-rencana" ukuran="sedang"
+                    judul="Maksud perjalanan (1), tempat tujuan (2), serta tanggal berangkat dan kembali (3); lamanya perjalanan dihitung sendiri (4)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Lampirkan surat tugas dan nomornya">
                 Pada kartu <strong>Surat Tugas</strong>, unggah berkas surat tugas (PDF, JPG, atau
                 PNG, maks. 5 MB) dan salin nomornya persis seperti tertulis. Tidak wajib, tetapi
                 bila diisi di sini, usulan perjadin yang memilih SPD ini
-                <strong>tidak perlu mengunggah dan menyalin nomornya lagi</strong> — keduanya
+                <strong>tidak perlu mengunggah dan menyalin nomornya lagi</strong> &mdash; keduanya
                 diambil dari SPD. Saat menyunting SPD, biarkan kolom berkasnya kosong untuk
                 mempertahankan yang sudah ada.
+                <x-panduan-gambar berkas="spd-05-surat-tugas" ukuran="sedang"
+                    judul="Nomor dan berkas surat tugas (1), lalu tombol Pratinjau (2) dan Simpan (3)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Tambahkan pengikut bila ada">
-                Pengikut adalah orang yang ikut berangkat tanpa menjadi pelaksana — namanya
+                Pengikut adalah orang yang ikut berangkat tanpa menjadi pelaksana &mdash; namanya
                 tercantum pada SPD, tetapi ia tidak mengajukan usulan sendiri.
                 @can('mengisi-pengikut-spd')
                     Bagian ini hanya muncul bagi Anda; peran lain tidak dapat mengisinya, dan
@@ -177,11 +209,21 @@
                 @endcan
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="6" judul="Pratinjau, lalu simpan" :terakhir="true">
+            <x-panduan-langkah nomor="6" judul="Pratinjau, lalu simpan">
                 Tombol <strong>Pratinjau</strong> menampilkan dokumennya persis seperti yang akan
                 tercetak, tanpa menyimpan apa pun. Setelah disimpan, setiap pelaksana yang
                 tercantum menerima pemberitahuan bahwa SPD-nya sudah terbit dan usulan sudah
                 dapat diajukan.
+                <x-panduan-gambar berkas="spd-06-detail"
+                    judul="SPD tersimpan (1) beserta nomor tiap pelaksana (2); tekan Unduh PDF (3) untuk mencetaknya." />
+                <x-panduan-gambar berkas="spd-07-dokumen"
+                    judul="Contoh cetakan SPD, lembar pertama dan kedua. Penanda ${nomor_naskah} dan ${ttd_pengirim} diganti SRIKANDI saat surat ditandatangani." />
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="7" judul="Tandatangani lewat SRIKANDI" :terakhir="true">
+                Ajukan SPD yang sudah diunduh untuk ditandatangani PPK dan Direktur lewat SRIKANDI. Berkas
+                SPD bertanda tangan itulah yang diunggah saat
+                <button type="button" @click="bagian = 'pengajuan'" class="font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">mengajukan perjalanan dinas</button>.
             </x-panduan-langkah>
         </div>
     </div>
@@ -194,6 +236,11 @@
         </div>
 
         <div class="p-6">
+            <p class="mb-6 -mt-3 text-[11px] text-slate-400 leading-relaxed">
+                Gambar memakai data contoh dengan pegawai fiktif. Angka merah menandai bagian yang dibahas
+                pada langkah itu &mdash; ketuk gambar untuk memperbesar.
+            </p>
+
             <x-panduan-langkah nomor="1" judul="Buka menu Usulan Perjadin → Buat Usulan Perjadin">
                 Dari sidebar kiri, pilih <strong>Usulan Perjadin</strong> lalu
                 <strong>Buat Usulan Perjadin</strong>. Pertanyaan pertama adalah jalurnya:
@@ -206,6 +253,8 @@
                 Kota</strong> cukup surat tugas. Isian SPD muncul sendiri begitu kategorinya dipilih,
                 dan jenis kegiatannya terisi otomatis. Salah pilih jalur? Tekan
                 <strong>Ganti</strong> di kanan atas formulir.
+                <x-panduan-gambar berkas="usulan-01-jalur"
+                    judul="Menu Buat Usulan Perjadin (1) membuka pilihan jalur; pilih yang sesuai, misalnya Perjalanan Luar Kota (2)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
@@ -215,6 +264,8 @@
                 surat tugasnya ikut diambil — <strong>tidak perlu diunggah maupun disalin
                 lagi</strong>. Bila tidak ada SPD dari aplikasi, lewati dan isi data perjalanan
                 secara manual, termasuk mengunggah surat tugas beserta nomornya.
+                <x-panduan-gambar berkas="usulan-02-dasar"
+                    judul="SPD dari aplikasi (1) mengisi formulir secara otomatis; jalur yang dipilih tampil di kanan atas dan dapat diganti (2)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Unggah SPD bertanda tangan dan salin nomornya">
@@ -225,6 +276,15 @@
                 dan nomor itulah yang tercatat sebagai dasar persetujuan PPK pada jejak audit.
                 Pengajuan selalu atas nama Anda sendiri; rekan seperjalanan mengajukan
                 usulannya masing-masing dengan SPD bertanda tangannya sendiri.
+                <x-panduan-gambar berkas="usulan-03-berkas" ukuran="sedang"
+                    judul="Surat tugas diambil dari SPD yang dipilih (1); unggah SPD bertanda tangan (2) dan salin nomor naskahnya dari SRIKANDI (3)." />
+                <p class="mt-3">
+                    Pada jalur <strong>Supervisi Kerja Praktek / Magang</strong>, isian SPD baru muncul setelah
+                    kategori <strong>Supervisi Luar Kota</strong> dipilih; supervisi di dalam kota cukup dengan
+                    surat tugas.
+                </p>
+                <x-panduan-gambar berkas="usulan-08-supervisi" ukuran="sedang"
+                    judul="Jalur supervisi: kategori luar kota (3) memunculkan catatan (1) dan isian SPD bertanda tangan (2)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Pilih kategori perjalanan dengan benar">
@@ -239,13 +299,27 @@
                 Isi jenis kegiatan, lokasi tujuan, dan instansi. Kolom lokasi menyediakan daftar
                 kota yang sudah terdaftar — memilih dari daftar membuat usulan Anda ikut terekap
                 pada laporan per wilayah.
+                <x-panduan-gambar berkas="usulan-04-kegiatan" ukuran="sedang"
+                    judul="Jenis kegiatan (1), kategori perjalanan (2), lokasi dan instansi tujuan (3), serta tanggal yang tersalin dari SPD (4)." />
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="6" judul="Tekan Kirim Pengajuan Perjadin" :terakhir="true">
-                Sebuah kotak konfirmasi muncul lebih dulu, memuat ringkasan isian Anda —
-                periksa sekali lagi sebelum menekan lanjut. Pengajuan langsung berlaku karena
-                penugasannya sudah disahkan lewat SPD bertanda tangan. Bila belum siap, tekan
-                <strong>Simpan Draft</strong>.
+            <x-panduan-langkah nomor="6" judul="Tekan Kirim Pengajuan Perjadin">
+                Sebuah kotak konfirmasi muncul lebih dulu, memuat ringkasan isian Anda &mdash; tujuan,
+                tanggal, dan nomor SPD. Periksa sekali lagi sebelum menekan <strong>Ya, Kirim</strong>.
+                Pengajuan langsung berlaku karena penugasannya sudah disahkan lewat SPD bertanda tangan.
+                Bila belum siap, tekan <strong>Simpan Draft</strong>.
+                <x-panduan-gambar berkas="usulan-05-tindakan" ukuran="kecil"
+                    judul="Tombol Kirim Pengajuan Perjadin (1), atau Simpan Draft (2) bila belum siap dikirim." />
+                <x-panduan-gambar berkas="usulan-06-konfirmasi"
+                    judul="Kotak konfirmasi memuat ringkasan isian (1); tekan Ya, Kirim (2) untuk mengajukan." />
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="7" judul="Pantau di Daftar Usulan Perjadin" :terakhir="true">
+                Usulan yang terkirim langsung tampil berstatus <strong>Konfirmasi</strong>, beserta tahap
+                berikutnya yang sedang ditunggu &mdash; biasanya pembayaran uang muka. Tombol mata di kolom Aksi
+                membuka detail dan pelacakan berkasnya.
+                <x-panduan-gambar berkas="usulan-07-daftar"
+                    judul="Pesan berhasil (1), nomor usulan (2), dan statusnya (3) pada Daftar Usulan Perjadin." />
             </x-panduan-langkah>
 
             <div class="mt-6 grid gap-3">

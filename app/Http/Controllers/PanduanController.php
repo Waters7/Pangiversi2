@@ -32,6 +32,12 @@ class PanduanController extends Controller
      */
     public const BERKAS_BUKU = 'Buku-Panduan-PANGI-v2.5.docx';
 
+    /**
+     * Buku yang sama dalam PDF — sampul dan gambarnya tampil utuh di perangkat
+     * apa pun, termasuk ponsel yang tidak memasang pengolah kata.
+     */
+    public const BERKAS_PDF = 'Buku-Panduan-PANGI-v2.5.pdf';
+
     public function __invoke(Request $request, VersiAplikasi $versi): View
     {
         $pengguna = $request->user();
@@ -42,8 +48,8 @@ class PanduanController extends Controller
             'tugasPeran' => $this->tugasPeran($pengguna),
             // Tombol unduh disembunyikan bila bukunya memang tidak terpasang,
             // supaya tidak menjanjikan berkas yang berujung halaman 404.
-            'bukuTersedia' => is_file($this->jalurBuku()),
-            'namaBuku' => self::BERKAS_BUKU,
+            'bukuTersedia' => is_file($this->jalurBuku(self::BERKAS_BUKU)),
+            'pdfTersedia' => is_file($this->jalurBuku(self::BERKAS_PDF)),
             // Sebagian bagian memuat langkah yang tidak berlaku bagi seluruh
             // pembacanya — Tim SDM mengelola pengguna tanpa menyentuh master
             // data maupun jejak audit.
@@ -60,25 +66,27 @@ class PanduanController extends Controller
     }
 
     /**
-     * Unduh buku panduan lengkap dalam format Word.
+     * Unduh buku panduan lengkap — Word secara bawaan, PDF bila diminta.
      *
      * Yang di layar menyesuaikan peran pembacanya; berkas ini memuat
      * seluruhnya sekaligus, untuk dicetak atau dibagikan di luar aplikasi.
      */
-    public function unduh(): BinaryFileResponse
+    public function unduh(Request $request): BinaryFileResponse
     {
+        $berkas = $request->query('format') === 'pdf' ? self::BERKAS_PDF : self::BERKAS_BUKU;
+
         abort_unless(
-            is_file($this->jalurBuku()),
+            is_file($this->jalurBuku($berkas)),
             404,
             'Buku panduan belum terpasang pada aplikasi ini.',
         );
 
-        return response()->download($this->jalurBuku(), self::BERKAS_BUKU);
+        return response()->download($this->jalurBuku($berkas), $berkas);
     }
 
-    private function jalurBuku(): string
+    private function jalurBuku(string $berkas): string
     {
-        return resource_path('panduan/'.self::BERKAS_BUKU);
+        return resource_path('panduan/'.$berkas);
     }
 
     /**
@@ -127,6 +135,15 @@ class PanduanController extends Controller
     private function riwayatPerubahan(): array
     {
         return [
+            [
+                'versi' => '2.5.8',
+                'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Panduan bergambar: setiap langkah membuat SPD sampai mengajukan perjadin kini disertai tangkapan layar bertanda nomor, baik di menu Panduan Penggunaan maupun di buku panduan. Ketuk gambar untuk memperbesarnya.',
+                    'Buku panduan bersampul baru dengan warna Kemenkes dan dapat diunduh dalam format PDF maupun Word.',
+                    'Kotak konfirmasi sebelum mengirim pengajuan perjadin kini benar-benar menampilkan tujuan, tanggal, dan nomor SPD yang diisi — sebelumnya selalu tertulis "—".',
+                ],
+            ],
             [
                 'versi' => '2.5.7',
                 'tanggal' => '1 Oktober 2026',

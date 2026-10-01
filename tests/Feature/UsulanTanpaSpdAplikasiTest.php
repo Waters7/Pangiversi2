@@ -77,6 +77,23 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
             ->assertSee('Ya, Kirim');
     }
 
+    /**
+     * Ringkasan pada kotak konfirmasi dibaca saat kotaknya dibuka. Kolom
+     * formulir bukan data reaktif, jadi x-text yang membacanya langsung
+     * hanya menangkap isi saat halaman dimuat dan selalu menampilkan "—".
+     */
+    public function test_ringkasan_konfirmasi_dibaca_saat_kotaknya_dibuka(): void
+    {
+        $this->actingAs($this->pengguna)
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
+            ->assertOk()
+            ->assertSee('@click="bukaKonfirmasi()"', false)
+            ->assertSee('x-text="ringkasan.tujuan', false)
+            ->assertSee('x-text="ringkasan.noSpd', false)
+            ->assertDontSee('x-text="$refs.lokasi.value', false)
+            ->assertDontSee("getElementById('no_spd')?.value || '—'", false);
+    }
+
     public function test_formulir_usulan_terbuka_tanpa_spd_dari_aplikasi(): void
     {
         $this->actingAs($this->pengguna)

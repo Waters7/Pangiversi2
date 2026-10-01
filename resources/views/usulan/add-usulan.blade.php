@@ -43,6 +43,26 @@
     <form action="{{ route('usulan.store') }}" method="POST" enctype="multipart/form-data" id="formUsulan"
           x-data="{
             konfirmasiAjukan: false,
+            ringkasan: {},
+            /*
+              Ringkasan isian dibaca tepat saat kotak konfirmasi dibuka. Kolom
+              formulir bukan data reaktif Alpine, jadi membacanya langsung dari
+              x-text hanya menangkap isi saat halaman dimuat — selalu kosong.
+            */
+            bukaKonfirmasi() {
+              const nilai = (id) => document.getElementById(id)?.value?.trim() ?? '';
+              const tanggal = (isi) => isi
+                ? new Date(isi + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                : '';
+              this.ringkasan = {
+                tujuan: nilai('lokasi'),
+                mulai: tanggal(nilai('tanggal_mulai')),
+                selesai: tanggal(nilai('tanggal_selesai')),
+                noTugas: nilai('no_tugas'),
+                noSpd: nilai('no_spd'),
+              };
+              this.konfirmasiAjukan = true;
+            },
             daftarSpd: {{ Js::from($spdTerkait) }},
             idSpd: '{{ old('id_spd') }}',
             idKategori: '{{ old('id_kategori_perjadin') }}',
@@ -544,7 +564,7 @@
 
                         {{-- Usulan yang sudah diajukan menggerakkan SPD, biaya, dan
                              pembayaran, jadi pengisiannya ditanya ulang sekali. --}}
-                        <button type="button" @click="konfirmasiAjukan = true"
+                        <button type="button" @click="bukaKonfirmasi()"
                                 class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition shadow-sm shadow-teal-200">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -581,13 +601,13 @@
                                 </p>
 
                                 <ul class="mt-3 space-y-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3.5 py-3">
-                                    <li>Tujuan: <strong class="text-slate-700" x-text="$refs.lokasi.value || '—'"></strong></li>
-                                    <li>Tanggal: <strong class="text-slate-700" x-text="($refs.tanggalMulai.value || '—') + ' s.d. ' + ($refs.tanggalSelesai.value || '—')"></strong></li>
+                                    <li>Tujuan: <strong class="text-slate-700" x-text="ringkasan.tujuan || '—'"></strong></li>
+                                    <li>Tanggal: <strong class="text-slate-700" x-text="(ringkasan.mulai || '—') + ' s.d. ' + (ringkasan.selesai || '—')"></strong></li>
                                     @if ($spdBersyarat)
-                                        <li>Nomor surat tugas: <strong class="text-slate-700" x-text="document.getElementById('no_tugas')?.value || '—'"></strong></li>
-                                        <li x-show="butuhSpd" x-cloak>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
+                                        <li>Nomor surat tugas: <strong class="text-slate-700" x-text="ringkasan.noTugas || '—'"></strong></li>
+                                        <li x-show="butuhSpd" x-cloak>Nomor SPD: <strong class="text-slate-700" x-text="ringkasan.noSpd || '—'"></strong></li>
                                     @else
-                                        <li>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
+                                        <li>Nomor SPD: <strong class="text-slate-700" x-text="ringkasan.noSpd || '—'"></strong></li>
                                     @endif
                                 </ul>
 
