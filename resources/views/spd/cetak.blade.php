@@ -7,10 +7,10 @@
      * elektronik berukuran 3x3 cm. Ruang di sekitarnya sudah disediakan
      * seukuran itu agar tata letaknya tidak bergeser setelah QR disisipkan.
      *
-     * Pembagian penandatangannya: Pejabat Pembuat Komitmen menandatangani
-     * lembar pertama dan kolom pemberi perintah (${ttd_pengirim1}),
-     * sedangkan Direktur mengesahkan keberangkatan dan kedatangan kembali
-     * pada lembar kedua (${ttd_pengirim2}).
+     * Tiap penanda tangan memperoleh satu QR: Pejabat Pembuat Komitmen pada
+     * lembar pertama (${ttd_pengirim1}) dan Direktur pada butir I lembar
+     * kedua (${ttd_pengirim2}). Kotak tanda tangan pada butir V dibiarkan
+     * kosong — ruangnya tetap 3 cm untuk tanda tangan basah dan cap.
      *
      * Satu lembar terbit per pelaksana; rencana perjalanannya dipakai bersama.
      */
@@ -98,7 +98,9 @@
         .pengesahan .kanan { width: 52%; }
 
         .blok-ttd { text-align: center; }
-        .nama-ttd { font-weight: bold; text-decoration: underline; }
+        /* Nama penanda tangan tidak digarisbawahi: pada cetakan, garis itu
+           menyatu dengan garis kolom tabel dan terbaca sebagai pemisah. */
+        .nama-ttd { font-weight: bold; }
 
         /* Halaman belakang. Kolom nomor Romawi 8 mm, lalu dua kolom sisi yang
            benar-benar sama lebar — 88 mm masing-masing. Sebelumnya kolom kiri
@@ -493,8 +495,10 @@
                 <div class="blok-ttd">
                     <p style="margin:37px 0 0">Direktur Poltekkes Manado</p>
 
-                    {{-- Diganti QR tanda tangan elektronik oleh SRIKANDI. --}}
-                    <table class="kotak-ttd"><tr><td>${ttd_pengirim2}</td></tr></table>
+                    {{-- Kotaknya sengaja kosong: QR SRIKANDI hanya sekali per
+                         penanda tangan, yaitu pada butir I. Ruang 3 cm ini
+                         tetap disediakan untuk tanda tangan basah dan cap. --}}
+                    <table class="kotak-ttd"><tr><td>&nbsp;</td></tr></table>
 
                     <p style="margin:0"><span class="nama-ttd">{{ $direktur?->nama ?? '' }}</span></p>
                     <p style="margin:0">NIP. {{ $direktur?->nip ?? '' }}</p>
@@ -511,8 +515,9 @@
                 <div class="blok-ttd">
                     <p style="margin:6px 0 0">Pejabat Pembuat Komitmen</p>
 
-                    {{-- Diganti QR tanda tangan elektronik oleh SRIKANDI. --}}
-                    <table class="kotak-ttd"><tr><td>${ttd_pengirim1}</td></tr></table>
+                    {{-- Kotaknya sengaja kosong: QR SRIKANDI hanya sekali per
+                         penanda tangan, yaitu pada lembar pertama. --}}
+                    <table class="kotak-ttd"><tr><td>&nbsp;</td></tr></table>
 
                     <p style="margin:0"><span class="nama-ttd">{{ $ppk?->nama ?? '' }}</span></p>
                     <p style="margin:0">NIP. {{ $ppk?->nip ?? '' }}</p>

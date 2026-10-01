@@ -546,17 +546,32 @@ class SuratPerjalananDinasTest extends TestCase
 
     /**
      * SRIKANDI menggantikan penanda ini dengan QR tanda tangan elektronik.
-     * Tulisannya tidak boleh berubah sedikit pun.
+     * Tulisannya tidak boleh berubah sedikit pun, dan tiap penanda tangan
+     * cukup satu QR — kotak pada butir V dibiarkan kosong untuk tanda
+     * tangan basah.
      */
     public function test_penanda_tanda_tangan_srikandi_tidak_berubah(): void
     {
         $html = $this->htmlDokumen();
 
-        // PPK menandatangani lembar pertama dan kolom pemberi perintah.
-        $this->assertSame(2, substr_count($html, '${ttd_pengirim1}'));
+        // PPK menandatangani lembar pertama.
+        $this->assertSame(1, substr_count($html, '${ttd_pengirim1}'));
 
-        // Direktur mengesahkan keberangkatan dan kedatangan kembali.
-        $this->assertSame(2, substr_count($html, '${ttd_pengirim2}'));
+        // Direktur mengesahkan keberangkatan pada butir I lembar kedua.
+        $this->assertSame(1, substr_count($html, '${ttd_pengirim2}'));
+    }
+
+    /** Butir V tetap menyediakan ruang tanda tangan, tanpa penanda QR. */
+    public function test_kotak_tanda_tangan_butir_lima_kosong(): void
+    {
+        $html = $this->htmlDokumen();
+
+        $awal = strpos($html, 'Telah diperiksa dengan keterangan');
+        $this->assertNotFalse($awal);
+        $butirLima = substr($html, $awal);
+
+        $this->assertStringNotContainsString('${ttd_pengirim', $butirLima);
+        $this->assertStringContainsString('class="kotak-ttd"', $butirLima);
     }
 
     public function test_pembagian_penanda_tangan_direktur_dan_ppk(): void
@@ -599,10 +614,10 @@ class SuratPerjalananDinasTest extends TestCase
         $pemberiPerintah = strpos($html, 'Pejabat yang memberi perintah');
         $this->assertNotFalse($pemberiPerintah);
 
-        // Penanda Direktur yang terakhir ada di kolom kiri, sebelum kolom
-        // kanan; penanda PPK yang terakhir ada di kolom kanan itu sendiri.
-        $this->assertLessThan($pemberiPerintah, strrpos($html, '${ttd_pengirim2}'));
-        $this->assertGreaterThan($pemberiPerintah, strrpos($html, '${ttd_pengirim1}'));
+        // Blok Direktur yang terakhir ada di kolom kiri, sebelum kolom
+        // kanan; blok PPK yang terakhir ada di kolom kanan itu sendiri.
+        $this->assertLessThan($pemberiPerintah, strrpos($html, 'Direktur Poltekkes Manado'));
+        $this->assertGreaterThan($pemberiPerintah, strrpos($html, 'Pejabat Pembuat Komitmen'));
     }
 
     public function test_nama_penanda_tangan_tercetak_pada_tiap_blok(): void
@@ -658,10 +673,11 @@ class SuratPerjalananDinasTest extends TestCase
             $html
         );
 
-        // Setiap penanda memang berada di dalam kotak itu.
+        // Keempat kotaknya tetap ada; dua di antaranya — butir V — kosong.
         $this->assertSame(4, substr_count($html, 'class="kotak-ttd"'));
-        $this->assertSame(2, substr_count($html, '<td>${ttd_pengirim1}</td>'));
-        $this->assertSame(2, substr_count($html, '<td>${ttd_pengirim2}</td>'));
+        $this->assertSame(1, substr_count($html, '<td>${ttd_pengirim1}</td>'));
+        $this->assertSame(1, substr_count($html, '<td>${ttd_pengirim2}</td>'));
+        $this->assertSame(2, substr_count($html, '<td>&nbsp;</td></tr></table>'));
     }
 
     /**
