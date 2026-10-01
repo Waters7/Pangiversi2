@@ -139,7 +139,7 @@ enum DokumenCetak: string
                 'pesan_gratifikasi' => [
                     'label' => 'Pesan antigratifikasi',
                     'keterangan' => 'Tampil bila elemen pesan antigratifikasi dinyalakan.',
-                    'bawaan' => 'Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun. Jika terdapat potensi suap atau gratifikasi silakan laporkan melalui HALO KEMENKES 1500567 dan https://wbs.kemkes.go.id. Untuk verifikasi keaslian tanda tangan elektronik, silakan unggah dokumen pada laman https://tte.kominfo.go.id/verifyPDF.',
+                    'bawaan' => 'Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun. Jika terdapat potensi suap atau gratifikasi silakan laporkan melalui HALO KEMENKES 1500567 dan https://wbs.kemkes.go.id. Untuk verifikasi keaslian tanda tangan elektronik, silakan unggah dokumen pada laman https://tte.komdigi.go.id/verifyPDF.',
                     'panjang' => true,
                 ],
             ],

@@ -94,6 +94,46 @@ class NavigasiDanPengelompokanTest extends TestCase
             ->assertDontSee($lama->maksud);
     }
 
+    /**
+     * Kolom paling kiri daftar usulan menyebut pelaksana perjalanan, bukan
+     * pembuat usulannya: Tim SDM kerap membuatkan usulan untuk orang lain,
+     * dan yang dicari pembaca daftar adalah siapa yang berangkat.
+     */
+    public function test_daftar_usulan_menyebut_pelaksana_bukan_pembuat(): void
+    {
+        $usulan = Usulan::factory()->create([
+            'id_user' => $this->admin->id,
+            'status' => StatusUsulan::Disetujui->value,
+        ]);
+
+        PesertaUsulan::factory()->create([
+            'id_usulan' => $usulan->id,
+            'nama' => 'Berangkat Sendiri, S.KM',
+            'peran' => 'ketua',
+        ]);
+        PesertaUsulan::factory()->create(['id_usulan' => $usulan->id, 'nama' => 'Kawan Seperjalanan']);
+
+        $this->actingAs($this->admin)
+            ->get(route('usulan.list'))
+            ->assertOk()
+            ->assertSee('Pelaksana')
+            ->assertSee('Berangkat Sendiri, S.KM')
+            ->assertSee('+1 pelaksana lain')
+            ->assertDontSee('Pemohon');
+    }
+
+    /** Usulan lama tanpa baris peserta tetap menyebut nama pengusulnya. */
+    public function test_daftar_usulan_tanpa_peserta_memakai_nama_pengusul(): void
+    {
+        $pengusul = User::factory()->create(['nama' => 'Pengusul Tanpa Peserta']);
+        Usulan::factory()->create(['id_user' => $pengusul->id, 'status' => StatusUsulan::Draft->value]);
+
+        $this->actingAs($this->admin)
+            ->get(route('usulan.list'))
+            ->assertOk()
+            ->assertSee('Pengusul Tanpa Peserta');
+    }
+
     // ── Usulan per status ──
 
     /**

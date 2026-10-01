@@ -134,7 +134,7 @@
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No. / Tanggal</th>
                         @if(auth()->user()->isAdmin())
-                            <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Pemohon</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Pelaksana</th>
                         @endif
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Kegiatan & Tujuan</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5 hidden sm:table-cell">Periode</th>
@@ -171,9 +171,18 @@
                             </td>
                             @if(auth()->user()->isAdmin())
                                 <td class="px-4 py-4">
+                                    @php
+                                        // Yang ditampilkan pelaksana perjalanan, bukan pembuat
+                                        // usulan: Tim SDM kerap membuatkannya untuk orang lain.
+                                        $pelaksana = $item->peserta->firstWhere('peran', 'ketua') ?? $item->peserta->first();
+                                        $pelaksanaLain = max(0, $item->peserta->count() - 1);
+                                    @endphp
                                     {{-- NIP sengaja tidak ditampilkan: kolom ini dipakai untuk
                                          mengenali orang sekilas, dan namanya sudah cukup. --}}
-                                    <p class="font-semibold text-slate-800 text-xs">{{ $item->user->name }}</p>
+                                    <p class="font-semibold text-slate-800 text-xs">{{ $pelaksana?->nama ?? $item->user?->nama ?? '—' }}</p>
+                                    @if ($pelaksanaLain > 0)
+                                        <p class="text-xs text-slate-400 mt-0.5">+{{ $pelaksanaLain }} pelaksana lain</p>
+                                    @endif
                                 </td>
                             @endif
                             <td class="px-4 py-4 max-w-[160px] sm:max-w-xs">

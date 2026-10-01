@@ -126,8 +126,11 @@
             font-size: 7.5pt;
             line-height: 1.25;
         }
-        .kaki td.logo { padding-left: 6px; text-align: right; }
-        .kaki td.logo img { width: 155px; height: auto; }
+        .kaki td.logo { padding-left: 6px; text-align: right; white-space: nowrap; }
+        /* Ukurannya mengikuti berkas cetakan baku: KAN 1,95 x 1,3 cm dan
+           BLU 1,19 cm persegi. Lambang Garuda Sertifikasi tidak dipakai lagi. */
+        .kaki td.logo img.kan { width: 74px; height: 49px; }
+        .kaki td.logo img.blu { width: 45px; height: 45px; margin-left: 6px; }
         .kaki .tautan { text-decoration: underline; }
 
         .pecah { page-break-after: always; }
@@ -368,8 +371,10 @@
             <tr>
                 <td class="pesan">{{ $dok->teks('pesan_gratifikasi') }}</td>
                 <td class="logo">
-                    <img src="{{ public_path('images/logo-akreditasi.jpg') }}"
-                         alt="KAN, Garuda Sertifikasi Indonesia, dan BLU">
+                    <img class="kan" src="{{ public_path('images/logo-kan.png') }}"
+                         alt="Komite Akreditasi Nasional"><img
+                        class="blu" src="{{ public_path('images/logo-blu.png') }}"
+                        alt="Badan Layanan Umum">
                 </td>
             </tr>
         </table>

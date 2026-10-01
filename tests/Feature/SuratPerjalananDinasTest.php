@@ -859,8 +859,13 @@ class SuratPerjalananDinasTest extends TestCase
     {
         $html = $this->htmlDokumen();
 
-        $this->assertStringContainsString('logo-akreditasi.jpg', $html);
-        $this->assertFileExists(public_path('images/logo-akreditasi.jpg'));
+        $this->assertStringContainsString('logo-kan.png', $html);
+        $this->assertStringContainsString('logo-blu.png', $html);
+        $this->assertFileExists(public_path('images/logo-kan.png'));
+        $this->assertFileExists(public_path('images/logo-blu.png'));
+
+        // Lambang Garuda Sertifikasi Indonesia tidak lagi dipakai.
+        $this->assertStringNotContainsString('logo-akreditasi', $html);
 
         $this->assertStringContainsString(
             'Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun.',
@@ -868,7 +873,7 @@ class SuratPerjalananDinasTest extends TestCase
         );
         $this->assertStringContainsString('HALO KEMENKES', $html);
         $this->assertStringContainsString('https://wbs.kemkes.go.id', $html);
-        $this->assertStringContainsString('https://tte.kominfo.go.id/verifyPDF', $html);
+        $this->assertStringContainsString('https://tte.komdigi.go.id/verifyPDF', $html);
     }
 
     /**
