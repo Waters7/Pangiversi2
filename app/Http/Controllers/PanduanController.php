@@ -128,6 +128,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.6',
+                'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Berkas Pertanggungjawaban (submenu Administrasi Sistem): berkas apa saja yang ditagih sesudah perjalanan kini dipilih sendiri untuk tiap jalur pengajuan — dalam kota, luar kota, dan supervisi kerja praktek / magang. Pilihannya meliputi SPPD bertanda tangan, tiket, nota transport lokal, bill hotel, kuitansi penyelenggara/hotel, bukti biaya penyelenggaraan, dan laporan perjalanan dinas.',
+                    'Centangan itu berlaku serentak pada formulir Dokumen Perdin, checklist kelengkapan, dan penagihan ke pelaksana; berkas yang dicabut tidak lagi menahan penyelesaian berkas. Jalur yang belum diubah menagih berkas yang sama persis seperti sebelumnya, dan tiap jalur dapat dikembalikan ke bawaan dengan satu tombol.',
+                ],
+            ],
+            [
                 'versi' => '2.5.5',
                 'tanggal' => '1 Oktober 2026',
                 'butir' => [

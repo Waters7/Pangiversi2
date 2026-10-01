@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\Kemampuan;
 use App\Models\User;
 use App\Services\PenentuHakAkses;
+use App\Services\PengaturanBerkasLpj;
 use App\Services\PengaturanDokumen;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,10 @@ class AppServiceProvider extends ServiceProvider
         // Satu wadah bersama: pratinjau memasang setelan sementara di sini
         // dan berkas cetak membacanya lewat app() pada permintaan yang sama.
         $this->app->singleton(PengaturanDokumen::class);
+
+        // Daftar berkas pertanggungjawaban dibaca berkali-kali pada satu
+        // halaman — checklist, penagihan, dan formulir dokumen.
+        $this->app->singleton(PengaturanBerkasLpj::class);
     }
 
     /**

@@ -16,6 +16,10 @@
         $bagianAdministrasi[] = ['rute' => 'administrasi.dokumen', 'aktif' => 'administrasi.dokumen', 'label' => 'Dokumen Output'];
     }
 
+    if (auth()->user()->can('mengatur-berkas-lpj')) {
+        $bagianAdministrasi[] = ['rute' => 'administrasi.berkas-lpj', 'aktif' => 'administrasi.berkas-lpj', 'label' => 'Berkas Pertanggungjawaban'];
+    }
+
     // Integrasi Data memuat token dan alamat aplikasi lain — hanya super administrator.
     if (auth()->user()->isAdmin()) {
         $bagianAdministrasi[] = ['rute' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data'];

@@ -14,6 +14,12 @@
     // kuitansi: yang dipertanggungjawabkan hanya SPD dan transport lokalnya.
     $dalamKota = $usulan->dalamKota();
 
+    // Berkas yang ditagih diatur per jalur pengajuan lewat Administrasi
+    // Sistem > Berkas Pertanggungjawaban; seksi yang tidak diminta tidak
+    // ditampilkan sama sekali agar pelaksana tidak mengunggah sia-sia.
+    $berkasWajib = app(\App\Services\PengaturanBerkasLpj::class);
+    $minta = fn (\App\Enums\BerkasLpj $berkas) => $berkasWajib->wajib($usulan, $berkas);
+
     // Tiket, nota, dan bill hotel adalah sumber angka pada rincian biaya
     // dan daftar riil. Begitu salah satunya ditandatangani, sumbernya
     // ikut terkunci supaya angka yang sudah disetujui tidak bergeser.
@@ -200,7 +206,7 @@
             </form>
 
             {{-- ══════════ 2. TIKET PERGI & PULANG ══════════ --}}
-            @unless ($dalamKota)
+            @if ($minta(\App\Enums\BerkasLpj::Tiket))
             @foreach (ArahTiket::urutan() as $arah)
                 @php $data = $tiket->get($arah->value); @endphp
 
@@ -298,7 +304,7 @@
                     </div>
                 </form>
             @endforeach
-            @endunless
+            @endif
 
             {{-- ══════════ 3. NOTA TRANSPORTASI LOKAL ══════════ --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
@@ -405,7 +411,7 @@
                 </div>
             </form>
 
-            @unless ($dalamKota)
+            @if ($minta(\App\Enums\BerkasLpj::BillHotel) || $minta(\App\Enums\BerkasLpj::Kuitansi))
             {{-- ══════════ 4. AKOMODASI & BUKTI BIAYA ══════════ --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -423,6 +429,7 @@
                     </div>
 
                     <div class="p-6 space-y-5">
+                        @if ($minta(\App\Enums\BerkasLpj::BillHotel))
                         <x-unggah-berkas
                             nama="bill_hotel"
                             label="Bill hotel"
@@ -449,6 +456,9 @@
                             </div>
                         </div>
 
+                        @endif
+
+                        @if ($minta(\App\Enums\BerkasLpj::Kuitansi))
                         <x-unggah-berkas
                             nama="kwintasi"
                             label="Kuitansi penyelenggara / hotel"
@@ -456,6 +466,7 @@
                             terima=".pdf,.jpg,.jpeg,.png"
                             keterangan="Kuitansi resmi dari penyelenggara kegiatan atau dari hotel tempat menginap — PDF, JPG, atau PNG, maks. 2 MB."
                             :terkunci="$terkunci" />
+                        @endif
 
                         @unless ($terkunci)
                             <button type="submit" class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">
@@ -465,7 +476,7 @@
                     </div>
                 </div>
             </form>
-            @endunless
+            @endif
 
             {{-- ══════════ 5. BIAYA PENYELENGGARAAN ══════════ --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"

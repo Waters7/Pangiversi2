@@ -800,6 +800,16 @@
             @endif
 
             @if ($boleh['dokumen'])
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pilih berkas pertanggungjawaban tiap jalur">
+                    Submenu <strong>Administrasi Sistem → Berkas Pertanggungjawaban</strong> menentukan
+                    berkas apa saja yang ditagih sesudah perjalanan, terpisah untuk ketiga jalur
+                    pengajuan: <strong>dalam kota</strong>, <strong>luar kota</strong>, dan
+                    <strong>supervisi kerja praktek / magang</strong>. Centangan di sana berlaku serentak
+                    pada formulir Dokumen Perdin, checklist kelengkapan, dan penagihan ke pelaksana —
+                    berkas yang dicabut tidak lagi ditampilkan maupun menahan penyelesaian. Tiap jalur
+                    dapat dikembalikan ke bawaan dengan satu tombol.
+                </x-panduan-langkah>
+
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur tampilan dokumen output"
                                    :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
                     Submenu <strong>Administrasi Sistem → Dokumen Output</strong> mengatur rupa empat

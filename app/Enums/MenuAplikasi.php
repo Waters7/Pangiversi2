@@ -69,7 +69,7 @@ enum MenuAplikasi: string
             self::LaporanArsip => 'Rekap anggaran, arsip daftar riil, rincian lengkap, dan daftar nominatif.',
             self::MasterData => 'Unit kerja, lokasi, kategori, komponen biaya, tahun anggaran, dan jenis kegiatan.',
             self::JejakAudit => 'Riwayat setiap tindakan pengguna.',
-            self::AdministrasiSistem => 'Akun pengguna, impor & ekspor, pengaturan sistem, peran dan hak akses, serta tampilan dokumen cetak.',
+            self::AdministrasiSistem => 'Akun pengguna, impor & ekspor, pengaturan sistem, peran dan hak akses, tampilan dokumen cetak, serta berkas pertanggungjawaban.',
         };
     }
 
@@ -93,7 +93,7 @@ enum MenuAplikasi: string
             self::LaporanArsip => [Kemampuan::MelihatArsipPerjadin, Kemampuan::MelihatLaporan],
             self::MasterData => [Kemampuan::MengelolaMasterData, Kemampuan::MenghapusMasterData],
             self::JejakAudit => [Kemampuan::MelihatJejakAudit],
-            self::AdministrasiSistem => [Kemampuan::MengelolaPengguna, Kemampuan::MenghapusPengguna, Kemampuan::MengelolaPeran, Kemampuan::MengaturDokumenCetak],
+            self::AdministrasiSistem => [Kemampuan::MengelolaPengguna, Kemampuan::MenghapusPengguna, Kemampuan::MengelolaPeran, Kemampuan::MengaturDokumenCetak, Kemampuan::MengaturBerkasLpj],
         };
     }
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BantuanController;
 use App\Http\Controllers\BerkasController;
+use App\Http\Controllers\BerkasLpjController;
 use App\Http\Controllers\DaftarRiilController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardEksekutifController;
@@ -414,6 +415,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/peran', [PeranController::class, 'store'])->name('administrasi.peran.store');
             Route::put('/peran/{peran}', [PeranController::class, 'update'])->name('administrasi.peran.update');
             Route::delete('/peran/{peran}', [PeranController::class, 'destroy'])->name('administrasi.peran.destroy');
+        });
+
+        // Berkas pertanggungjawaban yang ditagih pada tiap jalur pengajuan.
+        Route::middleware('can:mengatur-berkas-lpj')->group(function () {
+            Route::get('/berkas-lpj', [BerkasLpjController::class, 'index'])->name('administrasi.berkas-lpj');
+            Route::put('/berkas-lpj/{jalur}', [BerkasLpjController::class, 'simpan'])->name('administrasi.berkas-lpj.simpan');
+            Route::delete('/berkas-lpj/{jalur}', [BerkasLpjController::class, 'bawaan'])->name('administrasi.berkas-lpj.bawaan');
         });
 
         // Pengaturan Dokumen Output: tampilan dan elemen tiap dokumen cetak.

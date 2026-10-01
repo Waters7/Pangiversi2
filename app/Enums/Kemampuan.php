@@ -106,6 +106,12 @@ enum Kemampuan: string
      */
     case MengaturDokumenCetak = 'mengatur-dokumen-cetak';
 
+    /**
+     * Memilih berkas pertanggungjawaban apa saja yang ditagih pada tiap
+     * jalur pengajuan perjalanan dinas.
+     */
+    case MengaturBerkasLpj = 'mengatur-berkas-lpj';
+
     public function label(): string
     {
         return match ($this) {
@@ -133,6 +139,7 @@ enum Kemampuan: string
             self::MenghapusPengguna => 'Menghapus pengguna',
             self::MengelolaPeran => 'Mengelola peran dan hak akses',
             self::MengaturDokumenCetak => 'Mengatur tampilan dokumen cetak',
+            self::MengaturBerkasLpj => 'Mengatur berkas pertanggungjawaban',
         };
     }
 

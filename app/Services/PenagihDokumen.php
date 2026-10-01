@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ArahTiket;
+use App\Enums\BerkasLpj;
 use App\Models\Dokumen;
 use App\Models\Usulan;
 use Carbon\Carbon;
@@ -16,6 +17,8 @@ use Carbon\Carbon;
  */
 class PenagihDokumen
 {
+    public function __construct(private PengaturanBerkasLpj $berkasWajib) {}
+
     /**
      * Label yang dipahami pengguna untuk tiap kolom berkas.
      *
@@ -40,32 +43,44 @@ class PenagihDokumen
     public function berkasKurang(Usulan $usulan): array
     {
         $dokumen = $usulan->dokumen->last();
+        $wajib = $this->berkasWajib->untukUsulan($usulan);
+        $diminta = fn (BerkasLpj $berkas) => in_array($berkas, $wajib, true);
 
-        // Dalam kota tidak melibatkan tiket, penginapan, maupun kuitansi:
-        // yang dipertanggungjawabkan hanya SPD dan transport lokalnya.
-        if ($usulan->dalamKota()) {
-            return collect([filled($dokumen?->sppd) ? null : self::LABEL['sppd']])
-                ->filter()
-                ->concat($this->notaKurang($usulan))
-                ->concat($this->penyelenggaraanKurang($dokumen))
-                ->concat($this->laporanKurang($usulan))
-                ->values()
-                ->all();
+        $kurang = collect();
+
+        if ($diminta(BerkasLpj::Sppd) && blank($dokumen?->sppd)) {
+            $kurang->push(self::LABEL['sppd']);
         }
 
-        $kurang = collect(Usulan::DOKUMEN_LPJ_WAJIB)
-            ->reject(fn (string $kolom) => filled($dokumen?->{$kolom}))
-            ->map(fn (string $kolom) => self::LABEL[$kolom] ?? $kolom)
-            ->values();
+        if ($diminta(BerkasLpj::Tiket)) {
+            $kurang = $kurang->concat($this->tiketKurang($usulan));
+        }
 
-        return $kurang
-            ->concat($this->tiketKurang($usulan))
-            ->concat($this->notaKurang($usulan))
-            ->concat($this->rincianHotelKurang($dokumen))
-            ->concat($this->penyelenggaraanKurang($dokumen))
-            ->concat($this->laporanKurang($usulan))
-            ->values()
-            ->all();
+        if ($diminta(BerkasLpj::NotaTransport)) {
+            $kurang = $kurang->concat($this->notaKurang($usulan));
+        }
+
+        if ($diminta(BerkasLpj::BillHotel)) {
+            if (blank($dokumen?->bill_hotel)) {
+                $kurang->push(self::LABEL['bill_hotel']);
+            }
+
+            $kurang = $kurang->concat($this->rincianHotelKurang($dokumen));
+        }
+
+        if ($diminta(BerkasLpj::Kuitansi) && blank($dokumen?->kwintasi)) {
+            $kurang->push(self::LABEL['kwintasi']);
+        }
+
+        if ($diminta(BerkasLpj::Penyelenggaraan)) {
+            $kurang = $kurang->concat($this->penyelenggaraanKurang($dokumen));
+        }
+
+        if ($diminta(BerkasLpj::Laporan)) {
+            $kurang = $kurang->concat($this->laporanKurang($usulan));
+        }
+
+        return $kurang->values()->all();
     }
 
     /**
@@ -85,16 +100,19 @@ class PenagihDokumen
     {
         $usulan->loadMissing('dokumen', 'tiket', 'notaTransport', 'laporan', 'kategoriPerjadin');
         $dokumen = $usulan->dokumen->last();
-        $dalamKota = $usulan->dalamKota();
+        $wajib = $this->berkasWajib->untukUsulan($usulan);
+        $diminta = fn (BerkasLpj $berkas) => in_array($berkas, $wajib, true);
+
+        $baris = [];
 
         // Seksi 1 — penugasan.
-        $baris = [
-            $this->barisChecklist('SPPD Bertanda Tangan', $dokumen?->sppd, 'Hardcopy dikumpulkan ke tim keuangan'),
-        ];
+        if ($diminta(BerkasLpj::Sppd)) {
+            $baris[] = $this->barisChecklist('SPPD Bertanda Tangan', $dokumen?->sppd, 'Hardcopy dikumpulkan ke tim keuangan');
+        }
 
         // Seksi 2 — tiket pergi dan pulang, masing-masing dengan boarding pass
-        // dan invoice-nya. Dalam kota tidak memakai tiket sama sekali.
-        if (! $dalamKota) {
+        // dan invoice-nya.
+        if ($diminta(BerkasLpj::Tiket)) {
             $tersimpan = $usulan->tiket->keyBy(fn ($tiket) => $tiket->arah->value);
 
             foreach (ArahTiket::urutan() as $arah) {
@@ -119,27 +137,29 @@ class PenagihDokumen
         $ruasKurang = $this->ruasTanpaBukti($usulan);
         $adaNota = $usulan->notaTransport->contains(fn ($item) => $item->terisi());
 
-        $baris[] = [
-            'label' => 'Nota Transportasi Lokal',
-            'terpenuhi' => $ruasKurang === [],
-            'berkas' => $usulan->notaTransport
-                ->filter(fn ($item) => filled($item->bukti))
-                ->sortBy('urutan')
-                ->map(fn ($item) => [
-                    'label' => $item->nama_ruas,
-                    'path' => $item->bukti,
-                ])
-                ->values()
-                ->all(),
-            'catatan' => match (true) {
-                ! $adaNota => 'Tidak ada biaya transport lokal yang dinyatakan',
-                $ruasKurang !== [] => 'Bernominal tapi belum ada notanya: '.implode(', ', $ruasKurang),
-                default => 'Ruas terisi: '.$usulan->notaTransport->filter(fn ($item) => $item->terisi())->count(),
-            },
-        ];
+        if ($diminta(BerkasLpj::NotaTransport)) {
+            $baris[] = [
+                'label' => 'Nota Transportasi Lokal',
+                'terpenuhi' => $ruasKurang === [],
+                'berkas' => $usulan->notaTransport
+                    ->filter(fn ($item) => filled($item->bukti))
+                    ->sortBy('urutan')
+                    ->map(fn ($item) => [
+                        'label' => $item->nama_ruas,
+                        'path' => $item->bukti,
+                    ])
+                    ->values()
+                    ->all(),
+                'catatan' => match (true) {
+                    ! $adaNota => 'Tidak ada biaya transport lokal yang dinyatakan',
+                    $ruasKurang !== [] => 'Bernominal tapi belum ada notanya: '.implode(', ', $ruasKurang),
+                    default => 'Ruas terisi: '.$usulan->notaTransport->filter(fn ($item) => $item->terisi())->count(),
+                },
+            ];
+        }
 
         // Seksi 4 — akomodasi dan bukti biaya.
-        if (! $dalamKota) {
+        if ($diminta(BerkasLpj::BillHotel)) {
             $baris[] = [
                 'label' => 'Bill Hotel',
                 'terpenuhi' => filled($dokumen?->bill_hotel)
@@ -150,12 +170,14 @@ class PenagihDokumen
                     ? 'No. transaksi '.$dokumen->bill_hotel_no_transaksi
                     : 'Nomor transaksi dan nominalnya wajib diisi',
             ];
+        }
 
+        if ($diminta(BerkasLpj::Kuitansi)) {
             $baris[] = $this->barisChecklist('Kuitansi penyelenggara / hotel', $dokumen?->kwintasi);
         }
 
         // Seksi 5 — biaya penyelenggaraan, hanya bila pelaksana menyatakan ada.
-        if ($dokumen?->adaPenyelenggaraan()) {
+        if ($diminta(BerkasLpj::Penyelenggaraan) && $dokumen?->adaPenyelenggaraan()) {
             $baris[] = [
                 'label' => 'Bukti Biaya Penyelenggaraan',
                 'terpenuhi' => $this->penyelenggaraanKurang($dokumen) === [],
@@ -170,16 +192,18 @@ class PenagihDokumen
         }
 
         // Laporan perjadin diisi langsung di aplikasi, bukan diunggah.
-        $laporan = $usulan->laporan;
+        if ($diminta(BerkasLpj::Laporan)) {
+            $laporan = $usulan->laporan;
 
-        $baris[] = [
-            'label' => 'Laporan Perjalanan Dinas',
-            'terpenuhi' => $laporan?->sudahSelesai() === true,
-            'berkas' => [],
-            'catatan' => $laporan
-                ? $laporan->status()->label()
-                : 'Diisi pada menu Dokumen, tidak diunggah',
-        ];
+            $baris[] = [
+                'label' => 'Laporan Perjalanan Dinas',
+                'terpenuhi' => $laporan?->sudahSelesai() === true,
+                'berkas' => [],
+                'catatan' => $laporan
+                    ? $laporan->status()->label()
+                    : 'Diisi pada menu Dokumen, tidak diunggah',
+            ];
+        }
 
         return $baris;
     }
