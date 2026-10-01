@@ -41,7 +41,7 @@ enum BerkasLpj: string
     public function keterangan(): string
     {
         return match ($this) {
-            self::Sppd => 'Pindaian SPPD yang sudah ditandatangani pejabat di tempat tujuan.',
+            self::Sppd => 'Pindaian SPPD yang sudah ditandatangani pejabat di tempat tujuan; dilewati pada perjalanan yang tidak menerbitkan SPD.',
             self::Tiket => 'Boarding pass dan invoice untuk tiap arah, beserta nomor tiket dan kode bookingnya.',
             self::NotaTransport => 'Bukti tiap ruas transport lokal yang bernominal; ruas tanpa biaya tidak ditagih.',
             self::BillHotel => 'Bill hotel beserta nomor transaksi dan nominalnya.',
@@ -68,9 +68,10 @@ enum BerkasLpj: string
         return match ($jenis) {
             JenisPerjadin::LuarKota => self::cases(),
             JenisPerjadin::DalamKota => [self::Sppd, self::NotaTransport, self::Penyelenggaraan, self::Laporan],
-            // Supervisi berdasar surat tugas, bukan SPPD; berkas lain
-            // ditambahkan sendiri oleh administrator bila memang diperlukan.
-            JenisPerjadin::Supervisi => [self::NotaTransport, self::Penyelenggaraan, self::Laporan],
+            // Supervisi di dalam kota berdasar surat tugas saja — SPPD-nya
+            // gugur sendiri lewat untukUsulan(), jadi yang tersisa di sini
+            // berlaku untuk supervisi ke luar kota.
+            JenisPerjadin::Supervisi => [self::Sppd, self::NotaTransport, self::Penyelenggaraan, self::Laporan],
         };
     }
 

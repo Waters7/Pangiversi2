@@ -140,6 +140,7 @@
         <div class="xl:col-span-2 space-y-5">
 
             {{-- ══════════ 1. PENUGASAN ══════════ --}}
+            @if ($minta(\App\Enums\BerkasLpj::Sppd))
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="penugasan">
@@ -204,6 +205,7 @@
                     </div>
                 </div>
             </form>
+            @endif
 
             {{-- ══════════ 2. TIKET PERGI & PULANG ══════════ --}}
             @if ($minta(\App\Enums\BerkasLpj::Tiket))

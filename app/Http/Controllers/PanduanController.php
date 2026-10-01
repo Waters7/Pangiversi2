@@ -128,6 +128,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.7',
+                'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Supervisi kerja praktek / magang kini dibedakan menurut tujuannya: supervisi ke luar kota tetap menerbitkan Surat Perjalanan Dinas — berkas SPD bertanda tangan beserta nomornya wajib dilampirkan — sedangkan supervisi di dalam kota cukup surat tugas seperti sebelumnya.',
+                    'Isian SPD pada formulir usulan muncul dan menghilang sendiri begitu kategori supervisi dipilih, jadi tidak ada kolom yang terisi percuma. Checklist kelengkapan dan formulir Dokumen Perdin ikut menyesuaikan: SPPD bertanda tangan hanya ditagih pada perjalanan yang memang menerbitkan SPD.',
+                ],
+            ],
+            [
                 'versi' => '2.5.6',
                 'tanggal' => '1 Oktober 2026',
                 'butir' => [

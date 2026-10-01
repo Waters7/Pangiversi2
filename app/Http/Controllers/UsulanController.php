@@ -156,8 +156,12 @@ class UsulanController extends Controller
             'kategoriPerjadin' => $jenis->kategori(),
             'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
             'kegiatanTerkunci' => $this->kegiatanJalur($jenis),
-            // Supervisi tidak berdasar SPD, jadi daftarnya pun tidak perlu.
-            'spdTerkait' => $jenis->butuhSpd() ? $this->bekalSpd($request->user()) : [],
+            // Kategori yang tetap menerbitkan SPD — pada jalur supervisi
+            // isian SPD baru muncul setelah salah satunya dipilih.
+            'kategoriBerSpd' => $jenis->idKategoriBerSpd(),
+            'spdTerkait' => $jenis->butuhSpd() || $jenis->spdIkutKategori()
+                ? $this->bekalSpd($request->user())
+                : [],
         ]);
     }
 
@@ -287,6 +291,7 @@ class UsulanController extends Controller
             'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
             'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
             'jenis' => $usulan->jalur(),
+            'kategoriBerSpd' => $usulan->jalur()->idKategoriBerSpd(),
         ]);
     }
 
@@ -299,9 +304,11 @@ class UsulanController extends Controller
 
         // Berkas SPD bertanda tangan boleh dilewati hanya bila sudah pernah
         // diunggah; nomornya tetap wajib karena ikut tercatat pada jejak audit.
-        // Jalur supervisi tidak berdasar SPD sama sekali.
+        // Supervisi di dalam kota tidak berdasar SPD sama sekali — kategori
+        // yang baru dikirim yang menentukan, bukan yang masih tersimpan.
         $sudahAdaSpd = filled($usulan->dokumen()->latest('id')->value('spd_ditandatangani'));
-        $butuhSpd = $usulan->jalur()->butuhSpd();
+        $kategori = KategoriPerjadin::find($request->input('id_kategori_perjadin')) ?? $usulan->kategoriPerjadin;
+        $butuhSpd = $usulan->jalur()->butuhSpd($kategori);
 
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
@@ -395,12 +402,16 @@ class UsulanController extends Controller
         // diminta dan kategori perjadin yang boleh dipakai. Kiriman tanpa
         // jalur — draf lama atau pemanggilan langsung — disimpulkan dari
         // kategorinya, supaya aturannya tetap konsisten tanpa menolak.
+        $kategori = KategoriPerjadin::find($request->input('id_kategori_perjadin'));
         $jenis = JenisPerjadin::dari($request->input('jenis'))
-            ?? JenisPerjadin::untukKategori(KategoriPerjadin::find($request->input('id_kategori_perjadin')));
-        $butuhSpd = $jenis->butuhSpd();
+            ?? JenisPerjadin::untukKategori($kategori);
 
-        // Supervisi berdasar surat tugas, jadi berkasnya wajib diunggah
-        // sendiri — tidak ada SPD yang dapat menyalinkannya.
+        // Supervisi ke luar kota tetap menerbitkan SPD; yang di dalam kota
+        // cukup surat tugas jurusan.
+        $butuhSpd = $jenis->butuhSpd($kategori);
+
+        // Perjalanan tanpa SPD berdasar surat tugas, jadi berkasnya wajib
+        // diunggah sendiri — tidak ada SPD yang dapat menyalinkannya.
         if (! $butuhSpd) {
             $suratTugasDariSpd = false;
             $spdTerpilih = null;

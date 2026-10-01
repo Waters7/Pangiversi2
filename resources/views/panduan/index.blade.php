@@ -200,10 +200,12 @@
                 <strong>Perjalanan Dalam Kota</strong>, <strong>Perjalanan Luar Kota</strong>, atau
                 <strong>Supervisi Kerja Praktek / Magang</strong>. Pilihan itu menyaring kategori
                 perjalanan dinas pada formulir — hanya kategori yang berlaku bagi jalur tersebut yang
-                ditampilkan — dan menentukan berkas yang diminta. Jalur supervisi
-                <strong>tidak memakai SPD</strong>: cukup surat tugas beserta nomornya, dan jenis
-                kegiatannya terisi sendiri. Salah pilih jalur? Tekan <strong>Ganti</strong> di kanan
-                atas formulir.
+                ditampilkan — dan menentukan berkas yang diminta. Pada jalur supervisi,
+                kebutuhan SPD mengikuti kategorinya: <strong>Supervisi Luar Kota</strong> tetap
+                memakai SPD bertanda tangan beserta nomornya, sedangkan <strong>Supervisi Dalam
+                Kota</strong> cukup surat tugas. Isian SPD muncul sendiri begitu kategorinya dipilih,
+                dan jenis kegiatannya terisi otomatis. Salah pilih jalur? Tekan
+                <strong>Ganti</strong> di kanan atas formulir.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
@@ -807,7 +809,9 @@
                     <strong>supervisi kerja praktek / magang</strong>. Centangan di sana berlaku serentak
                     pada formulir Dokumen Perdin, checklist kelengkapan, dan penagihan ke pelaksana —
                     berkas yang dicabut tidak lagi ditampilkan maupun menahan penyelesaian. Tiap jalur
-                    dapat dikembalikan ke bawaan dengan satu tombol.
+                    dapat dikembalikan ke bawaan dengan satu tombol. <strong>SPPD bertanda tangan</strong>
+                    gugur sendiri pada perjalanan yang memang tidak menerbitkan SPD — supervisi di dalam
+                    kota, misalnya — sekalipun jalurnya tetap mencentangnya.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur tampilan dokumen output"

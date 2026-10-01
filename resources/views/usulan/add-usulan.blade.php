@@ -4,6 +4,14 @@
 
 @section('content')
 
+@php
+    // Supervisi menentukan kebutuhan SPD dari kategori yang dipilih, jadi
+    // isian SPD-nya dimunculkan Alpine saat kategori luar kota terpilih.
+    // Jalur lain sudah pasti berdasar SPD sejak formulir dibuka.
+    $spdBersyarat = $jenis->spdIkutKategori();
+    $spdMungkin = $jenis->butuhSpd() || $spdBersyarat;
+@endphp
+
 <div class="flex-1 px-4 md:px-8 py-7">
 
     {{-- Page Header --}}
@@ -37,6 +45,15 @@
             konfirmasiAjukan: false,
             daftarSpd: {{ Js::from($spdTerkait) }},
             idSpd: '{{ old('id_spd') }}',
+            idKategori: '{{ old('id_kategori_perjadin') }}',
+            /*
+              Supervisi ke luar kota tetap menerbitkan SPD, sedangkan yang di
+              dalam kota cukup surat tugas jurusan — jadi isian SPD mengikuti
+              kategori. Jalur lain selalu berdasar SPD.
+            */
+            spdSelalu: {{ $jenis->butuhSpd() ? 'true' : 'false' }},
+            kategoriBerSpd: {{ Js::from($kategoriBerSpd) }},
+            get butuhSpd() { return this.spdSelalu || this.kategoriBerSpd.includes(String(this.idKategori)); },
             get spd() { return this.daftarSpd.find(s => String(s.id) === String(this.idSpd)) ?? null; },
             /*
               Salin isi SPD ke formulir. Kolom yang sudah ditulis saat membuat
@@ -81,9 +98,11 @@
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-5">
 
-                {{-- STEP 0: Dasar penugasan — hanya jalur yang berdasar SPD. --}}
-                @if ($jenis->butuhSpd())
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {{-- STEP 0: Dasar penugasan — hanya jalur yang berdasar SPD. Pada
+                     supervisi kartunya muncul setelah kategori luar kota dipilih. --}}
+                @if ($spdMungkin)
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+                     @if ($spdBersyarat) x-show="butuhSpd" x-cloak @endif>
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
                             <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -153,8 +172,11 @@
                         </template>
                     </div>
                 </div>
-                @else
-                {{-- Jalur supervisi: dasar penugasannya surat tugas jurusan. --}}
+                @endif
+
+                @if ($spdBersyarat)
+                {{-- Jalur supervisi: dasar penugasannya surat tugas jurusan,
+                     ditambah SPD bila tujuannya ke luar kota. --}}
                 <div class="bg-violet-50/70 border border-violet-100 rounded-2xl p-5 flex items-start gap-3">
                     <span class="w-9 h-9 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -164,9 +186,18 @@
                     <div>
                         <p class="text-sm font-bold text-violet-900">{{ $jenis->label() }}</p>
                         <p class="text-xs text-violet-800 leading-relaxed mt-1">
-                            Jalur ini <strong>tidak memakai Surat Perjalanan Dinas</strong>. Dasar penugasannya
-                            surat tugas — unggah berkasnya beserta nomornya di bawah. Jenis kegiatannya
-                            sudah terisi sendiri dan tidak perlu dipilih.
+                            Dasar penugasannya <strong>surat tugas</strong> — unggah berkasnya beserta nomornya
+                            di bawah. Jenis kegiatannya sudah terisi sendiri dan tidak perlu dipilih.
+                        </p>
+                        <p class="text-xs text-violet-900 leading-relaxed mt-2 px-3 py-2 rounded-lg bg-white/70 border border-violet-100"
+                           x-show="butuhSpd" x-cloak>
+                            Kategorinya <strong>luar kota</strong>, jadi perjalanan ini
+                            <strong>tetap menerbitkan SPD</strong> — unggah SPD bertanda tangan beserta nomornya.
+                        </p>
+                        <p class="text-xs text-violet-900 leading-relaxed mt-2 px-3 py-2 rounded-lg bg-white/70 border border-violet-100"
+                           x-show="! butuhSpd">
+                            Supervisi <strong>di dalam kota tidak memakai SPD</strong>. Bila kategorinya diganti
+                            ke luar kota, isian SPD akan diminta.
                         </p>
                     </div>
                 </div>
@@ -261,9 +292,10 @@
                         {{-- SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
                              resminya. Keduanya wajib sebelum pengajuan dikirim: itulah
                              dasar persetujuan PPK yang tercatat pada jejak audit.
-                             Jalur supervisi tidak melewatinya sama sekali. --}}
-                        @if ($jenis->butuhSpd())
-                        <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl">
+                             Supervisi di dalam kota tidak melewatinya sama sekali. --}}
+                        @if ($spdMungkin)
+                        <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl"
+                             @if ($spdBersyarat) x-show="butuhSpd" x-cloak @endif>
 
                             <div class="flex items-start gap-3 mb-4">
                                 <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
@@ -284,7 +316,8 @@
                             <label for="spd_ditandatangani" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Berkas SPD Bertanda Tangan <span class="text-red-500">*</span>
                             </label>
-                            <input type="file" name="spd_ditandatangani" id="spd_ditandatangani" required
+                            <input type="file" name="spd_ditandatangani" id="spd_ditandatangani"
+                                   @if ($spdBersyarat) x-bind:required="butuhSpd" @else required @endif
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
                                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
@@ -300,7 +333,8 @@
                                 <label for="no_spd" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                     Nomor Surat Perjalanan Dinas <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="no_spd" id="no_spd" required x-ref="noSpd"
+                                <input type="text" name="no_spd" id="no_spd" x-ref="noSpd"
+                                       @if ($spdBersyarat) x-bind:required="butuhSpd" @else required @endif
                                        value="{{ old('no_spd') }}"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('no_spd') ? 'border-red-500' : 'border-slate-200' }}"
                                        placeholder="cth: KU.02.04/F.XXX.8/1234/2026">
@@ -353,7 +387,7 @@
                         </div>
 
                         {{-- Kategori Perjalanan Dinas — daftarnya disaring menurut jalur. --}}
-                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin"
+                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin" x-model="idKategori"
                                                    keterangan="Hanya kategori untuk jalur {{ mb_strtolower($jenis->label()) }} yang ditampilkan." />
 
                         {{-- Lokasi Tujuan + Instansi --}}
@@ -519,12 +553,18 @@
                         </button>
 
                         <p class="text-xs text-slate-400 leading-relaxed -mt-1">
-                            @if ($jenis->butuhSpd())
+                            @if ($spdBersyarat)
+                                <span x-show="butuhSpd" x-cloak>
+                                    Pengajuan langsung berlaku — penugasannya disahkan lewat SPD bertanda tangan,
+                                    dan persetujuan PPK tercatat pada jejak audit.
+                                </span>
+                                <span x-show="! butuhSpd">
+                                    Pengajuan langsung berlaku — dasar penugasannya surat tugas yang Anda unggah,
+                                    dan prosesnya tercatat pada jejak audit.
+                                </span>
+                            @else
                                 Pengajuan langsung berlaku — penugasannya sudah disahkan lewat SPD bertanda tangan,
                                 dan persetujuan PPK tercatat pada jejak audit.
-                            @else
-                                Pengajuan langsung berlaku — dasar penugasannya surat tugas yang Anda unggah,
-                                dan prosesnya tercatat pada jejak audit.
                             @endif
                         </p>
 
@@ -543,10 +583,11 @@
                                 <ul class="mt-3 space-y-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3.5 py-3">
                                     <li>Tujuan: <strong class="text-slate-700" x-text="$refs.lokasi.value || '—'"></strong></li>
                                     <li>Tanggal: <strong class="text-slate-700" x-text="($refs.tanggalMulai.value || '—') + ' s.d. ' + ($refs.tanggalSelesai.value || '—')"></strong></li>
-                                    @if ($jenis->butuhSpd())
-                                        <li>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
-                                    @else
+                                    @if ($spdBersyarat)
                                         <li>Nomor surat tugas: <strong class="text-slate-700" x-text="document.getElementById('no_tugas')?.value || '—'"></strong></li>
+                                        <li x-show="butuhSpd" x-cloak>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
+                                    @else
+                                        <li>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
                                     @endif
                                 </ul>
 

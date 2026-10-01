@@ -38,7 +38,15 @@ class PengaturanBerkasLpj
      */
     public function untukUsulan(Usulan $usulan): array
     {
-        return $this->untuk($usulan->jalur());
+        $berkas = $this->untuk($usulan->jalur());
+
+        if ($usulan->butuhSpd()) {
+            return $berkas;
+        }
+
+        // Supervisi di dalam kota tidak menerbitkan SPD, jadi SPPD bertanda
+        // tangan tidak mungkin ditagih sekalipun jalurnya memintanya.
+        return array_values(array_filter($berkas, fn (BerkasLpj $item) => $item !== BerkasLpj::Sppd));
     }
 
     public function wajib(Usulan $usulan, BerkasLpj $berkas): bool

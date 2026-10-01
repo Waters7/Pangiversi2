@@ -74,9 +74,9 @@ class BerkasLpjPerJalurTest extends TestCase
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
 
-        // Supervisi tidak berdasar SPPD.
+        // Supervisi menagih SPPD hanya pada usulan yang menerbitkannya.
         $this->assertSame(
-            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::Supervisi),
         );
 
@@ -97,10 +97,33 @@ class BerkasLpjPerJalurTest extends TestCase
         $this->assertNotContains('Tiket Pergi', $dalam);
         $this->assertNotContains('Bill Hotel', $dalam);
 
-        $supervisi = $this->labelChecklist($this->usulan('SV-LK', 'supervisi'));
-        $this->assertNotContains('SPPD Bertanda Tangan', $supervisi);
-        $this->assertContains('Nota Transportasi Lokal', $supervisi);
-        $this->assertContains('Laporan Perjalanan Dinas', $supervisi);
+        // Supervisi ke luar kota menerbitkan SPD, jadi SPPD-nya ikut ditagih.
+        $supervisiLuar = $this->labelChecklist($this->usulan('SV-LK', 'supervisi'));
+        $this->assertContains('SPPD Bertanda Tangan', $supervisiLuar);
+        $this->assertContains('Nota Transportasi Lokal', $supervisiLuar);
+        $this->assertContains('Laporan Perjalanan Dinas', $supervisiLuar);
+
+        // Yang di dalam kota tidak memakai SPD sama sekali.
+        $supervisiDalam = $this->labelChecklist($this->usulan('SV-DK', 'supervisi'));
+        $this->assertNotContains('SPPD Bertanda Tangan', $supervisiDalam);
+        $this->assertContains('Nota Transportasi Lokal', $supervisiDalam);
+        $this->assertContains('Laporan Perjalanan Dinas', $supervisiDalam);
+    }
+
+    public function test_formulir_dokumen_supervisi_dalam_kota_tanpa_seksi_sppd(): void
+    {
+        $luar = $this->usulan('SV-LK', 'supervisi');
+        $dalam = $this->usulan('SV-DK', 'supervisi');
+
+        $this->actingAs($this->admin)
+            ->get(route('dokumen.show', $luar->no_usulan))
+            ->assertOk()
+            ->assertSee('name="sppd"', false);
+
+        $this->actingAs($this->admin)
+            ->get(route('dokumen.show', $dalam->no_usulan))
+            ->assertOk()
+            ->assertDontSee('name="sppd"', false);
     }
 
     // ── Halaman pengaturan ──

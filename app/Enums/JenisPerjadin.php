@@ -10,7 +10,8 @@ use Illuminate\Support\Collection;
  *
  * Pilihan ini memilah kategori perjadin dari master data dan menentukan
  * berkas apa yang diminta: perjalanan biasa berdasar SPD bertanda tangan,
- * sedangkan supervisi kerja praktek cukup surat tugas.
+ * sedangkan supervisi kerja praktek mengikuti kategorinya — yang ke luar
+ * kota tetap memakai SPD, yang di dalam kota cukup surat tugas.
  */
 enum JenisPerjadin: string
 {
@@ -40,25 +41,40 @@ enum JenisPerjadin: string
         return match ($this) {
             self::DalamKota => 'Tujuan di dalam kota: fullboard, fullday, halfday, atau sekadar transport lokal.',
             self::LuarKota => 'Tujuan ke luar kota atau luar negeri, dengan tiket dan penginapan.',
-            self::Supervisi => 'Mendampingi mahasiswa di lokasi praktek atau magang.',
+            self::Supervisi => 'Mendampingi mahasiswa di lokasi praktek atau magang, di dalam maupun luar kota.',
         };
     }
 
     /** Hal yang perlu disiapkan, ditampilkan pada kartu pilihan. */
     public function berkasDasar(): string
     {
-        return $this->butuhSpd()
-            ? 'Perlu SPD bertanda tangan beserta nomornya.'
-            : 'Cukup surat tugas — tanpa SPD bertanda tangan.';
+        return match ($this) {
+            self::Supervisi => 'Surat tugas jurusan — SPD hanya bila tujuannya luar kota.',
+            default => 'Perlu SPD bertanda tangan beserta nomornya.',
+        };
     }
 
     /**
-     * Supervisi tidak menerbitkan SPD: dasar penugasannya surat tugas
-     * jurusan, dan pertanggungjawabannya mengikuti surat itu.
+     * Apakah perjalanan ini berdasar SPD bertanda tangan.
+     *
+     * Perjalanan biasa selalu menerbitkannya. Supervisi menentukannya dari
+     * kategori yang dipilih: supervisi ke luar kota tetap memakai SPD,
+     * sedangkan yang di dalam kota cukup surat tugas jurusan. Selama
+     * kategorinya belum dipilih, supervisi dianggap belum memerlukannya.
      */
-    public function butuhSpd(): bool
+    public function butuhSpd(?KategoriPerjadin $kategori = null): bool
     {
-        return $this !== self::Supervisi;
+        if (! $this->spdIkutKategori()) {
+            return true;
+        }
+
+        return $kategori !== null && ! $kategori->dalamKota();
+    }
+
+    /** Jalur yang kebutuhan SPD-nya ditentukan kategori, bukan jalurnya. */
+    public function spdIkutKategori(): bool
+    {
+        return $this === self::Supervisi;
     }
 
     /** Jenis kegiatan yang dipaksakan oleh jalur ini, bila ada. */
@@ -96,6 +112,22 @@ enum JenisPerjadin: string
     public function idKategori(): array
     {
         return $this->kategori()->flatten()->pluck('id')->all();
+    }
+
+    /**
+     * Id kategori jalur ini yang tetap menerbitkan SPD — dipakai formulir
+     * untuk memunculkan isian SPD hanya pada kategori yang memerlukannya.
+     *
+     * @return list<string>
+     */
+    public function idKategoriBerSpd(): array
+    {
+        return $this->kategori()
+            ->flatten()
+            ->filter(fn (KategoriPerjadin $kategori) => $this->butuhSpd($kategori))
+            ->map(fn (KategoriPerjadin $kategori) => (string) $kategori->id)
+            ->values()
+            ->all();
     }
 
     public static function dari(?string $nilai): ?self

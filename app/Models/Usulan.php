@@ -143,10 +143,10 @@ class Usulan extends Model
             ?? JenisPerjadin::untukKategori($this->kategoriPerjadin);
     }
 
-    /** Usulan jalur supervisi tidak berdasar SPD bertanda tangan. */
+    /** Supervisi di dalam kota tidak berdasar SPD bertanda tangan. */
     public function butuhSpd(): bool
     {
-        return $this->jalur()->butuhSpd();
+        return $this->jalur()->butuhSpd($this->kategoriPerjadin);
     }
 
     public function kategoriPerjadin(): BelongsTo

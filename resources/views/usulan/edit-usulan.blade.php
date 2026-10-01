@@ -4,6 +4,13 @@
 
 @section('content')
 
+@php
+    // Supervisi di dalam kota tidak berdasar SPD, jadi isiannya mengikuti
+    // kategori yang sedang dipilih — bukan yang tersimpan sebelumnya.
+    $spdBersyarat = $jenis->spdIkutKategori();
+    $spdMungkin = $jenis->butuhSpd() || $spdBersyarat;
+@endphp
+
 <div class="flex-1 px-4 md:px-8 py-7">
 
     {{-- Page Header --}}
@@ -26,7 +33,13 @@
     </div>
 
     {{-- Main Form --}}
-    <form action="{{ route('usulan.update', $usulan) }}" method="POST" enctype="multipart/form-data" id="formUsulan">
+    <form action="{{ route('usulan.update', $usulan) }}" method="POST" enctype="multipart/form-data" id="formUsulan"
+          x-data="{
+            idKategori: '{{ old('id_kategori_perjadin', $usulan->id_kategori_perjadin) }}',
+            spdSelalu: {{ $jenis->butuhSpd() ? 'true' : 'false' }},
+            kategoriBerSpd: {{ Js::from($kategoriBerSpd) }},
+            get butuhSpd() { return this.spdSelalu || this.kategoriBerSpd.includes(String(this.idKategori)); },
+          }">
         @csrf
         @method('PUT')
 
@@ -81,14 +94,17 @@
                         </div>
 
                         {{-- Kategori Perjalanan Dinas --}}
-                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin"
+                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin" x-model="idKategori"
                                                    :terpilih="$usulan->id_kategori_perjadin" />
 
                         @php $dokumen = $usulan->dokumen->first(); @endphp
 
                         {{-- SPD bertanda tangan beserta nomor resminya — dasar
-                             persetujuan PPK, wajib sebelum pengajuan dikirim. --}}
-                        <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-4">
+                             persetujuan PPK, wajib sebelum pengajuan dikirim.
+                             Supervisi di dalam kota tidak melewatinya sama sekali. --}}
+                        @if ($spdMungkin)
+                        <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-4"
+                             @if ($spdBersyarat) x-show="butuhSpd" x-cloak @endif>
                             <div>
                                 <label for="spd_ditandatangani" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                     Berkas SPD Bertanda Tangan
@@ -112,7 +128,9 @@
                                 <input type="file" name="spd_ditandatangani" id="spd_ditandatangani"
                                        accept=".pdf,.jpg,.jpeg,.png"
                                        data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
-                                       @unless ($dokumen?->spd_ditandatangani) required @endunless
+                                       @if ($dokumen?->spd_ditandatangani)
+                                       @elseif ($spdBersyarat) x-bind:required="butuhSpd"
+                                       @else required @endif
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('spd_ditandatangani') ? 'border-red-500' : 'border-slate-200' }}">
                                 <p class="text-xs text-slate-400 mt-1">SPD yang sudah ditandatangani PPK dan Direktur — PDF, JPG, PNG, maks. 5 MB</p>
                                 <p class="file-error hidden text-red-500 text-xs mt-1"></p>
@@ -125,7 +143,8 @@
                                 <label for="no_spd" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                     Nomor Surat Perjalanan Dinas <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="no_spd" id="no_spd" required
+                                <input type="text" name="no_spd" id="no_spd"
+                                       @if ($spdBersyarat) x-bind:required="butuhSpd" @else required @endif
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('no_spd') ? 'border-red-500' : 'border-slate-200' }}"
                                        placeholder="cth: KU.02.04/F.XXX.8/1234/2026"
                                        value="{{ old('no_spd', $usulan->no_spd) }}">
@@ -135,6 +154,7 @@
                                 @enderror
                             </div>
                         </div>
+                        @endif
 
                         {{-- Nomor Surat Tugas --}}
                         <div>

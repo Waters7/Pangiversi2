@@ -108,5 +108,10 @@
         bernominal, dan bukti biaya penyelenggaraan bila pelaksana menyatakan ada. Mematikannya berarti
         berkas itu tidak pernah ditagih sama sekali.
     </p>
+
+    <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+        <strong>SPPD bertanda tangan</strong> gugur sendiri pada perjalanan yang memang tidak menerbitkan
+        SPD — supervisi kerja praktek di dalam kota, misalnya — sekalipun jalurnya tetap mencentangnya.
+    </p>
 </div>
 @endsection
