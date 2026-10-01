@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisPerjadin;
 use App\Models\KategoriPerjadin;
 use App\Models\Kegiatan;
 use App\Models\User;
@@ -39,7 +40,7 @@ class NomorSpdUnikTest extends TestCase
     {
         return array_merge([
             'id_kegiatan' => Kegiatan::first()->id,
-            'id_kategori_perjadin' => KategoriPerjadin::first()->id,
+            'id_kategori_perjadin' => KategoriPerjadin::where('grup', '!=', JenisPerjadin::GRUP_SUPERVISI)->first()->id,
             'no_tugas' => 'KP.01.02/F.XXX/1557/2026',
             'lokasi' => 'Jakarta',
             'instansi' => 'Kementerian Kesehatan',

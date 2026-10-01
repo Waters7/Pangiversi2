@@ -249,7 +249,7 @@ class NavigasiGelombangDuaTest extends TestCase
         $this->terbitkanSpd($this->pelaksana);
 
         $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('pangi-draf-usulan');
     }

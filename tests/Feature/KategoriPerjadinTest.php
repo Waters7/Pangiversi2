@@ -66,7 +66,7 @@ class KategoriPerjadinTest extends TestCase
         $grup = KategoriPerjadin::terkelompok();
 
         $this->assertSame(
-            ['Perjadin Luar Kota', 'Perjadin Dalam Kota', 'Narasumber', 'Diklat'],
+            ['Perjadin Luar Kota', 'Perjadin Dalam Kota', 'Narasumber', 'Diklat', 'Supervisi Kerja Praktek / Magang'],
             $grup->keys()->all()
         );
     }
@@ -116,12 +116,25 @@ class KategoriPerjadinTest extends TestCase
     public function test_formulir_menampilkan_pilihan_berkelompok(): void
     {
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Kategori Perjalanan Dinas')
             ->assertSee('<optgroup label="Perjadin Luar Kota">', false)
             ->assertSee('<optgroup label="Narasumber">', false)
-            ->assertSee('Dalam Kota HalfDay Pagi');
+            // Kategori dalam kota tidak ikut pada jalur luar kota.
+            ->assertDontSee('Dalam Kota HalfDay Pagi');
+    }
+
+    /** Jalur dalam kota menampilkan kategori dalam kota saja. */
+    public function test_formulir_jalur_dalam_kota_menyaring_kategorinya(): void
+    {
+        $this->actingAs($this->pengusul)
+            ->get(route('usulan.create', ['jenis' => 'dalam-kota']))
+            ->assertOk()
+            ->assertSee('Dalam Kota HalfDay Pagi')
+            ->assertSee('<optgroup label="Perjadin Dalam Kota">', false)
+            ->assertDontSee('Luar Kota NonFullBoard')
+            ->assertDontSee('Luar Negeri');
     }
 
     public function test_kategori_tersimpan_saat_usulan_dibuat(): void

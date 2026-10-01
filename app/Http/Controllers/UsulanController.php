@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JenisPerjadin;
 use App\Enums\StatusUsulan;
 use App\Models\AuditLog;
 use App\Models\Dokumen;
@@ -134,15 +135,62 @@ class UsulanController extends Controller
         ));
     }
 
+    /**
+     * Jalur pengajuan ditanyakan lebih dahulu — dalam kota, luar kota, atau
+     * supervisi kerja praktek — karena ketiganya meminta berkas yang
+     * berbeda dan memakai kategori perjadin yang berbeda pula.
+     */
     public function create(Request $request)
     {
+        $jenis = JenisPerjadin::dari($request->query('jenis'));
+
+        if (! $jenis) {
+            return view('usulan.pilih-jenis', ['pilihan' => JenisPerjadin::cases()]);
+        }
+
+        $this->siapkanMasterJalur($jenis);
+
         $lokasiTujuan = LokasiTujuan::aktif()->orderBy('nama')->get();
 
-        return view('usulan.add-usulan', compact('lokasiTujuan') + [
-            'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
+        return view('usulan.add-usulan', compact('lokasiTujuan', 'jenis') + [
+            'kategoriPerjadin' => $jenis->kategori(),
             'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
-            'spdTerkait' => $this->bekalSpd($request->user()),
+            'kegiatanTerkunci' => $this->kegiatanJalur($jenis),
+            // Supervisi tidak berdasar SPD, jadi daftarnya pun tidak perlu.
+            'spdTerkait' => $jenis->butuhSpd() ? $this->bekalSpd($request->user()) : [],
         ]);
+    }
+
+    /**
+     * Pastikan master data jalur ini ada.
+     *
+     * Kategori dan jenis kegiatan supervisi dibawa seeder, tetapi
+     * pemasangan yang sudah berjalan belum tentu menjalankannya ulang —
+     * jadi aplikasi menambahkannya sendiri saat jalurnya pertama dibuka.
+     */
+    private function siapkanMasterJalur(JenisPerjadin $jenis): void
+    {
+        if ($jenis !== JenisPerjadin::Supervisi) {
+            return;
+        }
+
+        foreach ([['SV-DK', 'Supervisi Dalam Kota', true], ['SV-LK', 'Supervisi Luar Kota', false]] as [$kode, $nama, $dalamKota]) {
+            KategoriPerjadin::firstOrCreate(['kode' => $kode], [
+                'grup' => JenisPerjadin::GRUP_SUPERVISI,
+                'nama' => $nama,
+                'dalam_kota' => $dalamKota,
+                'urutan' => (int) KategoriPerjadin::max('urutan') + 1,
+                'is_aktif' => true,
+            ]);
+        }
+    }
+
+    /** Jenis kegiatan yang dipaksakan sebuah jalur, bila ada. */
+    private function kegiatanJalur(JenisPerjadin $jenis): ?Kegiatan
+    {
+        return $jenis->namaKegiatan()
+            ? Kegiatan::firstOrCreate(['nama' => $jenis->namaKegiatan()])
+            : null;
     }
 
     /**
@@ -238,6 +286,7 @@ class UsulanController extends Controller
         return view('usulan.edit-usulan', compact('usulan', 'lokasiTujuan') + [
             'kategoriPerjadin' => KategoriPerjadin::terkelompok(),
             'jenisKegiatan' => Kegiatan::orderBy('nama')->get(),
+            'jenis' => $usulan->jalur(),
         ]);
     }
 
@@ -250,14 +299,16 @@ class UsulanController extends Controller
 
         // Berkas SPD bertanda tangan boleh dilewati hanya bila sudah pernah
         // diunggah; nomornya tetap wajib karena ikut tercatat pada jejak audit.
+        // Jalur supervisi tidak berdasar SPD sama sekali.
         $sudahAdaSpd = filled($usulan->dokumen()->latest('id')->value('spd_ditandatangani'));
+        $butuhSpd = $usulan->jalur()->butuhSpd();
 
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
-            'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
+            'id_kategori_perjadin' => ['required', Rule::in($usulan->jalur()->idKategori())],
             'no_tugas' => ['required', 'string', 'max:255'],
-            'no_spd' => ['required', 'string', 'max:255', new NomorSpdUnik($usulan)],
-            'spd_ditandatangani' => [$sudahAdaSpd ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'no_spd' => [$butuhSpd ? 'required' : 'nullable', 'string', 'max:255', new NomorSpdUnik($usulan)],
+            'spd_ditandatangani' => [$butuhSpd && ! $sudahAdaSpd ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
             'tanggal_mulai' => ['required', 'date'],
@@ -276,7 +327,7 @@ class UsulanController extends Controller
 
         $usulan->update([
             'no_tugas' => $request->no_tugas,
-            'no_spd' => trim($request->no_spd),
+            'no_spd' => filled($request->no_spd) ? trim($request->no_spd) : null,
             'status' => StatusUsulan::Draft->value,
             'lokasi' => $request->lokasi,
             'id_lokasi' => $this->resolveLokasi($request->lokasi),
@@ -340,17 +391,33 @@ class UsulanController extends Controller
             : null;
         $suratTugasDariSpd = $spdTerpilih?->punyaSuratTugas() ?? false;
 
+        // Jalur yang dipilih pada langkah pertama menentukan berkas yang
+        // diminta dan kategori perjadin yang boleh dipakai. Kiriman tanpa
+        // jalur — draf lama atau pemanggilan langsung — disimpulkan dari
+        // kategorinya, supaya aturannya tetap konsisten tanpa menolak.
+        $jenis = JenisPerjadin::dari($request->input('jenis'))
+            ?? JenisPerjadin::untukKategori(KategoriPerjadin::find($request->input('id_kategori_perjadin')));
+        $butuhSpd = $jenis->butuhSpd();
+
+        // Supervisi berdasar surat tugas, jadi berkasnya wajib diunggah
+        // sendiri — tidak ada SPD yang dapat menyalinkannya.
+        if (! $butuhSpd) {
+            $suratTugasDariSpd = false;
+            $spdTerpilih = null;
+        }
+
         $request->validate([
+            'jenis' => ['nullable', Rule::enum(JenisPerjadin::class)],
             // SPD dari aplikasi tidak wajib: memilihnya hanya menyalin isian.
             // Dasar penugasannya adalah SPD bertanda tangan yang diunggah.
             'id_spd' => ['nullable', Rule::in($this->spdMilik($request->user())->pluck('id'))],
             // SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
             // resminya — dasar persetujuan PPK yang tercatat pada jejak audit.
             // Nomornya unik: nomor yang sudah dipakai usulan lain ditolak.
-            'no_spd' => ['required', 'string', 'max:255', new NomorSpdUnik],
-            'spd_ditandatangani' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'no_spd' => [$butuhSpd ? 'required' : 'nullable', 'string', 'max:255', new NomorSpdUnik],
+            'spd_ditandatangani' => [$butuhSpd ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
-            'id_kategori_perjadin' => ['required', 'exists:kategori_perjadin,id'],
+            'id_kategori_perjadin' => ['required', Rule::in($jenis->idKategori())],
             'no_tugas' => [filled($spdTerpilih?->no_tugas) ? 'nullable' : 'required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
@@ -362,11 +429,19 @@ class UsulanController extends Controller
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ], [
             'id_spd.in' => 'Surat Perjalanan Dinas itu bukan milik Anda.',
-            'surat_tugas.required' => 'Unggah surat tugas, atau pilih SPD yang sudah melampirkannya.',
+            'surat_tugas.required' => $butuhSpd
+                ? 'Unggah surat tugas, atau pilih SPD yang sudah melampirkannya.'
+                : 'Unggah surat tugas — dasar penugasan supervisi kerja praktek.',
             'no_spd.required' => 'Nomor Surat Perjalanan Dinas wajib diisi sebelum usulan dikirim.',
             'spd_ditandatangani.required' => 'Unggah Surat Perjalanan Dinas yang sudah ditandatangani sebelum usulan dikirim.',
             'id_kegiatan.required' => 'Pilih jenis kegiatan perjalanan dinas ini.',
+            'id_kategori_perjadin.in' => 'Kategori itu tidak tersedia untuk jalur pengajuan yang Anda pilih.',
         ]);
+
+        // Jenis kegiatan jalur supervisi tidak dipilih pengusul.
+        if ($kegiatanJalur = $this->kegiatanJalur($jenis)) {
+            $request->merge(['id_kegiatan' => $kegiatanJalur->id]);
+        }
 
         $isDraft = $request->input('action') === 'draft';
         $pengusul = $request->user();
@@ -410,7 +485,10 @@ class UsulanController extends Controller
             'surat_tugas' => $request->hasFile('surat_tugas')
                 ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
                 : $this->salinSuratTugasDariSpd($spd),
-            'spd_ditandatangani' => $request->file('spd_ditandatangani')->store('dokumen/spd', 'public'),
+            // Jalur supervisi tidak mengunggah SPD sama sekali.
+            'spd_ditandatangani' => $request->hasFile('spd_ditandatangani')
+                ? $request->file('spd_ditandatangani')->store('dokumen/spd', 'public')
+                : null,
             'rundown' => $request->hasFile('rundown')
                 ? $request->file('rundown')->store('dokumen/rundown', 'public')
                 : null,
@@ -455,6 +533,9 @@ class UsulanController extends Controller
             'no_tugas' => $request->no_tugas,
             'status' => StatusUsulan::Draft->value,
             'jenis_pengajuan' => $kodeRombongan ? Usulan::PENGAJUAN_KELOMPOK : Usulan::PENGAJUAN_PERSONAL,
+            // Jalur yang dipilih pada langkah pertama ikut disimpan supaya
+            // penyuntingan dan pemeriksaan berkas mengikuti aturan yang sama.
+            'jenis_perjadin' => $request->input('jenis'),
             'kode_rombongan' => $kodeRombongan,
             'lokasi' => $request->lokasi,
             'id_lokasi' => $this->resolveLokasi($request->lokasi),
@@ -465,7 +546,7 @@ class UsulanController extends Controller
             'id_kegiatan' => $request->id_kegiatan,
             'id_kategori_perjadin' => $request->id_kategori_perjadin,
             'id_spd' => $request->id_spd ?: null,
-            'no_spd' => trim($request->no_spd),
+            'no_spd' => filled($request->no_spd) ? trim($request->no_spd) : null,
             'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
             'id_user' => $pemilik->id,
             'id_pembuat' => $pengusul->id,

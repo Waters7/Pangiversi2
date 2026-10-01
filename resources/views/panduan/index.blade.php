@@ -196,7 +196,14 @@
         <div class="p-6">
             <x-panduan-langkah nomor="1" judul="Buka menu Usulan Perjadin → Buat Usulan Perjadin">
                 Dari sidebar kiri, pilih <strong>Usulan Perjadin</strong> lalu
-                <strong>Buat Usulan Perjadin</strong>.
+                <strong>Buat Usulan Perjadin</strong>. Pertanyaan pertama adalah jalurnya:
+                <strong>Perjalanan Dalam Kota</strong>, <strong>Perjalanan Luar Kota</strong>, atau
+                <strong>Supervisi Kerja Praktek / Magang</strong>. Pilihan itu menyaring kategori
+                perjalanan dinas pada formulir — hanya kategori yang berlaku bagi jalur tersebut yang
+                ditampilkan — dan menentukan berkas yang diminta. Jalur supervisi
+                <strong>tidak memakai SPD</strong>: cukup surat tugas beserta nomornya, dan jenis
+                kegiatannya terisi sendiri. Salah pilih jalur? Tekan <strong>Ganti</strong> di kanan
+                atas formulir.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">

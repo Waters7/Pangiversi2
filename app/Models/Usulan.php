@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\JenisPerjadin;
 use App\Enums\LevelPersetujuan;
 use App\Enums\StatusUsulan;
 use App\Services\PenagihDokumen;
@@ -69,6 +70,7 @@ class Usulan extends Model
         'no_tugas',
         'status',
         'jenis_pengajuan',
+        'jenis_perjadin',
         'lokasi',
         'instansi',
         'tanggal_mulai',
@@ -127,6 +129,24 @@ class Usulan extends Model
     public function dalamKota(): bool
     {
         return $this->kategoriPerjadin?->dalamKota() === true;
+    }
+
+    /**
+     * Jalur pengajuan usulan ini — dalam kota, luar kota, atau supervisi.
+     *
+     * Usulan lama belum menyimpannya, jadi disimpulkan dari kategorinya
+     * supaya penyuntingan tetap memakai aturan yang sama.
+     */
+    public function jalur(): JenisPerjadin
+    {
+        return JenisPerjadin::dari($this->jenis_perjadin)
+            ?? JenisPerjadin::untukKategori($this->kategoriPerjadin);
+    }
+
+    /** Usulan jalur supervisi tidak berdasar SPD bertanda tangan. */
+    public function butuhSpd(): bool
+    {
+        return $this->jalur()->butuhSpd();
     }
 
     public function kategoriPerjadin(): BelongsTo

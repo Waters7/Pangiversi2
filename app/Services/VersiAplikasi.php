@@ -12,7 +12,7 @@ namespace App\Services;
  */
 final class VersiAplikasi
 {
-    public const BAWAAN = '2.5.4';
+    public const BAWAAN = '2.5.5';
 
     public function nomor(): string
     {

@@ -51,6 +51,7 @@ class KategoriPerjadin extends Model
         'Narasumber',
         'Diklat',
         'Auditor',
+        'Supervisi Kerja Praktek / Magang',
     ];
 
     /**

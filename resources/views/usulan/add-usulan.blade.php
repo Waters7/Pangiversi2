@@ -14,9 +14,20 @@
                 <path d="M15 18l-6-6 6-6"/>
             </svg>
         </a>
-        <div>
+        <div class="min-w-0">
             <h1 class="text-xl font-bold text-slate-800">Buat Usulan Perjalanan Dinas</h1>
             <p class="text-xs text-slate-400 mt-0.5">Lengkapi semua data sebelum usulan diajukan</p>
+        </div>
+
+        {{-- Jalur yang dipilih pada langkah pertama; dapat diganti di sini. --}}
+        <div class="ml-auto flex items-center gap-2 shrink-0">
+            <span class="hidden sm:inline text-xs text-slate-400">Jalur</span>
+            <span class="text-xs font-bold px-3 py-1.5 rounded-full
+                         {{ $jenis->butuhSpd() ? 'bg-teal-50 text-teal-700 border border-teal-100' : 'bg-violet-50 text-violet-700 border border-violet-100' }}">
+                {{ $jenis->label() }}
+            </span>
+            <a href="{{ route('usulan.create') }}"
+               class="text-xs font-semibold text-slate-500 hover:text-teal-600 underline underline-offset-2">Ganti</a>
         </div>
     </div>
 
@@ -48,7 +59,7 @@
 
               // Nomor SPD pengguna ini ikut tersalin bila kolomnya masih kosong;
               // yang sudah diketik tidak ditimpa.
-              if (s.nomor && s.nomor !== 'Tanpa nomor' && ! this.$refs.noSpd.value) {
+              if (s.nomor && s.nomor !== 'Tanpa nomor' && this.$refs.noSpd && ! this.$refs.noSpd.value) {
                 this.$refs.noSpd.value = s.nomor;
               }
 
@@ -61,6 +72,7 @@
             get suratTugasDariSpd() { return !! (this.spd && this.spd.surat_tugas); },
           }">
         @csrf
+        <input type="hidden" name="jenis" value="{{ $jenis->value }}">
 
         {{-- Draf hanya dipulihkan pada formulir yang masih kosong: isian yang
              dikembalikan validasi tidak boleh ditimpa isi lama. --}}
@@ -69,7 +81,8 @@
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-5">
 
-                {{-- STEP 0: Dasar penugasan --}}
+                {{-- STEP 0: Dasar penugasan — hanya jalur yang berdasar SPD. --}}
+                @if ($jenis->butuhSpd())
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                         <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
@@ -140,6 +153,24 @@
                         </template>
                     </div>
                 </div>
+                @else
+                {{-- Jalur supervisi: dasar penugasannya surat tugas jurusan. --}}
+                <div class="bg-violet-50/70 border border-violet-100 rounded-2xl p-5 flex items-start gap-3">
+                    <span class="w-9 h-9 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <p class="text-sm font-bold text-violet-900">{{ $jenis->label() }}</p>
+                        <p class="text-xs text-violet-800 leading-relaxed mt-1">
+                            Jalur ini <strong>tidak memakai Surat Perjalanan Dinas</strong>. Dasar penugasannya
+                            surat tugas — unggah berkasnya beserta nomornya di bawah. Jenis kegiatannya
+                            sudah terisi sendiri dan tidak perlu dipilih.
+                        </p>
+                    </div>
+                </div>
+                @endif
 
                 {{-- STEP 1: Data Dasar Perjalanan --}}
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -229,7 +260,9 @@
 
                         {{-- SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
                              resminya. Keduanya wajib sebelum pengajuan dikirim: itulah
-                             dasar persetujuan PPK yang tercatat pada jejak audit. --}}
+                             dasar persetujuan PPK yang tercatat pada jejak audit.
+                             Jalur supervisi tidak melewatinya sama sekali. --}}
+                        @if ($jenis->butuhSpd())
                         <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl">
 
                             <div class="flex items-start gap-3 mb-4">
@@ -281,29 +314,47 @@
                             </div>
                         </div>
 
+                        @endif
+
                         {{-- Jenis Kegiatan --}}
                         <div>
                             <label for="id_kegiatan" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Jenis Kegiatan <span class="text-red-500">*</span>
                             </label>
-                            <select name="id_kegiatan" id="id_kegiatan" required
-                                    class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('id_kegiatan') ? 'border-red-500' : 'border-slate-200' }}">
-                                <option value="">— Pilih jenis kegiatan —</option>
-                                @foreach ($jenisKegiatan as $kegiatan)
-                                    <option value="{{ $kegiatan->id }}" @selected(old('id_kegiatan') == $kegiatan->id)>{{ $kegiatan->nama }}</option>
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-slate-400 mt-1">
-                                Maksud perjalanannya — rapat, pelatihan, monitoring, dan sebagainya.
-                                Daftarnya dikelola pada Master Data.
-                            </p>
+
+                            @if ($kegiatanTerkunci)
+                                {{-- Jalur supervisi: kegiatannya sudah pasti, jadi tinggal
+                                     ditampilkan — nilainya ikut terkirim lewat kolom tersembunyi. --}}
+                                <input type="hidden" name="id_kegiatan" value="{{ $kegiatanTerkunci->id }}">
+                                <div class="w-full px-4 py-2.5 rounded-xl text-sm bg-violet-50 border border-violet-100 text-violet-900 font-semibold flex items-center gap-2">
+                                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    {{ $kegiatanTerkunci->nama }}
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1">Terisi sendiri mengikuti jalur pengajuan yang dipilih.</p>
+                            @else
+                                <select name="id_kegiatan" id="id_kegiatan" required
+                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('id_kegiatan') ? 'border-red-500' : 'border-slate-200' }}">
+                                    <option value="">— Pilih jenis kegiatan —</option>
+                                    @foreach ($jenisKegiatan as $kegiatan)
+                                        <option value="{{ $kegiatan->id }}" @selected(old('id_kegiatan') == $kegiatan->id)>{{ $kegiatan->nama }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-slate-400 mt-1">
+                                    Maksud perjalanannya — rapat, pelatihan, monitoring, dan sebagainya.
+                                    Daftarnya dikelola pada Master Data.
+                                </p>
+                            @endif
+
                             @error('id_kegiatan')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        {{-- Kategori Perjalanan Dinas --}}
-                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin" />
+                        {{-- Kategori Perjalanan Dinas — daftarnya disaring menurut jalur. --}}
+                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin"
+                                                   keterangan="Hanya kategori untuk jalur {{ mb_strtolower($jenis->label()) }} yang ditampilkan." />
 
                         {{-- Lokasi Tujuan + Instansi --}}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -468,8 +519,13 @@
                         </button>
 
                         <p class="text-xs text-slate-400 leading-relaxed -mt-1">
-                            Pengajuan langsung berlaku — penugasannya sudah disahkan lewat SPD bertanda tangan,
-                            dan persetujuan PPK tercatat pada jejak audit.
+                            @if ($jenis->butuhSpd())
+                                Pengajuan langsung berlaku — penugasannya sudah disahkan lewat SPD bertanda tangan,
+                                dan persetujuan PPK tercatat pada jejak audit.
+                            @else
+                                Pengajuan langsung berlaku — dasar penugasannya surat tugas yang Anda unggah,
+                                dan prosesnya tercatat pada jejak audit.
+                            @endif
                         </p>
 
                         <div x-show="konfirmasiAjukan" x-cloak
@@ -487,7 +543,11 @@
                                 <ul class="mt-3 space-y-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3.5 py-3">
                                     <li>Tujuan: <strong class="text-slate-700" x-text="$refs.lokasi.value || '—'"></strong></li>
                                     <li>Tanggal: <strong class="text-slate-700" x-text="($refs.tanggalMulai.value || '—') + ' s.d. ' + ($refs.tanggalSelesai.value || '—')"></strong></li>
-                                    <li>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd').value || '—'"></strong></li>
+                                    @if ($jenis->butuhSpd())
+                                        <li>Nomor SPD: <strong class="text-slate-700" x-text="document.getElementById('no_spd')?.value || '—'"></strong></li>
+                                    @else
+                                        <li>Nomor surat tugas: <strong class="text-slate-700" x-text="document.getElementById('no_tugas')?.value || '—'"></strong></li>
+                                    @endif
                                 </ul>
 
                                 <p class="mt-3 text-xs bg-amber-50 text-amber-800 border border-amber-100 rounded-lg px-3 py-2">

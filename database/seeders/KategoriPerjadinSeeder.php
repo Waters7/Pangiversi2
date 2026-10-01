@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\JenisPerjadin;
 use App\Models\KategoriPerjadin;
 use Illuminate\Database\Seeder;
 
@@ -44,6 +45,11 @@ class KategoriPerjadinSeeder extends Seeder
                 ['DL-LK-NFB', 'Diklat Luar Kota NonFullBoard', false],
                 ['DL-LK-FB', 'Diklat Luar Kota FullBoard', false],
                 ['DL-DK', 'Diklat Dalam Kota', true],
+            ],
+            // Jalur pengajuan tersendiri: tanpa SPD, cukup surat tugas.
+            JenisPerjadin::GRUP_SUPERVISI => [
+                ['SV-DK', 'Supervisi Dalam Kota', true],
+                ['SV-LK', 'Supervisi Luar Kota', false],
             ],
         ];
 

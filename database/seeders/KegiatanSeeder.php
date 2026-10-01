@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\JenisPerjadin;
 use App\Models\Kegiatan;
 use Illuminate\Database\Seeder;
 
@@ -19,6 +20,9 @@ class KegiatanSeeder extends Seeder
         'Mengikuti pendidikan dan pelatihan (diklat) atau kursus singkat',
         'Menempuh ujian dinas atau menghadap majelis penguji kesehatan',
         'Mengikuti pameran, promosi, atau sidang internasional',
+
+        // Terisi sendiri pada jalur pengajuan supervisi kerja praktek.
+        JenisPerjadin::KEGIATAN_SUPERVISI,
     ];
 
     /**

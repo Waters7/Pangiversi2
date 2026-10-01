@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisPerjadin;
 use App\Models\KategoriPerjadin;
 use App\Models\Kegiatan;
 use App\Models\SuratPerjalananDinas;
@@ -68,7 +69,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         $this->buatkanSpd();
 
         $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Kirim pengajuan perjalanan dinas?')
             ->assertSee('Apakah Anda sudah benar mengisi seluruh datanya?')
@@ -79,7 +80,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
     public function test_formulir_usulan_terbuka_tanpa_spd_dari_aplikasi(): void
     {
         $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Buat Usulan Perjalanan Dinas')
             ->assertSee('Belum ada SPD yang dibuat lewat aplikasi atas nama Anda')
@@ -91,7 +92,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         $this->buatkanSpd();
 
         $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('KU.02.04/F.XXX.8/1/2026')
             ->assertSee('(opsional)')
@@ -139,7 +140,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
             'no_spd' => 'AR.05.02/F.XXX/99/2026',
             'spd_ditandatangani' => UploadedFile::fake()->create('spd.pdf', 120, 'application/pdf'),
             'id_kegiatan' => Kegiatan::first()->id,
-            'id_kategori_perjadin' => KategoriPerjadin::first()->id,
+            'id_kategori_perjadin' => KategoriPerjadin::where('grup', '!=', JenisPerjadin::GRUP_SUPERVISI)->first()->id,
             'no_tugas' => 'KP.01.02/F.XXX/99/2026',
             'lokasi' => 'Jakarta',
             'instansi' => 'Kementerian Kesehatan',
@@ -164,7 +165,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         ]);
 
         // Yang ditawarkan adalah nomor SPD pengguna ini sendiri, bukan nomor orang pertama.
-        $halaman = $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk()
+        $halaman = $this->actingAs($this->pengguna)->get(route('usulan.create', ['jenis' => 'luar-kota']))->assertOk()
             ->assertSee('KU.02.04/F.XXX.8/2/2026')
             ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
         $this->assertSame('KU.02.04/F.XXX.8/2/2026', $halaman->viewData('spdTerkait')[0]['nomor']);
@@ -178,10 +179,10 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         $spd->update(['id_pembuat' => $this->pengguna->id]);
 
         $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
-        $this->assertSame([], $this->actingAs($this->pengguna)->get(route('usulan.create'))->viewData('spdTerkait'));
+        $this->assertSame([], $this->actingAs($this->pengguna)->get(route('usulan.create', ['jenis' => 'luar-kota']))->viewData('spdTerkait'));
     }
 
     public function test_spd_milik_orang_lain_tidak_dapat_dipilih(): void
@@ -191,7 +192,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         $spdOrangLain = $this->buatkanSpd(User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]));
 
         $this->actingAs($this->pengguna)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertDontSee('KU.02.04/F.XXX.8/1/2026');
 

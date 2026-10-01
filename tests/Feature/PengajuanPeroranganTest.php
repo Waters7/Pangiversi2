@@ -105,7 +105,7 @@ class PengajuanPeroranganTest extends TestCase
     public function test_formulir_tidak_lagi_menawarkan_pengajuan_berkelompok(): void
     {
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertDontSee('Berkelompok')
             ->assertDontSee('Kirim untuk Dikonfirmasi')
@@ -150,7 +150,7 @@ class PengajuanPeroranganTest extends TestCase
     public function test_formulir_meminta_spd_bertanda_tangan(): void
     {
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Surat Perjalanan Dinas Bertanda Tangan')
             ->assertSee('name="spd_ditandatangani"', false)

@@ -133,7 +133,7 @@ class PenomoranPerjadinTest extends TestCase
         $this->terbitkanSpd($admin);
 
         $isi = $this->actingAs($admin)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->getContent();
 
@@ -157,7 +157,7 @@ class PenomoranPerjadinTest extends TestCase
         Kegiatan::create(['nama' => 'Rapat Koordinasi Nasional']);
 
         $this->actingAs($this->pegawai())
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('name="id_kegiatan"', false)
             ->assertSee('Rapat Koordinasi Nasional');
@@ -166,7 +166,7 @@ class PenomoranPerjadinTest extends TestCase
     public function test_nomor_surat_tugas_diisi_manual_sesuai_dokumen(): void
     {
         $this->actingAs($this->pegawai())
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Salin persis seperti tertulis pada surat')
             ->assertSee('cth: KP.01.02/F.XXX/1557/2026');
@@ -175,7 +175,7 @@ class PenomoranPerjadinTest extends TestCase
     public function test_formulir_tidak_lagi_punya_dua_input_surat_tugas(): void
     {
         $isi = $this->actingAs($this->pegawai())
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->getContent();
 

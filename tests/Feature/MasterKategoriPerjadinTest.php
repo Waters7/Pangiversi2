@@ -91,7 +91,7 @@ class MasterKategoriPerjadinTest extends TestCase
         $this->terbitkanSpd($pengusul);
 
         $this->actingAs($pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('<optgroup label="Auditor">', false)
             ->assertSee('Auditor Dalam Kota');

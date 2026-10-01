@@ -128,8 +128,19 @@ class PanduanController extends Controller
     {
         return [
             [
-                'versi' => '2.5.4',
+                'versi' => '2.5.5',
                 'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Pengajuan perjadin kini dimulai dengan satu pertanyaan: perjalanan dalam kota, luar kota, atau supervisi kerja praktek / magang. Jalur yang dipilih menyaring kategori perjalanan dinas dari Master Data, sehingga yang tampil pada formulir hanya kategori yang memang berlaku.',
+                    'Jalur supervisi kerja praktek / magang tidak memakai Surat Perjalanan Dinas: cukup surat tugas beserta nomornya, dan jenis kegiatannya terisi sendiri. Kategori "Supervisi Dalam Kota" dan "Supervisi Luar Kota" ditambahkan ke Master Data.',
+                    'Kaki halaman SPD mengikuti cetakan terbaru: lambang Garuda Sertifikasi Indonesia dilepas — tinggal KAN dan BLU — dan alamat verifikasi tanda tangan elektronik menjadi tte.komdigi.go.id.',
+                    'Butir V pada lembar kedua SPD tidak lagi memuat penanda QR SRIKANDI; ruang tanda tangannya tetap disediakan. Nama PPK dan Direktur tidak lagi digarisbawahi.',
+                    'Daftar Usulan Perjadin: kolom "Pemohon" yang selalu kosong diganti "Pelaksana" dan menyebut pelaksana perjalanan beserta jumlah rekan seperjalanannya.',
+                ],
+            ],
+            [
+                'versi' => '2.5.4',
+                'tanggal' => '30 September 2026',
                 'butir' => [
                     'Dokumen Output (submenu Administrasi Sistem): tampilan empat dokumen cetak — Perjadin (SPD), Rincian Biaya, Daftar Pengeluaran Riil, dan Daftar Nominatif — diatur dari aplikasi. Ukuran kertas dan ukuran huruf dapat diubah, elemen seperti kop surat, tabel pengikut, baris terbilang, blok tanda tangan, dan QR dapat disembunyikan, serta teks baku seperti judul dokumen dan paragraf pernyataan dapat ditulis ulang. Tiap perubahan tercatat pada jejak audit dan dapat dikembalikan ke bawaan dengan satu tombol.',
                     'Dokumen Output memuat pratinjau: dokumen contoh tampil di bawah formulir dan ikut berubah begitu centangan elemen diubah — tanpa perlu menyimpan lebih dulu, tanpa menyentuh data sungguhan. Tersedia pula tombol membuka pratinjau di tab baru dan mengunduh contoh PDF-nya.',

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisPerjadin;
 use App\Models\KategoriPerjadin;
 use App\Models\Kegiatan;
 use App\Models\SuratPerjalananDinas;
@@ -62,7 +63,7 @@ class SuratTugasPadaSpdTest extends TestCase
     {
         return array_merge([
             'id_kegiatan' => Kegiatan::first()->id,
-            'id_kategori_perjadin' => KategoriPerjadin::first()->id,
+            'id_kategori_perjadin' => KategoriPerjadin::where('grup', '!=', JenisPerjadin::GRUP_SUPERVISI)->first()->id,
             'lokasi' => 'Jakarta',
             'instansi' => 'Kementerian Kesehatan',
             'tanggal_mulai' => '2026-10-10',
@@ -132,7 +133,7 @@ class SuratTugasPadaSpdTest extends TestCase
         $this->actingAs($this->pengguna)->post(route('spd.store'), $this->isianSpd());
         $spd = SuratPerjalananDinas::sole();
 
-        $formulir = $this->actingAs($this->pengguna)->get(route('usulan.create'))->assertOk();
+        $formulir = $this->actingAs($this->pengguna)->get(route('usulan.create', ['jenis' => 'luar-kota']))->assertOk();
         $bekal = $formulir->viewData('spdTerkait')[0];
         $this->assertSame('KP.01.02/F.XXX/1557/2026', $bekal['no_tugas']);
         $this->assertSame(route('berkas.lihat', $spd->surat_tugas), $bekal['surat_tugas']);

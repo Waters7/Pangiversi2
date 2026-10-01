@@ -1,6 +1,7 @@
 @props([
     'kategori' => collect(),
     'terpilih' => null,
+    'keterangan' => null,
 ])
 
 {{-- Kategori perjalanan dinas, dikelompokkan sesuai daftar resmi. --}}
@@ -32,6 +33,7 @@
 
     <p class="text-xs text-slate-400 mt-1">
         Menentukan kelas biaya perjalanan — fullboard, fullday, halfday, atau transport lokal.
+        @if ($keterangan) {{ $keterangan }} @endif
     </p>
 
     @error('id_kategori_perjadin')

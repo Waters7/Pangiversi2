@@ -61,7 +61,7 @@ class SpdDasarUsulanTest extends TestCase
     public function test_formulir_menawarkan_spd_milik_pengusul(): void
     {
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertSee('Dasar Penugasan')
             ->assertSee('name="id_spd"', false)
@@ -72,7 +72,7 @@ class SpdDasarUsulanTest extends TestCase
     public function test_isi_spd_dibawa_ke_formulir_agar_tidak_diketik_ulang(): void
     {
         $bekal = $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->viewData('spdTerkait')[0];
 
@@ -93,7 +93,7 @@ class SpdDasarUsulanTest extends TestCase
         $this->terbitkanSpd($orangLain);
 
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertViewHas('spdTerkait', fn (array $daftar) => count($daftar) === 1);
     }
@@ -111,7 +111,7 @@ class SpdDasarUsulanTest extends TestCase
         ]);
 
         $bekal = $this->actingAs($this->pengusul)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->viewData('spdTerkait')[0];
 

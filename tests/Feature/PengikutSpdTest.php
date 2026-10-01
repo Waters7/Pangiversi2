@@ -249,7 +249,7 @@ class PengikutSpdTest extends TestCase
         $this->actingAs($this->pimpinan)->post(route('spd.store'), $this->isian());
 
         $this->actingAs($this->pelaksana)
-            ->get(route('usulan.create'))
+            ->get(route('usulan.create', ['jenis' => 'luar-kota']))
             ->assertOk()
             ->assertViewHas('spdTerkait', fn (array $daftar) => count($daftar) === 1
                 && $daftar[0]['tempat_tujuan'] === 'Jakarta');
