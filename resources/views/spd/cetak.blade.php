@@ -16,6 +16,9 @@
      */
     $tanggal = fn ($t) => $t ? \Carbon\Carbon::parse($t)->translatedFormat('d F Y') : '';
     $terbilang = app(\App\Services\Terbilang::class);
+
+    // Tampilan dokumen diatur dari Administrasi Sistem > Dokumen Output.
+    $dok = app(\App\Services\PengaturanDokumen::class)->untuk(\App\Enums\DokumenCetak::Perjadin);
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -38,10 +41,10 @@
            menjadi acuan seluruh lebar kolom di bawah, sehingga tata letaknya
            tidak bergeser sedikit pun; kelebihan tingginya jatuh ke bawah. */
         @page { margin: 8mm 16mm 7mm; }
-        body { font-size: 11pt; color: #000; margin: 0; line-height: 1.15; }
+        body { font-size: {{ $dok->huruf() }}pt; color: #000; margin: 0; line-height: 1.15; }
 
         .kop { text-align: center; }
-        .kop img { width: 82%; height: auto; }
+        .kop img { width: {{ $dok->lebarKop() }}%; height: auto; }
 
         /* Blok kode dan nomor di kanan atas. */
         .nomor-atas { width: 100%; margin: 2px 0 0; }
@@ -176,17 +179,21 @@
 
     {{-- ═══════════════ HALAMAN DEPAN ═══════════════ --}}
 
-    <div class="kop">
-        <img src="{{ public_path('images/kop-surat-poltekkes.jpg') }}" alt="Kop Poltekkes Kemenkes Manado">
-    </div>
+    @if ($dok->tampil('kop'))
+        <div class="kop">
+            <img src="{{ public_path('images/kop-surat-poltekkes.jpg') }}" alt="Kop Poltekkes Kemenkes Manado">
+        </div>
+    @endif
 
     <table class="nomor-atas">
+        @if ($dok->tampil('kode_nomor'))
         <tr>
             <td class="spasi">&nbsp;</td>
             <td class="label">Kode Nomor</td>
             <td class="titik">:</td>
             <td>{{ $spd->akun_pembebanan ?: '.........................................' }}</td>
         </tr>
+        @endif
         <tr>
             <td>&nbsp;</td>
             <td class="label">Nomor</td>
@@ -196,7 +203,7 @@
         </tr>
     </table>
 
-    <div class="judul"><span>SURAT PERJALANAN DINAS (SPD)</span></div>
+    <div class="judul"><span>{{ $dok->teks('judul') }}</span></div>
 
     <table class="isi">
         <tr>
@@ -224,8 +231,10 @@
             <td class="pemisah">:</td>
             <td class="rapat">
                 a.&nbsp; {{ $orang->pangkat_golongan }}<br>
-                b.&nbsp; {{ $orang->jabatan_instansi }}<br>
-                c.&nbsp; {{ $orang->tingkat_biaya }}
+                b.&nbsp; {{ $orang->jabatan_instansi }}
+                @if ($dok->tampil('tingkat_biaya'))
+                    <br>c.&nbsp; {{ $orang->tingkat_biaya }}
+                @endif
             </td>
         </tr>
         <tr>
@@ -316,7 +325,9 @@
         </tr>
     </table>
 
-    <p class="catatan-kaki">*) Coret yang tidak perlu</p>
+    @if ($dok->tampil('catatan_coret'))
+        <p class="catatan-kaki">*) Coret yang tidak perlu</p>
+    @endif
 
     <table class="pengesahan">
         <tr>
@@ -350,21 +361,17 @@
         </tr>
     </table>
 
-    <table class="kaki">
-        <tr>
-            <td class="pesan">
-                Kementerian Kesehatan tidak menerima suap dan/atau gratifikasi dalam bentuk apapun.
-                Jika terdapat potensi suap atau gratifikasi silakan laporkan melalui HALO KEMENKES
-                1500567 dan <span class="tautan">https://wbs.kemkes.go.id</span>. Untuk verifikasi
-                keaslian tanda tangan elektronik, silakan unggah dokumen pada laman
-                <span class="tautan">https://tte.kominfo.go.id/verifyPDF</span>.
-            </td>
-            <td class="logo">
-                <img src="{{ public_path('images/logo-akreditasi.jpg') }}"
-                     alt="KAN, Garuda Sertifikasi Indonesia, dan BLU">
-            </td>
-        </tr>
-    </table>
+    @if ($dok->tampil('kaki_gratifikasi'))
+        <table class="kaki">
+            <tr>
+                <td class="pesan">{{ $dok->teks('pesan_gratifikasi') }}</td>
+                <td class="logo">
+                    <img src="{{ public_path('images/logo-akreditasi.jpg') }}"
+                         alt="KAN, Garuda Sertifikasi Indonesia, dan BLU">
+                </td>
+            </tr>
+        </table>
+    @endif
 
     <div class="pecah"></div>
 

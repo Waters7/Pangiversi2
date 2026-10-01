@@ -27,6 +27,7 @@ use App\Http\Controllers\ModulDalamPengembanganController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\PengaturanDokumenController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PersetujuanController;
 use App\Http\Controllers\PersetujuanPpkController;
@@ -413,6 +414,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/peran', [PeranController::class, 'store'])->name('administrasi.peran.store');
             Route::put('/peran/{peran}', [PeranController::class, 'update'])->name('administrasi.peran.update');
             Route::delete('/peran/{peran}', [PeranController::class, 'destroy'])->name('administrasi.peran.destroy');
+        });
+
+        // Pengaturan Dokumen Output: tampilan dan elemen tiap dokumen cetak.
+        Route::middleware('can:mengatur-dokumen-cetak')->group(function () {
+            Route::get('/dokumen', [PengaturanDokumenController::class, 'index'])->name('administrasi.dokumen');
+            Route::put('/dokumen/{dokumen}', [PengaturanDokumenController::class, 'simpan'])->name('administrasi.dokumen.simpan');
+            Route::delete('/dokumen/{dokumen}', [PengaturanDokumenController::class, 'bawaan'])->name('administrasi.dokumen.bawaan');
         });
 
         Route::get('/export', [AdministrasiController::class, 'export'])->name('administrasi.export');

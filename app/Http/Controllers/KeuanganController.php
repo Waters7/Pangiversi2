@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DokumenCetak;
 use App\Enums\KategoriBiaya;
 use App\Models\AuditLog;
 use App\Models\DaftarRiil;
@@ -13,10 +14,10 @@ use App\Models\RiwayatPembayaran;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
-use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PenagihDokumen;
+use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
@@ -230,7 +231,7 @@ class KeuanganController extends Controller
             'qrBendahara' => $keuangan?->urlKonfirmasiBayar()
                 ? $this->qrCode->dataUri($keuangan->urlKonfirmasiBayar(), 180)
                 : null,
-        ])->setPaper(KertasCetak::UKURAN);
+        ])->setPaper(app(PengaturanDokumen::class)->untuk(DokumenCetak::RincianBiaya)->kertas());
 
         return $pdf->download("Rincian-Biaya_{$usulan->no_usulan}.pdf");
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DokumenCetak;
 use App\Models\AkunPembiayaan;
 use App\Models\DaftarNominatif as DaftarNominatifModel;
 use App\Models\DaftarRiil;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\EkspresiTanggal;
 use App\Services\KertasCetak;
+use App\Services\PengaturanDokumen;
 use App\Services\PenulisNominatifXlsx;
 use App\Services\PenyusunNominatif;
 use App\Services\QrCodeService;
@@ -408,7 +410,7 @@ class LaporanController extends Controller
             'qr' => $nominatif->urlVerifikasi()
                 ? $qrCode->dataUri($nominatif->urlVerifikasi(), 180)
                 : null,
-        ])->setPaper(KertasCetak::UKURAN, KertasCetak::MENDATAR);
+        ])->setPaper(app(PengaturanDokumen::class)->untuk(DokumenCetak::DaftarNominatif)->kertas(), KertasCetak::MENDATAR);
 
         return $pdf->download('Daftar-Nominatif_'.Str::slug($nominatif->no_tugas).'.pdf');
     }

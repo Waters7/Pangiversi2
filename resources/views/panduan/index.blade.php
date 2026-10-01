@@ -770,7 +770,7 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pantau siapa yang sedang aktif"
-                               :terakhir="! $boleh['peran'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                               :terakhir="! $boleh['peran'] && ! $boleh['dokumen'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                 Jumlah pengguna yang sedang masuk ditampilkan di halaman yang sama, dan daftarnya
                 dapat disaring menjadi hanya yang aktif atau hanya yang belum pernah masuk.
             </x-panduan-langkah>
@@ -779,7 +779,7 @@
 
             @if ($boleh['peran'])
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur peran dan hak akses"
-                                   :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                                   :terakhir="! $boleh['dokumen'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                     Submenu <strong>Administrasi Sistem → Peran &amp; Hak Akses</strong> memuat seluruh
                     peran — bawaan maupun buatan — beserta matriks menu: tiap kemampuan berada pada
                     kolom <strong>Lihat</strong>, <strong>Ubah</strong>, atau <strong>Hapus</strong>
@@ -789,6 +789,22 @@
                     langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
                     tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh
                     akses dan tidak dapat dikurangi.
+                </x-panduan-langkah>
+            @endif
+
+            @if ($boleh['dokumen'])
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur tampilan dokumen output"
+                                   :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                    Submenu <strong>Administrasi Sistem → Dokumen Output</strong> mengatur rupa empat
+                    dokumen cetak: <strong>Perjadin (SPD)</strong>, <strong>Rincian Biaya</strong>,
+                    <strong>Daftar Pengeluaran Riil</strong>, dan <strong>Daftar Nominatif</strong>.
+                    Untuk tiap dokumen dapat diubah ukuran kertas serta ukuran hurufnya, dicentang
+                    elemen mana yang ikut tercetak — kop surat, tabel pengikut, baris terbilang,
+                    blok tanda tangan, kode QR, dan seterusnya — dan ditulis ulang teks bakunya,
+                    misalnya judul dokumen atau paragraf pernyataan pada daftar riil. Perubahan
+                    berlaku pada cetakan berikutnya, tercatat pada jejak audit, dan dapat
+                    dikembalikan ke bawaan dengan satu tombol. Penanda tanda tangan elektronik
+                    SRIKANDI beserta nomor naskah selalu tercetak dan tidak dapat dimatikan.
                 </x-panduan-langkah>
             @endif
 

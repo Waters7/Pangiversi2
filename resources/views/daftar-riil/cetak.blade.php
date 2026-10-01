@@ -1,15 +1,19 @@
+@php
+    // Tampilan dokumen diatur dari Administrasi Sistem > Dokumen Output.
+    $dok = app(\App\Services\PengaturanDokumen::class)->untuk(\App\Enums\DokumenCetak::DaftarRiil);
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Daftar Pengeluaran Riil — {{ $usulan->no_usulan }}</title>
+    <title>{{ $dok->teks('judul') }} — {{ $usulan->no_usulan }}</title>
     <style>
         /* Arial dipetakan dompdf ke Helvetica — seragam dengan dokumen lain. */
         * { font-family: Arial, Helvetica, sans-serif; }
         @page { margin: 14mm 18mm 14mm; }
-        body { font-size: 10.5pt; color: #000; margin: 0; line-height: 1.35; }
+        body { font-size: {{ $dok->huruf() }}pt; color: #000; margin: 0; line-height: 1.35; }
         .kop { text-align: center; margin-bottom: 5mm; }
-        .kop img { width: 82%; height: auto; }
+        .kop img { width: {{ $dok->lebarKop() }}%; height: auto; }
         h2 { font-size: 13pt; text-align: center; text-transform: uppercase; margin: 0 0 1mm; letter-spacing: .3px; }
         .nomor { text-align: center; font-size: 9.5pt; margin: 0 0 4mm; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
@@ -35,20 +39,23 @@
 </head>
 <body>
 
-    <div class="kop">
-        <img src="{{ public_path('images/kop-surat-poltekkes.jpg') }}" alt="Kop Poltekkes Kemenkes Manado">
-    </div>
+    @if ($dok->tampil('kop'))
+        <div class="kop">
+            <img src="{{ public_path('images/kop-surat-poltekkes.jpg') }}" alt="Kop Poltekkes Kemenkes Manado">
+        </div>
+    @endif
 
-    <h2>Daftar Pengeluaran Riil</h2>
-    <p class="nomor">Nomor Usulan: {{ $usulan->no_usulan }} &middot; Dasar Penugasan: {{ $usulan->no_tugas }}</p>
+    <h2>{{ $dok->teks('judul') }}</h2>
 
-    <p class="pernyataan">
-        Yang bertanda tangan di bawah ini menyatakan dengan sesungguhnya bahwa biaya perjalanan dinas
-        di bawah ini benar-benar dikeluarkan untuk pelaksanaan perjalanan dinas dimaksud, dan apabila
-        di kemudian hari terdapat kelebihan atas pembayaran tersebut, kami bersedia menyetorkan
-        kelebihan tersebut ke Kas Negara.
-    </p>
+    @if ($dok->tampil('nomor'))
+        <p class="nomor">Nomor Usulan: {{ $usulan->no_usulan }} &middot; Dasar Penugasan: {{ $usulan->no_tugas }}</p>
+    @endif
 
+    @if ($dok->tampil('pernyataan'))
+        <p class="pernyataan">{{ $dok->teks('pernyataan') }}</p>
+    @endif
+
+    @if ($dok->tampil('identitas'))
     <table class="identitas">
         <tr><td>Nama</td><td>: {{ $peserta->nama }}</td></tr>
         <tr><td>NIP</td><td>: {{ $peserta->nip ?? '-' }}</td></tr>
@@ -58,6 +65,7 @@
         <tr><td>Tujuan Perjalanan</td><td>: {{ $usulan->lokasi }} ({{ $usulan->instansi }})</td></tr>
         <tr><td>Waktu Pelaksanaan</td><td>: {{ \Illuminate\Support\Carbon::parse($usulan->tanggal_mulai)->translatedFormat('d F Y') }} s.d. {{ \Illuminate\Support\Carbon::parse($usulan->tanggal_selesai)->translatedFormat('d F Y') }} ({{ $usulan->durasi }} hari)</td></tr>
     </table>
+    @endif
 
     {{-- Hanya transport lokal. Komponen lain — tiket, uang harian, hotel —
          dipertanggungjawabkan pada dokumen rincian biaya (Lampiran II), dan
@@ -103,14 +111,14 @@
                 Pejabat Pembuat Komitmen
                 @if ($daftar->sudah_ditandatangani)
                     <div class="ruang-ttd">
-                        @if ($qr)
+                        @if ($qr && $dok->tampil('qr'))
                             <img src="{{ $qr }}" alt="QR verifikasi" class="qr">
                         @endif
                     </div>
                     <span class="nama-ttd">{{ $daftar->ppk?->nama }}</span><br>
                     NIP. {{ $daftar->ppk?->nip ?? '-' }}<br>
                     <span class="kode-verifikasi">{{ $daftar->kode_verifikasi }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Ditandatangani secara elektronik pada
                         {{ $daftar->ditandatangani_at->translatedFormat('d F Y, H:i') }} WITA.<br>
                         Pindai QR untuk memeriksa keabsahan dokumen ini.
@@ -127,14 +135,14 @@
                 <br>Yang Melakukan Perjalanan Dinas
                 @if ($daftar->sudahDisetujuiPegawai())
                     <div class="ruang-ttd">
-                        @if ($qrPelaksana)
+                        @if ($qrPelaksana && $dok->tampil('qr'))
                             <img src="{{ $qrPelaksana }}" alt="QR konfirmasi" class="qr">
                         @endif
                     </div>
                     <span class="nama-ttd">{{ $peserta->nama }}</span><br>
                     NIP. {{ $peserta->nip ?? '-' }}<br>
                     <span class="kode-verifikasi">{{ $daftar->kode_konfirmasi }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Nominal dikonfirmasi secara elektronik pada
                         {{ $daftar->disetujui_pegawai_at->translatedFormat('d F Y, H:i') }} WITA.<br>
                         Pindai QR untuk memeriksa nomor perjadin dan kode konfirmasinya.
@@ -144,7 +152,7 @@
                     <span class="nama-ttd">{{ $peserta->nama }}</span><br>
                     NIP. {{ $peserta->nip ?? '-' }}
                     @if ($daftar->sanggahKedaluwarsa())
-                        <p class="catatan-qr">
+                        <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                             Masa sanggah berakhir {{ $daftar->batas_sanggah->translatedFormat('d F Y') }}
                             tanpa tanggapan.
                         </p>

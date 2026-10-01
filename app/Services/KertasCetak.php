@@ -14,6 +14,18 @@ final class KertasCetak
 {
     public const UKURAN = 'folio';
 
+    /**
+     * Ukuran yang boleh dipilih administrator pada pengaturan dokumen.
+     *
+     * @var array<string, string>
+     */
+    public const PILIHAN = [
+        'folio' => 'Folio / F4 — 21,6 × 33 cm',
+        'a4' => 'A4 — 21 × 29,7 cm',
+        'legal' => 'Legal — 21,6 × 35,6 cm',
+        'letter' => 'Letter — 21,6 × 27,9 cm',
+    ];
+
     public const TEGAK = 'portrait';
 
     public const MENDATAR = 'landscape';

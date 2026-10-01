@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DokumenCetak;
 use App\Enums\Golongan;
 use App\Enums\Kemampuan;
 use App\Models\LokasiTujuan;
@@ -10,8 +11,8 @@ use App\Models\SpdPelaksana;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
 use App\Services\EkspresiTanggal;
-use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
+use App\Services\PengaturanDokumen;
 use App\Services\PenomoranPerjadin;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,7 @@ class SuratPerjalananDinasController extends Controller
         private EkspresiTanggal $tanggal,
         private NotifikasiService $notifikasi,
         private PenomoranPerjadin $penomoran,
+        private PengaturanDokumen $pengaturanDokumen,
     ) {}
 
     public function index(Request $request): View
@@ -376,7 +378,7 @@ class SuratPerjalananDinasController extends Controller
                 ->where('jabatan', 'like', '%Direktur%')
                 ->whereRaw('LOWER(jabatan) not like ?', ['%wakil%'])
                 ->first(),
-        ])->setPaper(KertasCetak::UKURAN);
+        ])->setPaper($this->pengaturanDokumen->untuk(DokumenCetak::Perjadin)->kertas());
 
         $nomor = $pelaksana->first()?->nomor_surat ?? 'SPD';
         $berkas = 'SPD_'.str_replace(['/', ' '], ['-', ''], $nomor).'.pdf';

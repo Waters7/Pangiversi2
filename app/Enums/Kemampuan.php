@@ -100,6 +100,12 @@ enum Kemampuan: string
      */
     case MengelolaPeran = 'mengelola-peran';
 
+    /**
+     * Mengatur tampilan dokumen cetak: ukuran kertas, ukuran huruf, elemen
+     * yang ditampilkan, dan teks bakunya.
+     */
+    case MengaturDokumenCetak = 'mengatur-dokumen-cetak';
+
     public function label(): string
     {
         return match ($this) {
@@ -126,6 +132,7 @@ enum Kemampuan: string
             self::MenghapusMasterData => 'Menghapus master data',
             self::MenghapusPengguna => 'Menghapus pengguna',
             self::MengelolaPeran => 'Mengelola peran dan hak akses',
+            self::MengaturDokumenCetak => 'Mengatur tampilan dokumen cetak',
         };
     }
 

@@ -50,6 +50,7 @@ class PanduanController extends Controller
             'boleh' => [
                 'masterData' => $pengguna->punyaKemampuan(Kemampuan::MengelolaMasterData),
                 'peran' => $pengguna->punyaKemampuan(Kemampuan::MengelolaPeran),
+                'dokumen' => $pengguna->punyaKemampuan(Kemampuan::MengaturDokumenCetak),
                 'jejakAudit' => $pengguna->punyaKemampuan(Kemampuan::MelihatJejakAudit),
             ],
             'hariSanggah' => DaftarRiil::HARI_MASA_SANGGAH,
@@ -126,6 +127,14 @@ class PanduanController extends Controller
     private function riwayatPerubahan(): array
     {
         return [
+            [
+                'versi' => '2.5.4',
+                'tanggal' => '1 Oktober 2026',
+                'butir' => [
+                    'Dokumen Output (submenu Administrasi Sistem): tampilan empat dokumen cetak — Perjadin (SPD), Rincian Biaya, Daftar Pengeluaran Riil, dan Daftar Nominatif — diatur dari aplikasi. Ukuran kertas dan ukuran huruf dapat diubah, elemen seperti kop surat, tabel pengikut, baris terbilang, blok tanda tangan, dan QR dapat disembunyikan, serta teks baku seperti judul dokumen dan paragraf pernyataan dapat ditulis ulang. Tiap perubahan tercatat pada jejak audit dan dapat dikembalikan ke bawaan dengan satu tombol.',
+                    'Penanda tanda tangan elektronik SRIKANDI dan nomor naskah sengaja tidak dapat dimatikan, supaya surat tetap dapat ditandatangani secara elektronik.',
+                ],
+            ],
             [
                 'versi' => '2.5.3',
                 'tanggal' => '21 September 2026',

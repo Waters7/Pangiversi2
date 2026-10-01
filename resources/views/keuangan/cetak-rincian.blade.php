@@ -1,15 +1,19 @@
+@php
+    // Tampilan dokumen diatur dari Administrasi Sistem > Dokumen Output.
+    $dok = app(\App\Services\PengaturanDokumen::class)->untuk(\App\Enums\DokumenCetak::RincianBiaya);
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Rincian Biaya Perjalanan Dinas — {{ $usulan->no_usulan }}</title>
+    <title>{{ $dok->teks('judul') }} — {{ $usulan->no_usulan }}</title>
     <style>
         /* Arial dipetakan dompdf ke Helvetica: font baku PDF yang sama
            dengan SPD, jadi seluruh dokumen cetak seragam dan lebih ringkas
            daripada DejaVu Sans yang lebar. */
         * { font-family: Arial, Helvetica, sans-serif; }
         @page { margin: 14mm 16mm 12mm; }
-        body { font-size: 10pt; color: #000; margin: 0; line-height: 1.25; }
+        body { font-size: {{ $dok->huruf() }}pt; color: #000; margin: 0; line-height: 1.25; }
         .lampiran { text-align: right; font-size: 7.5pt; line-height: 1.3; margin-bottom: 2.5mm; }
         h1 { font-size: 12.5pt; text-align: center; text-transform: uppercase; margin: 0 0 3mm; letter-spacing: .4px; }
         .rujukan td { padding: 0.4mm 0; font-size: 10pt; }
@@ -55,6 +59,7 @@
 </head>
 <body>
 
+    @if ($dok->tampil('lampiran_pmk'))
     <div class="lampiran">
         Lampiran II :<br>
         Peraturan Menteri Keuangan RI<br>
@@ -63,15 +68,18 @@
         Tentang Perjalanan Dinas Jabatan Dalam Negeri<br>
         Bagi Pejabat Negara, Pegawai Negeri dan Pegawai Tidak Tetap
     </div>
+    @endif
 
-    <h1>Rincian Biaya Perjalanan Dinas</h1>
+    <h1>{{ $dok->teks('judul') }}</h1>
 
+    @if ($dok->tampil('rujukan'))
     <table class="rujukan">
         <tr><td>Lampiran SPPD Nomor</td><td>: {{ $usulan->no_tugas }}</td></tr>
         <tr><td>Tanggal</td><td>: {{ \Carbon\Carbon::parse($usulan->tanggal_mulai)->translatedFormat('d F Y') }}</td></tr>
         <tr><td>Nama Pelaksana</td><td>: {{ $peserta?->nama ?? $usulan->user?->nama }}</td></tr>
         <tr><td>NIP</td><td>: {{ $peserta?->nip ?? $usulan->user?->nip ?? '-' }}</td></tr>
     </table>
+    @endif
 
     <table class="biaya">
         <thead>
@@ -177,7 +185,9 @@
         </tbody>
     </table>
 
-    <p class="terbilang">Terbilang : {{ ucfirst($terbilang) }}</p>
+    @if ($dok->tampil('terbilang'))
+        <p class="terbilang">Terbilang : {{ ucfirst($terbilang) }}</p>
+    @endif
 
     {{-- Dua kolom tanda tangan bersusunan sama — tempat & tanggal, judul,
          kotak QR bertinggi tetap, jabatan, nama, NIP — supaya keduanya
@@ -196,7 +206,7 @@
                 Telah dibayar sejumlah<br>
                 Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
                 <div class="kotak-ttd">
-                    @if ($qrBendahara)
+                    @if ($qrBendahara && $dok->tampil('qr'))
                         {{-- Konfirmasi bendahara terbit setelah pembayaran lunas --}}
                         <img src="{{ $qrBendahara }}" alt="QR konfirmasi pembayaran" class="qr">
                     @endif
@@ -204,9 +214,9 @@
                 Bendahara Pengeluaran,<br>
                 <span class="nama">{{ $bendahara?->nama ?? '……………………………' }}</span><br>
                 NIP : {{ $bendahara?->nip ?? '…………………………' }}
-                @if ($qrBendahara)
+                @if ($qrBendahara && $dok->tampil('qr'))
                     <br><span class="kode-qr">{{ $keuangan->kode_konfirmasi_bayar }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Pembayaran dikonfirmasi lunas pada
                         {{ $keuangan->dikonfirmasi_bayar_at?->translatedFormat('d F Y, H:i') }} WITA.<br>
                         Pindai QR untuk memeriksa nomor konfirmasi pembayaran.
@@ -218,7 +228,7 @@
                 Telah menerima jumlah uang<br>
                 Sebesar Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
                 <div class="kotak-ttd">
-                    @if ($qrPelaksana)
+                    @if ($qrPelaksana && $dok->tampil('qr'))
                         {{-- Kode yang sama dengan QR pelaksana pada daftar pengeluaran riil --}}
                         <img src="{{ $qrPelaksana }}" alt="QR konfirmasi pelaksana" class="qr">
                     @endif
@@ -226,9 +236,9 @@
                 Yang Menerima,<br>
                 <span class="nama">{{ $peserta?->nama ?? $usulan->user?->nama }}</span><br>
                 NIP : {{ $peserta?->nip ?? $usulan->user?->nip ?? '-' }}
-                @if ($qrPelaksana)
+                @if ($qrPelaksana && $dok->tampil('qr'))
                     <br><span class="kode-qr">{{ $daftarRiil->kode_konfirmasi }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Nominal dikonfirmasi pelaksana pada
                         {{ $daftarRiil->disetujui_pegawai_at?->translatedFormat('d F Y, H:i') }} WITA,
                         dan daftar pengeluaran riilnya sudah ditandatangani PPK.
@@ -241,6 +251,7 @@
     <table class="rampung">
         <tr>
             <td class="kolom">
+                @if ($dok->tampil('perhitungan_rampung'))
                 <div class="rampung">
                     <h2>Perhitungan SPD Rampung</h2>
                     <table class="hitung">
@@ -249,6 +260,7 @@
                         <tr><td>Sisa kurang / lebih</td><td>: Rp {{ number_format($totalKeseluruhan - $dibayarkan, 0, ',', '.') }}</td></tr>
                     </table>
                 </div>
+                @endif
             </td>
             <td class="kolom kolom-ppk">
                 {{-- Tanggal PPK menandatangani menurut sistem; sebelum itu
@@ -256,16 +268,16 @@
                 Manado, {{ $daftarRiil?->ditandatangani_at?->translatedFormat('d F Y') ?? '……………………' }}<br>
                 Pejabat Pembuat Komitmen,
                 <div class="kotak-ttd">
-                    @if ($qrPpk)
+                    @if ($qrPpk && $dok->tampil('qr'))
                         {{-- Kode yang sama dengan QR PPK pada daftar pengeluaran riil --}}
                         <img src="{{ $qrPpk }}" alt="QR verifikasi PPK" class="qr">
                     @endif
                 </div>
                 <span class="nama">{{ $daftarRiil?->ppk?->nama ?? $ppk?->nama ?? '……………………………' }}</span><br>
                 NIP : {{ $daftarRiil?->ppk?->nip ?? $ppk?->nip ?? '…………………………' }}
-                @if ($qrPpk)
+                @if ($qrPpk && $dok->tampil('qr'))
                     <br><span class="kode-qr">{{ $daftarRiil->kode_verifikasi }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Ditandatangani secara elektronik pada
                         {{ $daftarRiil->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.<br>
                         Pindai QR untuk memeriksa keabsahan tanda tangan PPK.

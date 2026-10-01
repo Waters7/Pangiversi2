@@ -1,6 +1,9 @@
 @php
     $rupiah = fn ($n) => number_format((float) $n, 0, ',', '.');
     $tahun = $nominatif->tanggal_tugas?->format('Y') ?? now()->format('Y');
+
+    // Tampilan dokumen diatur dari Administrasi Sistem > Dokumen Output.
+    $dok = app(\App\Services\PengaturanDokumen::class)->untuk(\App\Enums\DokumenCetak::DaftarNominatif);
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -12,7 +15,7 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 8pt;
+            font-size: {{ $dok->huruf() }}pt;
             color: #000;
             margin: 0;
         }
@@ -90,9 +93,13 @@
 </head>
 <body>
 
-    <p class="judul">NOMINATIF PERJADIN POLTEKKES KEMENKES MANADO TA {{ $tahun }}</p>
-    <p class="subjudul">Surat Tugas No. {{ $nominatif->no_tugas }}</p>
+    <p class="judul">{{ $dok->teks('judul', ['tahun' => $tahun]) }}</p>
 
+    @if ($dok->tampil('subjudul'))
+        <p class="subjudul">{{ $dok->teks('subjudul', ['nomor' => $nominatif->no_tugas]) }}</p>
+    @endif
+
+    @if ($dok->tampil('keterangan_pembiayaan'))
     <p class="keterangan">
         @if ($nominatif->kategoriPembiayaan)
             Kategori Pembiayaan : {{ $nominatif->kategoriPembiayaan->kode }} — {{ $nominatif->kategoriPembiayaan->nama }}
@@ -104,6 +111,7 @@
             Akun Pembiayaan : {{ $nominatif->akunPembiayaan->kode }} — {{ $nominatif->akunPembiayaan->nama }}
         @endif
     </p>
+    @endif
 
     <table class="isi">
         <thead>
@@ -143,7 +151,7 @@
                     <td class="tengah">{{ $item['tujuan'] }}</td>
                     <td class="tengah">
                         {{ $item['lamanya'] }} hari
-                        @if ($item['berangkat'] && $item['kembali'])
+                        @if ($item['berangkat'] && $item['kembali'] && $dok->tampil('rentang_tanggal'))
                             <br><span class="rentang">{{ $item['berangkat']->translatedFormat('d M Y') }}</span>
                             <br><span class="rentang">s.d. {{ $item['kembali']->translatedFormat('d M Y') }}</span>
                         @endif
@@ -168,7 +176,7 @@
                 </tr>
             @endforeach
 
-            <tr class="total">
+            <tr class="total" @if (! $dok->tampil('baris_total')) style="display:none" @endif>
                 <td colspan="6" class="tengah">T O T A L</td>
                 <td class="kanan">{{ $rupiah($total['tiket']) }}</td>
                 <td class="kanan">{{ $rupiah($total['transport']) }}</td>
@@ -181,6 +189,7 @@
         </tbody>
     </table>
 
+    @if ($dok->tampil('ttd'))
     <table class="ttd">
         <tr>
             <td>Disahkan Oleh :</td>
@@ -194,7 +203,7 @@
             {{-- KPPN menandatangani basah, jadi ruangnya dibiarkan kosong. --}}
             <td class="ruang-ttd"></td>
             <td class="ruang-ttd">
-                @if ($qr)
+                @if ($qr && $dok->tampil('qr'))
                     <img src="{{ $qr }}" alt="QR verifikasi PPK" class="qr">
                 @endif
             </td>
@@ -207,9 +216,9 @@
             <td>NIP. …………………………</td>
             <td>
                 NIP. {{ $ppk?->nip ?? '…………………………' }}
-                @if ($qr)
+                @if ($qr && $dok->tampil('qr'))
                     <br><span class="kode-qr">{{ $nominatif->kode_verifikasi }}</span>
-                    <p class="catatan-qr">
+                    <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Ditandatangani secara elektronik pada
                         {{ $nominatif->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.
                         Pindai QR untuk memeriksa keabsahan tanda tangan PPK.
@@ -218,6 +227,7 @@
             </td>
         </tr>
     </table>
+    @endif
 
 </body>
 </html>

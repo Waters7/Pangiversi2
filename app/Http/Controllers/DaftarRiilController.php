@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DokumenCetak;
 use App\Models\AuditLog;
 use App\Models\DaftarRiil;
 use App\Models\Notifikasi;
@@ -10,8 +11,8 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\JalurPersetujuan;
-use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
+use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
@@ -390,7 +391,7 @@ class DaftarRiilController extends Controller
 
         $pdf = Pdf::loadView('daftar-riil.cetak', compact(
             'usulan', 'peserta', 'daftar', 'qr', 'qrPelaksana',
-        ))->setPaper(KertasCetak::UKURAN);
+        ))->setPaper(app(PengaturanDokumen::class)->untuk(DokumenCetak::DaftarRiil)->kertas());
 
         return $pdf->download("Daftar-Riil_{$usulan->no_usulan}_{$peserta->nama}.pdf");
     }
