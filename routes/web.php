@@ -421,6 +421,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/dokumen', [PengaturanDokumenController::class, 'index'])->name('administrasi.dokumen');
             Route::put('/dokumen/{dokumen}', [PengaturanDokumenController::class, 'simpan'])->name('administrasi.dokumen.simpan');
             Route::delete('/dokumen/{dokumen}', [PengaturanDokumenController::class, 'bawaan'])->name('administrasi.dokumen.bawaan');
+
+            // Pratinjau memakai data contoh; POST memakai setelan yang masih
+            // di formulir, GET memakai setelan yang sudah tersimpan.
+            Route::match(['get', 'post'], '/dokumen/{dokumen}/pratinjau', [PengaturanDokumenController::class, 'pratinjau'])
+                ->name('administrasi.dokumen.pratinjau');
         });
 
         Route::get('/export', [AdministrasiController::class, 'export'])->name('administrasi.export');

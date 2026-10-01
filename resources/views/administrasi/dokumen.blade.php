@@ -57,8 +57,9 @@
         </div>
 
         {{-- ── Pengaturan dokumen terpilih ── --}}
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" x-data>
-            <form method="POST" action="{{ route('administrasi.dokumen.simpan', $terpilih->value) }}">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+             x-data="pengaturanDokumen('{{ route('administrasi.dokumen.pratinjau', $terpilih->value) }}')">
+            <form method="POST" action="{{ route('administrasi.dokumen.simpan', $terpilih->value) }}" id="formDokumen">
                 @csrf @method('PUT')
 
                 <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -75,6 +76,10 @@
                         <p class="text-xs text-slate-400 mt-1">{{ $terpilih->keterangan() }}</p>
                     </div>
                     <div class="flex gap-2 shrink-0">
+                        <button type="button" @click="segarkanPratinjau()"
+                                class="px-4 py-2 rounded-xl border border-teal-200 bg-teal-50 text-sm font-bold text-teal-700 hover:bg-teal-100 transition">
+                            Lihat Pratinjau
+                        </button>
                         @if ($sudahDiatur)
                             <button type="button" @click="$dispatch('buka-bawaan-dokumen')"
                                     class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
@@ -173,6 +178,45 @@
                 </div>
             </form>
 
+            {{-- ── Pratinjau: dokumen contoh yang mengikuti centangan di atas ── --}}
+            <div class="border-t border-slate-100">
+                <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pratinjau Dokumen</h4>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Berisi data contoh, bukan perjalanan dinas sungguhan. Tekan <strong>Lihat Pratinjau</strong>
+                            setelah mengubah centangan untuk melihat elemen mana yang hilang atau muncul.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" @click="bukaTab(false)"
+                                class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                            Buka di tab baru
+                        </button>
+                        <button type="button" @click="bukaTab(true)"
+                                class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                            Contoh PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-6 pb-6">
+                    <div class="relative rounded-xl border border-slate-200 bg-slate-100 overflow-hidden">
+                        <div x-show="memuat" x-cloak
+                             class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-xs font-semibold text-slate-500">
+                            Menyiapkan pratinjau…
+                        </div>
+                        <iframe name="bingkaiPratinjau" x-ref="bingkai" title="Pratinjau {{ $terpilih->label() }}"
+                                src="{{ route('administrasi.dokumen.pratinjau', $terpilih->value) }}"
+                                class="w-full bg-white" style="height: 560px; border: 0"
+                                @load="memuat = false"></iframe>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-2">
+                        Pratinjau ditampilkan sebagai halaman web; hasil cetaknya mengikuti ukuran kertas yang dipilih di atas.
+                    </p>
+                </div>
+            </div>
+
             @if ($sudahDiatur)
                 <x-modal-konfirmasi
                     nama="bawaan-dokumen"
@@ -188,4 +232,38 @@
         </div>
     </div>
 </div>
+
+<script>
+    /**
+     * Pratinjau mengirimkan isi formulir yang sedang tampak — termasuk
+     * centangan yang belum disimpan — ke bingkai di bawahnya, atau ke tab
+     * baru bila diminta.
+     */
+    function pengaturanDokumen(alamat) {
+        return {
+            memuat: false,
+            kirim(sasaran, pdf) {
+                const formulir = document.getElementById('formDokumen');
+                const salinan = formulir.cloneNode(true);
+                salinan.action = alamat + (pdf ? '?pdf=1' : '');
+                salinan.method = 'POST';
+                salinan.target = sasaran;
+                salinan.style.display = 'none';
+                // Penanda _method milik formulir simpan tidak ikut terkirim.
+                salinan.querySelectorAll('[name="_method"]').forEach((el) => el.remove());
+                document.body.appendChild(salinan);
+                salinan.submit();
+                setTimeout(() => salinan.remove(), 1000);
+            },
+            segarkanPratinjau() {
+                this.memuat = true;
+                this.kirim('bingkaiPratinjau', false);
+                setTimeout(() => { this.memuat = false; }, 4000);
+            },
+            bukaTab(pdf) {
+                this.kirim('_blank', pdf);
+            },
+        };
+    }
+</script>
 @endsection

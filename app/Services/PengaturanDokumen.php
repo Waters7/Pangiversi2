@@ -35,10 +35,27 @@ class PengaturanDokumen
      */
     public function simpan(DokumenCetak $dokumen, array $isi): void
     {
+        Pengaturan::simpan([
+            self::kunci($dokumen) => json_encode($this->rapikan($dokumen, $isi), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        unset($this->hafalan[$dokumen->value]);
+    }
+
+    /**
+     * Bersihkan kiriman formulir menjadi bentuk yang disimpan: nilai di luar
+     * batas dijepit, teks kosong kembali ke bawaan, elemen yang tidak
+     * dicentang berarti dimatikan.
+     *
+     * @param  array<string, mixed>  $isi
+     * @return array{kertas: string, huruf: float, lebar_kop: int, elemen: array<string, bool>, teks: array<string, string>}
+     */
+    private function rapikan(DokumenCetak $dokumen, array $isi): array
+    {
         $bawaan = $dokumen->bawaan();
 
         $elemen = [];
-        foreach ($dokumen->elemen() as $kode => $tentang) {
+        foreach (array_keys($dokumen->elemen()) as $kode) {
             $elemen[$kode] = (bool) ($isi['elemen'][$kode] ?? false);
         }
 
@@ -49,18 +66,25 @@ class PengaturanDokumen
         }
 
         $kertas = (string) ($isi['kertas'] ?? $bawaan['kertas']);
-        $huruf = (float) ($isi['huruf'] ?? $bawaan['huruf']);
-        $lebarKop = (int) ($isi['lebar_kop'] ?? $bawaan['lebar_kop']);
 
-        Pengaturan::simpan([self::kunci($dokumen) => json_encode([
+        return [
             'kertas' => array_key_exists($kertas, KertasCetak::PILIHAN) ? $kertas : $bawaan['kertas'],
-            'huruf' => max(6, min(16, $huruf)),
-            'lebar_kop' => max(40, min(100, $lebarKop)),
+            'huruf' => max(6, min(16, (float) ($isi['huruf'] ?? $bawaan['huruf']))),
+            'lebar_kop' => max(40, min(100, (int) ($isi['lebar_kop'] ?? $bawaan['lebar_kop']))),
             'elemen' => $elemen,
             'teks' => $teks,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+        ];
+    }
 
-        unset($this->hafalan[$dokumen->value]);
+    /**
+     * Pasang setelan hanya untuk permintaan ini — dipakai pratinjau agar
+     * perubahan yang belum disimpan dapat dilihat lebih dahulu.
+     *
+     * @param  array<string, mixed>  $isi
+     */
+    public function sementara(DokumenCetak $dokumen, array $isi): void
+    {
+        $this->hafalan[$dokumen->value] = new TampilanDokumen($dokumen, $this->rapikan($dokumen, $isi));
     }
 
     /** Kembalikan satu dokumen ke tampilan bawaannya. */

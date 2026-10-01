@@ -132,6 +132,7 @@ class PanduanController extends Controller
                 'tanggal' => '1 Oktober 2026',
                 'butir' => [
                     'Dokumen Output (submenu Administrasi Sistem): tampilan empat dokumen cetak — Perjadin (SPD), Rincian Biaya, Daftar Pengeluaran Riil, dan Daftar Nominatif — diatur dari aplikasi. Ukuran kertas dan ukuran huruf dapat diubah, elemen seperti kop surat, tabel pengikut, baris terbilang, blok tanda tangan, dan QR dapat disembunyikan, serta teks baku seperti judul dokumen dan paragraf pernyataan dapat ditulis ulang. Tiap perubahan tercatat pada jejak audit dan dapat dikembalikan ke bawaan dengan satu tombol.',
+                    'Dokumen Output memuat pratinjau: dokumen contoh tampil di bawah formulir dan ikut berubah begitu centangan elemen diubah — tanpa perlu menyimpan lebih dulu, tanpa menyentuh data sungguhan. Tersedia pula tombol membuka pratinjau di tab baru dan mengunduh contoh PDF-nya.',
                     'Penanda tanda tangan elektronik SRIKANDI dan nomor naskah sengaja tidak dapat dimatikan, supaya surat tetap dapat ditandatangani secara elektronik.',
                 ],
             ],

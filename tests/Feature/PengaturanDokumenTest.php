@@ -258,6 +258,68 @@ class PengaturanDokumenTest extends TestCase
         $this->assertStringNotContainsString('Kategori Pembiayaan', $isi);
     }
 
+    // ── Pratinjau ──
+
+    public function test_pratinjau_menampilkan_keempat_dokumen_dengan_data_contoh(): void
+    {
+        foreach (DokumenCetak::cases() as $dokumen) {
+            $this->actingAs($this->admin)
+                ->get(route('administrasi.dokumen.pratinjau', $dokumen->value))
+                ->assertOk()
+                ->assertSee('CONTOH', false);
+        }
+
+        // Tidak ada satu pun data contoh yang menyelinap ke basis data.
+        $this->assertDatabaseCount('usulan', 0);
+        $this->assertDatabaseCount('surat_perjalanan_dinas', 0);
+        $this->assertDatabaseCount('daftar_nominatif', 0);
+    }
+
+    public function test_pratinjau_mengikuti_setelan_yang_belum_disimpan(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('administrasi.dokumen.pratinjau', DokumenCetak::DaftarRiil->value), [
+                'kertas' => 'a4',
+                'huruf' => 13,
+                'elemen' => ['identitas' => '1'],
+                'teks' => ['judul' => 'CONTOH JUDUL BARU'],
+            ])
+            ->assertOk()
+            ->assertSee('CONTOH JUDUL BARU')
+            ->assertSee('font-size: 13pt', false)
+            ->assertDontSee('kop-surat-poltekkes')
+            ->assertDontSee('Nomor Usulan:');
+
+        // Setelan tersimpan tidak ikut berubah — pratinjau hanya menumpang
+        // lihat. Pada permintaan sungguhan setelan sementaranya ikut mati
+        // bersama permintaan; di dalam uji, wadahnya dilupakan dahulu.
+        $this->assertFalse($this->atur()->sudahDiatur(DokumenCetak::DaftarRiil));
+        $this->atur()->lupakan();
+        $this->assertSame('Daftar Pengeluaran Riil', $this->atur()->untuk(DokumenCetak::DaftarRiil)->teks('judul'));
+    }
+
+    public function test_pratinjau_dapat_diunduh_sebagai_pdf_dan_dijaga_hak_aksesnya(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.dokumen.pratinjau', [DokumenCetak::DaftarNominatif->value, 'pdf' => 1]))
+            ->assertOk()
+            ->assertSee('/MediaBox [0.000 0.000 936.000 612.000]', false);
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::TimSdm->value]))
+            ->get(route('administrasi.dokumen.pratinjau', DokumenCetak::Perjadin->value))
+            ->assertForbidden();
+    }
+
+    public function test_halaman_pengaturan_memuat_bingkai_pratinjau(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.dokumen'))
+            ->assertOk()
+            ->assertSee('Pratinjau Dokumen')
+            ->assertSee('Lihat Pratinjau')
+            ->assertSee(route('administrasi.dokumen.pratinjau', 'perjadin'));
+    }
+
     // ── Hak akses ──
 
     public function test_kemampuan_mengatur_dokumen_hanya_dimiliki_super_administrator(): void

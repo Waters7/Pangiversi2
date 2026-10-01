@@ -803,8 +803,11 @@
                     blok tanda tangan, kode QR, dan seterusnya — dan ditulis ulang teks bakunya,
                     misalnya judul dokumen atau paragraf pernyataan pada daftar riil. Perubahan
                     berlaku pada cetakan berikutnya, tercatat pada jejak audit, dan dapat
-                    dikembalikan ke bawaan dengan satu tombol. Penanda tanda tangan elektronik
-                    SRIKANDI beserta nomor naskah selalu tercetak dan tidak dapat dimatikan.
+                    dikembalikan ke bawaan dengan satu tombol. Di bawah formulir tersedia
+                    <strong>pratinjau</strong> berisi dokumen contoh: tekan <strong>Lihat Pratinjau</strong>
+                    seusai mengubah centangan untuk melihat elemen mana yang hilang atau muncul,
+                    sebelum pengaturannya disimpan. Penanda tanda tangan elektronik SRIKANDI
+                    beserta nomor naskah selalu tercetak dan tidak dapat dimatikan.
                 </x-panduan-langkah>
             @endif
 

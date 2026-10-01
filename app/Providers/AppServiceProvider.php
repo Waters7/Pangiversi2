@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\Kemampuan;
 use App\Models\User;
 use App\Services\PenentuHakAkses;
+use App\Services\PengaturanDokumen;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // Tabel peran dibaca sekali per permintaan, bukan pada tiap @can.
         $this->app->singleton(PenentuHakAkses::class);
+
+        // Satu wadah bersama: pratinjau memasang setelan sementara di sini
+        // dan berkas cetak membacanya lewat app() pada permintaan yang sama.
+        $this->app->singleton(PengaturanDokumen::class);
     }
 
     /**
