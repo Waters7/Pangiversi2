@@ -37,6 +37,32 @@
         </div>
     </div>
 
+    {{-- Keterangan langkah berikutnya. SPD di PANGI baru rancangan: nomor resmi
+         dan tanda tangannya datang dari SRIKANDI, dan SPD bertanda tangan itulah
+         yang kemudian menjadi dasar usulan perjadin. --}}
+    <div class="mb-5 px-5 py-4 rounded-2xl bg-teal-50/70 border border-teal-100">
+        <p class="text-sm font-bold text-teal-900">Langkah berikutnya</p>
+        <ol class="mt-2 ml-4 list-decimal space-y-1.5 text-xs text-teal-800 leading-relaxed">
+            <li>
+                Tekan <strong>Unduh PDF</strong> di kanan atas. Dokumennya sudah berformat SRIKANDI — penanda
+                <code>${nomor_naskah}</code>, <code>${ttd_pengirim1}</code>, dan <code>${ttd_pengirim2}</code>
+                jangan diubah atau dihapus.
+            </li>
+            <li>
+                Masukkan dokumen itu ke <strong>SRIKANDI</strong> sebagai naskah dinas keluar dan ajukan tanda tangan
+                kepada PPK (lembar pertama) dan Direktur (lembar kedua).
+            </li>
+            <li>
+                Setelah selesai diproses, unduh SPD bertanda tangan dari SRIKANDI dan catat <strong>nomor naskahnya</strong>.
+                Nomor PJ-… pada halaman ini nomor internal PANGI, bukan nomor SRIKANDI.
+            </li>
+            <li>
+                Buat usulan lewat menu <strong>Usulan Perjadin → Buat Usulan Perjadin</strong>: pilih SPD ini, unggah
+                SPD bertanda tangan, lalu isi nomor SPD dengan nomor naskah dari SRIKANDI.
+            </li>
+        </ol>
+    </div>
+
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
         <div class="px-6 py-4 border-b border-slate-100">
             <h3 class="font-bold text-slate-800 text-sm">Pelaksana</h3>

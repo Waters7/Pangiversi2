@@ -136,6 +136,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.11',
+                'tanggal' => '2 Oktober 2026',
+                'butir' => [
+                    'Halaman SPD kini memuat keterangan langkah sesudah SPD disimpan: unduh dokumen berformat SRIKANDI, masukkan ke SRIKANDI untuk ditandatangani PPK dan Direktur, unduh SPD bertanda tangan beserta nomor naskahnya, lalu buat usulan perjadin dengan dokumen dan nomor itu.',
+                    'Kolom nomor SPD pada formulir usulan tidak lagi terisi nomor internal PJ-… dari PANGI, dan keterangannya mengingatkan bahwa yang diisi nomor naskah dari SRIKANDI.',
+                ],
+            ],
+            [
                 'versi' => '2.5.10',
                 'tanggal' => '2 Oktober 2026',
                 'butir' => [

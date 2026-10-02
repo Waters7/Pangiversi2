@@ -118,7 +118,7 @@ class SuratPerjalananDinasController extends Controller
 
         return redirect()
             ->route('spd.show', $spd)
-            ->with('success', 'Surat Perjalanan Dinas berhasil disimpan.');
+            ->with('success', 'Surat Perjalanan Dinas berhasil disimpan. Ikuti langkah di bawah: unduh dokumennya, tanda tangani lewat SRIKANDI, lalu ajukan usulan perjadin.');
     }
 
     /**

@@ -221,9 +221,19 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="7" judul="Tandatangani lewat SRIKANDI" :terakhir="true">
-                Ajukan SPD yang sudah diunduh untuk ditandatangani PPK dan Direktur lewat SRIKANDI. Berkas
-                SPD bertanda tangan itulah yang diunggah saat
-                <button type="button" @click="bagian = 'pengajuan'" class="font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">mengajukan perjalanan dinas</button>.
+                Halaman SPD yang baru disimpan memuat keterangan <strong>Langkah berikutnya</strong>:
+                <ol class="mt-2 ml-4 list-decimal space-y-1">
+                    <li>Tekan <strong>Unduh PDF</strong>. Dokumennya sudah berformat SRIKANDI — penanda
+                        <code>${nomor_naskah}</code>, <code>${ttd_pengirim1}</code>, dan
+                        <code>${ttd_pengirim2}</code> jangan diubah atau dihapus.</li>
+                    <li>Masukkan dokumen itu ke SRIKANDI sebagai naskah dinas keluar dan ajukan tanda tangan
+                        kepada PPK (lembar pertama) dan Direktur (lembar kedua).</li>
+                    <li>Setelah selesai diproses, unduh SPD bertanda tangan dari SRIKANDI dan catat nomor naskahnya.
+                        Nomor <strong>PJ-…</strong> di PANGI hanya nomor internal, bukan nomor SRIKANDI.</li>
+                    <li>Lanjutkan dengan
+                        <button type="button" @click="bagian = 'pengajuan'" class="font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">mengajukan perjalanan dinas</button>
+                        memakai SPD bertanda tangan dan nomor naskah tadi.</li>
+                </ol>
             </x-panduan-langkah>
         </div>
     </div>
@@ -259,8 +269,8 @@
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
                 Bila SPD-nya dibuat lewat aplikasi, daftarnya muncul di bagian atas formulir;
-                begitu satu dipilih, tujuan, tanggal, maksud perjalanan, dan nomor SPD Anda
-                terisi sendiri. Bila SPD itu sudah melampirkan surat tugas, berkas dan nomor
+                begitu satu dipilih, tujuan, tanggal, dan maksud perjalanan terisi sendiri. Nomor
+                SPD sengaja tidak ikut terisi, karena yang diisi nomor naskah dari SRIKANDI. Bila SPD itu sudah melampirkan surat tugas, berkas dan nomor
                 surat tugasnya ikut diambil — <strong>tidak perlu diunggah maupun disalin
                 lagi</strong>. Bila tidak ada SPD dari aplikasi, lewati dan isi data perjalanan
                 secara manual, termasuk mengunggah surat tugas beserta nomornya.
@@ -272,7 +282,7 @@
                 Pada <strong>Data Dasar Perjalanan</strong>, unggah SPD yang sudah ditandatangani
                 PPK dan Direktur lewat SRIKANDI, lalu salin <strong>nomor naskahnya</strong> persis
                 seperti pada dokumen. Satu nomor hanya untuk satu usulan — nomor yang sudah dipakai
-                usulan lain ditolak. Keduanya wajib — pengajuan tidak dapat dikirim tanpanya,
+                usulan lain ditolak. Jangan memakai nomor internal <strong>PJ-…</strong> dari PANGI. Keduanya wajib — pengajuan tidak dapat dikirim tanpanya,
                 dan nomor itulah yang tercatat sebagai dasar persetujuan PPK pada jejak audit.
                 Pengajuan selalu atas nama Anda sendiri; rekan seperjalanan mengajukan
                 usulannya masing-masing dengan SPD bertanda tangannya sendiri.

@@ -94,11 +94,9 @@
                 this.$refs.instansi.value = s.instansi_pembebanan;
               }
 
-              // Nomor SPD pengguna ini ikut tersalin bila kolomnya masih kosong;
-              // yang sudah diketik tidak ditimpa.
-              if (s.nomor && s.nomor !== 'Tanpa nomor' && this.$refs.noSpd && ! this.$refs.noSpd.value) {
-                this.$refs.noSpd.value = s.nomor;
-              }
+              // Nomor SPD sengaja tidak disalin: nomor PJ-… milik PANGI hanya
+              // nomor internal. Yang diisi pengusul adalah nomor naskah yang
+              // diterbitkan SRIKANDI pada SPD bertanda tangan.
 
               // Surat tugas yang sudah dilampirkan pada SPD tidak diminta lagi.
               if (s.no_tugas && ! this.$refs.noTugas.value) {
@@ -361,6 +359,9 @@
                                 <p class="text-xs text-slate-400 mt-1.5">
                                     Nomor naskah yang diterbitkan SRIKANDI saat SPD diregistrasi — salin persis seperti pada dokumen.
                                     Satu nomor hanya untuk satu usulan; nomor yang sudah dipakai usulan lain ditolak.
+                                </p>
+                                <p x-show="spd" x-cloak class="text-xs text-indigo-700 mt-1.5">
+                                    Bukan nomor <span class="font-mono font-semibold" x-text="spd?.nomor"></span> — itu nomor internal SPD di PANGI.
                                 </p>
                                 @error('no_spd')
                                     <p class="text-red-500 text-xs mt-1.5">{{ $message }}</p>
