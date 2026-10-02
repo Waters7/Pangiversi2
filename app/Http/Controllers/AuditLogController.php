@@ -76,4 +76,53 @@ class AuditLogController extends Controller
             'sampai',
         ));
     }
+
+    /**
+     * Riwayat penghapusan usulan perjadin dan SPD.
+     *
+     * Barang aslinya sudah tidak ada, jadi yang ditampilkan adalah cuplikan
+     * isinya yang direkam tepat sebelum dihapus — nomor, pelaksana, tujuan,
+     * dan tanggal — beserta siapa yang menghapus, kapan, dan dari mana.
+     */
+    public function penghapusan(Request $request): View
+    {
+        $search = $request->input('search');
+        $objek = array_key_exists((string) $request->input('objek'), AuditLog::objekOptions())
+            ? $request->input('objek')
+            : null;
+        $dari = $request->input('dari');
+        $sampai = $request->input('sampai');
+
+        $logs = AuditLog::with('pelaku')
+            ->penghapusan()
+            ->when($objek, fn ($query) => $query->where('objek', $objek))
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('deskripsi', 'like', "%{$search}%")
+                        ->orWhere('cuplikan', 'like', "%{$search}%")
+                        ->orWhereHas('pelaku', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
+                });
+            })
+            ->when($dari, fn ($query) => $query->whereDate('created_at', '>=', $dari))
+            ->when($sampai, fn ($query) => $query->whereDate('created_at', '<=', $sampai))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $perObjek = AuditLog::penghapusan()
+            ->selectRaw('objek, count(*) as jumlah')
+            ->groupBy('objek')
+            ->pluck('jumlah', 'objek');
+
+        return view('audit-log.penghapusan', [
+            'logs' => $logs,
+            'objekOptions' => AuditLog::objekOptions(),
+            'perObjek' => $perObjek,
+            'bulanIni' => AuditLog::penghapusan()->where('created_at', '>=', now()->startOfMonth())->count(),
+            'search' => $search,
+            'objek' => $objek,
+            'dari' => $dari,
+            'sampai' => $sampai,
+        ]);
+    }
 }

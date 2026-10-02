@@ -25,6 +25,8 @@ use App\Http\Controllers\LaporanPimpinanController;
 use App\Http\Controllers\LokasiTujuanController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\ModulDalamPengembanganController;
+use App\Http\Controllers\NewsFeedEksekutifController;
+use App\Http\Controllers\NomorSuratController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PembayaranController;
@@ -72,6 +74,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:melihat-dashboard-eksekutif')->group(function () {
         Route::get('/dashboard-eksekutif', DashboardEksekutifController::class)->name('dashboard-eksekutif');
+        Route::get('/dashboard-eksekutif/news-feed', NewsFeedEksekutifController::class)->name('dashboard-eksekutif.news-feed');
 
         // Fitur AI: wawasan otomatis dan agen tanya-jawab, keduanya baca-saja.
         Route::get('/asisten-ai/wawasan', [AsistenAiController::class, 'wawasan'])->name('asisten-ai.wawasan');
@@ -392,8 +395,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{kegiatan}', [KegiatanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('kegiatan.destroy');
     });
 
-    // Jejak audit
-    Route::middleware('can:melihat-jejak-audit')->get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log');
+    // Jejak audit: seluruh aktivitas, penghapusan usulan & SPD, dan register nomor surat
+    Route::middleware('can:melihat-jejak-audit')->group(function () {
+        Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log');
+        Route::get('/audit-log/penghapusan', [AuditLogController::class, 'penghapusan'])->name('audit-log.penghapusan');
+        Route::get('/audit-log/nomor-surat', [NomorSuratController::class, 'index'])->name('audit-log.nomor-surat');
+        Route::get('/audit-log/nomor-surat/ekspor', [NomorSuratController::class, 'ekspor'])->name('audit-log.nomor-surat.ekspor');
+    });
 
     // Manajemen pengguna — Tim SDM dan super administrator
     Route::middleware('can:mengelola-pengguna')->prefix('administrasi')->group(function () {

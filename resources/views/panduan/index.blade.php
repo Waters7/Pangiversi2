@@ -797,9 +797,13 @@
 
         <div class="p-6">
             <x-panduan-langkah nomor="1" judul="Dashboard Eksekutif">
-                Realisasi anggaran per kategori dan per bulan, pergerakan pegawai per unit kerja,
-                serta siapa yang akan berangkat, sedang berjalan, dan belum melapor. Tahun
-                anggarannya dapat dipilih.
+                Submenu <strong>Dashboard Utama</strong> memuat realisasi anggaran per kategori dan
+                per bulan, pergerakan pegawai per unit kerja, serta siapa yang akan berangkat, sedang
+                berjalan, dan belum melapor; tahun anggarannya dapat dipilih. Submenu
+                <strong>News Feed</strong> menyajikan kabarnya seperti lini masa media sosial: siapa
+                yang akan dan sedang melakukan perjalanan dinas, ke mana, bersama siapa, serta tindak
+                lanjut hasil perjalanan yang dijadwalkan — yang melewati tenggat ditaruh paling atas.
+                Saring menurut jenis kabar dan rentang 7, 30, atau 90 hari ke depan.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Rekap Perjadin">
@@ -939,7 +943,13 @@
 
             @if ($boleh['jejakAudit'])
                 <x-panduan-langkah :nomor="$nomorLangkah" judul="Telusuri lewat Jejak Audit" :terakhir="true">
-                    Setiap tindakan yang mengubah data tercatat beserta pelakunya dan waktunya.
+                    Setiap tindakan yang mengubah data tercatat beserta pelakunya dan waktunya, pada
+                    submenu <strong>Semua Aktivitas</strong>. Submenu <strong>Penghapusan Usulan &amp;
+                    SPD</strong> memuat usulan perjadin dan SPD yang dihapus lengkap dengan isinya —
+                    nomor, pelaksana, tujuan, tanggal — serta siapa yang menghapus, kapan, dan dari
+                    alamat mana. Submenu <strong>Nomor Surat</strong> mendaftar nomor SPD dan surat tugas
+                    per bulan dan tahun, dan dapat diekspor ke Excel untuk dicocokkan arsiparis dengan
+                    buku agenda surat keluar.
                 </x-panduan-langkah>
             @endif
         </div>

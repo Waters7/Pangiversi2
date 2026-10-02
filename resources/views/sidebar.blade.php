@@ -35,13 +35,44 @@
       </a>
 
       @can('melihat-dashboard-eksekutif')
-      <a href="{{ route('dashboard-eksekutif') }}"
-         class="nav-item {{ request()->routeIs('dashboard-eksekutif') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>
-        </svg>
-        Dashboard Eksekutif
-      </a>
+      {{-- Dashboard eksekutif: angka utama, dan news feed perjalanan serta tindak lanjut. --}}
+      <div x-data="{ eksekutifOpen: {{ request()->routeIs('dashboard-eksekutif', 'dashboard-eksekutif.*') ? 'true' : 'false' }} }">
+        <button
+          type="button"
+          @click.stop="eksekutifOpen = !eksekutifOpen"
+          class="nav-item w-full {{ request()->routeIs('dashboard-eksekutif', 'dashboard-eksekutif.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>
+          </svg>
+          Dashboard Eksekutif
+          <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+              :class="eksekutifOpen ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div x-show="eksekutifOpen" x-transition
+             class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+          <a href="{{ route('dashboard-eksekutif') }}"
+            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                    {{ request()->routeIs('dashboard-eksekutif') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
+            </svg>
+            Dashboard Utama
+          </a>
+
+          <a href="{{ route('dashboard-eksekutif.news-feed') }}"
+            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                    {{ request()->routeIs('dashboard-eksekutif.news-feed') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M4 11a9 9 0 019 9M4 4a16 16 0 0116 16"/><circle cx="5" cy="19" r="1"/>
+            </svg>
+            News Feed
+          </a>
+        </div>
+      </div>
       @endcan
 
       {{-- Dropdown SPD --}}
@@ -626,13 +657,41 @@
       @endcan
 
       @can('melihat-jejak-audit')
-      <a href="{{ route('audit-log') }}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium {{ request()->routeIs('audit-log') ? 'nav-active text-white' : 'text-slate-400' }} transition-all">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M12 7v5l3 2"/>
-        </svg>
-        Jejak Audit
-      </a>
+      {{-- Jejak audit: seluruh aktivitas, penghapusan usulan & SPD — yang hanya
+           dapat ditelusuri lewat jejaknya — dan register nomor surat untuk arsiparis. --}}
+      <div x-data="{ auditOpen: {{ request()->routeIs('audit-log', 'audit-log.*') ? 'true' : 'false' }} }">
+        <button
+          type="button"
+          @click.stop="auditOpen = !auditOpen"
+          class="nav-item w-full {{ request()->routeIs('audit-log', 'audit-log.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7v5l3 2"/>
+          </svg>
+          Jejak Audit
+          <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 shrink-0"
+              :class="auditOpen ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div x-show="auditOpen" x-transition
+             class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
+          @foreach ([
+            ['route' => 'audit-log', 'label' => 'Semua Aktivitas'],
+            ['route' => 'audit-log.penghapusan', 'label' => 'Penghapusan Usulan & SPD'],
+            ['route' => 'audit-log.nomor-surat', 'label' => 'Nomor Surat'],
+          ] as $menu)
+            <a href="{{ route($menu['route']) }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs($menu['route']) ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <span class="w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>
+              {{ $menu['label'] }}
+            </a>
+          @endforeach
+        </div>
+      </div>
       @endcan
 
       @can('mengelola-pengguna')

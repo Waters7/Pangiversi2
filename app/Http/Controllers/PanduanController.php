@@ -136,6 +136,15 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.10',
+                'tanggal' => '2 Oktober 2026',
+                'butir' => [
+                    'Jejak Audit kini bersubmenu. Semua Aktivitas memuat seluruh jejak seperti sebelumnya; Penghapusan Usulan & SPD memuat usulan perjadin dan Surat Perjalanan Dinas yang dihapus lengkap dengan isinya — nomor, pelaksana, tujuan, tanggal perjalanan, maksud — beserta siapa yang menghapus, kapan, dan dari alamat mana. Penghapusan SPD sebelumnya tidak tercatat sama sekali.',
+                    'Submenu Nomor Surat pada Jejak Audit mendaftar nomor SPD aplikasi, nomor SPD bertanda tangan, dan nomor surat tugas per bulan dan tahun, lengkap dengan pelaksana dan tujuannya. Daftarnya dapat diekspor ke Excel untuk dicocokkan arsiparis dengan buku agenda surat keluar.',
+                    'Dashboard Eksekutif kini bersubmenu: Dashboard Utama berisi angka-angka seperti sebelumnya, dan News Feed menyajikan siapa yang akan dan sedang melakukan perjalanan dinas serta tindak lanjut yang dijadwalkan, dalam bentuk lini masa seperti media sosial.',
+                ],
+            ],
+            [
                 'versi' => '2.5.9',
                 'tanggal' => '1 Oktober 2026',
                 'butir' => [

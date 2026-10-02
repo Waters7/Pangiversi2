@@ -42,17 +42,44 @@ class AuditLog extends Model
 
     public const AKSI_PENGGUNA = 'pengguna';
 
+    /** Objek yang penghapusannya direkam beserta cuplikan isinya. */
+    public const OBJEK_USULAN = 'usulan';
+
+    public const OBJEK_SPD = 'spd';
+
     protected $fillable = [
         'id_usulan',
         'id_user',
         'aksi',
+        'objek',
         'deskripsi',
         'status_lama',
         'status_baru',
         'catatan',
+        'cuplikan',
         'ip_address',
         'user_agent',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'cuplikan' => 'array',
+        ];
+    }
+
+    /**
+     * Cuplikan disimpan tanpa meloloskan garis miring dan huruf non-ASCII,
+     * supaya nomor seperti "KU.02.04/F.XXX/2471/2026" dan nama bergelar
+     * tetap dapat dicari apa adanya pada halaman riwayat penghapusan.
+     */
+    protected function asJson($value, $flags = 0)
+    {
+        return parent::asJson($value, $flags | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
 
     /**
      * @return BelongsTo<Usulan, $this>
@@ -78,6 +105,35 @@ class AuditLog extends Model
     public function scopeUntukUsulan(Builder $query, Usulan $usulan): void
     {
         $query->where('id_usulan', $usulan->id);
+    }
+
+    /**
+     * Penghapusan usulan perjadin dan SPD, beserta cuplikan isinya.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopePenghapusan(Builder $query): void
+    {
+        $query->where('aksi', self::AKSI_DIHAPUS)
+            ->whereIn('objek', array_keys(self::objekOptions()));
+    }
+
+    /**
+     * Jenis objek yang penghapusannya direkam, untuk saringan halamannya.
+     *
+     * @return array<string, string>
+     */
+    public static function objekOptions(): array
+    {
+        return [
+            self::OBJEK_USULAN => 'Usulan Perjadin',
+            self::OBJEK_SPD => 'SPD',
+        ];
+    }
+
+    public function getObjekLabelAttribute(): ?string
+    {
+        return self::objekOptions()[$this->objek] ?? null;
     }
 
     /**

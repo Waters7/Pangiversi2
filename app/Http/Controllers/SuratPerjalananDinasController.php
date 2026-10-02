@@ -14,6 +14,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PengaturanDokumen;
 use App\Services\PenomoranPerjadin;
+use App\Services\RekamPenghapusan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,7 @@ class SuratPerjalananDinasController extends Controller
         private NotifikasiService $notifikasi,
         private PenomoranPerjadin $penomoran,
         private PengaturanDokumen $pengaturanDokumen,
+        private RekamPenghapusan $penghapusan,
     ) {}
 
     public function index(Request $request): View
@@ -215,6 +217,10 @@ class SuratPerjalananDinasController extends Controller
     public function destroy(Request $request, SuratPerjalananDinas $spd): RedirectResponse
     {
         $this->pastikanBolehMengubah($request, $spd);
+
+        // Dicatat sebelum penghapusan, beserta cuplikan isinya: setelah ini
+        // SPD, pelaksana, dan pengikutnya hilang dan yang tersisa hanya jejaknya.
+        $this->penghapusan->spd($spd);
 
         $spd->delete();
 

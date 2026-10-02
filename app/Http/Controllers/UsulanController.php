@@ -20,6 +20,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PelacakUsulan;
 use App\Services\PenomoranPerjadin;
+use App\Services\RekamPenghapusan;
 use App\Services\WorkflowUsulan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -39,6 +40,7 @@ class UsulanController extends Controller
         private PenomoranPerjadin $penomoran,
         private EkspresiTanggal $tanggal,
         private PelacakUsulan $pelacak,
+        private RekamPenghapusan $penghapusan,
     ) {}
 
     public function index(Request $request)
@@ -707,12 +709,9 @@ class UsulanController extends Controller
 
         $noUsulan = $usulan->no_usulan;
 
-        // Dicatat sebelum penghapusan agar relasi audit tidak ikut hilang.
-        $this->audit->catat(
-            AuditLog::AKSI_DIHAPUS,
-            "Usulan {$noUsulan} dihapus.",
-            ['status_lama' => $usulan->status],
-        );
+        // Dicatat sebelum penghapusan, beserta cuplikan isinya: setelah ini
+        // usulan dan relasinya hilang, dan yang tersisa hanya jejaknya.
+        $this->penghapusan->usulan($usulan);
 
         $usulan->delete();
 
