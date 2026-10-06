@@ -226,14 +226,23 @@
                     <li>Tekan <strong>Unduh PDF</strong>. Dokumennya sudah berformat SRIKANDI — penanda
                         <code>${nomor_naskah}</code>, <code>${ttd_pengirim1}</code>, dan
                         <code>${ttd_pengirim2}</code> jangan diubah atau dihapus.</li>
-                    <li>Masukkan dokumen itu ke SRIKANDI sebagai naskah dinas keluar dan ajukan tanda tangan
-                        kepada PPK (lembar pertama) dan Direktur (lembar kedua).</li>
+                    <li>Masukkan dokumen itu ke SRIKANDI lewat <strong>Naskah Keluar → Registrasi Naskah Keluar</strong>
+                        dan ajukan tanda tangan kepada PPK (lembar pertama) dan Direktur (lembar kedua).</li>
                     <li>Setelah selesai diproses, unduh SPD bertanda tangan dari SRIKANDI dan catat nomor naskahnya.
                         Nomor <strong>PJ-…</strong> di PANGI hanya nomor internal, bukan nomor SRIKANDI.</li>
                     <li>Lanjutkan dengan
                         <button type="button" @click="bagian = 'pengajuan'" class="font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">mengajukan perjalanan dinas</button>
                         memakai SPD bertanda tangan dan nomor naskah tadi.</li>
                 </ol>
+
+                <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+                    <p class="text-xs font-bold text-slate-700 mb-2">Contoh pengisian Registrasi Naskah Keluar di SRIKANDI</p>
+                    @include('spd.partials.contoh-srikandi')
+                </div>
+                <x-panduan-gambar berkas="srikandi-01-isi-naskah"
+                    judul="Registrasi Naskah Keluar di SRIKANDI: Tipe Form Naskah Keluar (1), dikirim melalui PPK (2), Naskah Dinas bersifat Biasa (3), klasifikasi KU.02.04 (4), Ambil Nomor (5), Hal dan Isi Ringkas (6), lalu berkas SPD (7)." />
+                <x-panduan-gambar berkas="srikandi-02-penandatangan"
+                    judul="Unggah PDF SPD (1), pelaksana sebagai tujuan utama (2), verifikator (3), penandatangan PPK lalu Direktur (4), tanda tangan elektronik ber-QR 3x3 (5), lalu Simpan (6)." />
             </x-panduan-langkah>
         </div>
     </div>

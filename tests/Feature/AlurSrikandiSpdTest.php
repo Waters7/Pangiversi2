@@ -41,6 +41,24 @@ class AlurSrikandiSpdTest extends TestCase
             ]);
     }
 
+    /** Contoh pengisian Registrasi Naskah Keluar menyertai arahannya, di halaman SPD maupun Panduan. */
+    public function test_contoh_pengisian_registrasi_naskah_keluar_tersedia(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('spd.show', $this->spd))
+            ->assertOk()
+            ->assertSee('Lihat contoh pengisian Registrasi Naskah Keluar')
+            ->assertSeeInOrder(['Tipe Form', 'Naskah Keluar', 'Klasifikasi', 'KU.02.04 – Belanja Modal', 'Nomor Naskah', 'Ambil Nomor'])
+            ->assertSee('PPK lebih dulu, lalu Direktur');
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('panduan'))
+            ->assertOk()
+            ->assertSee('Contoh pengisian Registrasi Naskah Keluar di SRIKANDI')
+            ->assertSee('images/panduan/srikandi-01-isi-naskah.webp', false)
+            ->assertSee('images/panduan/srikandi-02-penandatangan.webp', false);
+    }
+
     public function test_formulir_usulan_mengingatkan_nomor_dari_srikandi(): void
     {
         $this->actingAs($this->pelaksana)

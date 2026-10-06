@@ -49,8 +49,19 @@
                 jangan diubah atau dihapus.
             </li>
             <li>
-                Masukkan dokumen itu ke <strong>SRIKANDI</strong> sebagai naskah dinas keluar dan ajukan tanda tangan
-                kepada PPK (lembar pertama) dan Direktur (lembar kedua).
+                Masukkan dokumen itu ke <strong>SRIKANDI</strong> lewat <strong>Naskah Keluar → Registrasi Naskah Keluar</strong>
+                dan ajukan tanda tangan kepada PPK (lembar pertama) dan Direktur (lembar kedua).
+                <details class="mt-2 rounded-xl bg-white/80 border border-teal-100 px-3 py-2">
+                    <summary class="cursor-pointer font-semibold text-teal-700">Lihat contoh pengisian Registrasi Naskah Keluar</summary>
+                    <div class="mt-2.5">
+                        @include('spd.partials.contoh-srikandi')
+                        <p class="mt-2.5 text-[11px] text-slate-500">
+                            Gambar bertanda nomornya ada di menu
+                            <a href="{{ route('panduan') }}" class="font-semibold text-teal-700 underline underline-offset-2">Panduan Penggunaan</a>
+                            pada bagian Menerbitkan SPD.
+                        </p>
+                    </div>
+                </details>
             </li>
             <li>
                 Setelah selesai diproses, unduh SPD bertanda tangan dari SRIKANDI dan catat <strong>nomor naskahnya</strong>.

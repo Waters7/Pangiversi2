@@ -136,6 +136,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.14',
+                'tanggal' => '6 Oktober 2026',
+                'butir' => [
+                    'Contoh pengisian Registrasi Naskah Keluar di SRIKANDI untuk SPD dari PANGI — tipe form, pengirim, klasifikasi, Ambil Nomor, berkas, tujuan, verifikator, serta urutan penandatangan PPK lalu Direktur. Tampil di halaman SPD (Langkah berikutnya) dan di Panduan Penggunaan lengkap dengan gambar bertanda nomor.',
+                ],
+            ],
+            [
                 'versi' => '2.5.13',
                 'tanggal' => '6 Oktober 2026',
                 'butir' => [
