@@ -8,6 +8,7 @@ use Database\Factories\KeuanganFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Keuangan extends Model
@@ -66,6 +67,17 @@ class Keuangan extends Model
     public function dokumenKeuangan()
     {
         return $this->hasOne(DokumenKeuangan::class, 'id_keuangan');
+    }
+
+    /**
+     * Jurnal pembayaran — tiap pembayaran dan pembatalannya, berikut pencatat
+     * dan bukti transfernya.
+     *
+     * @return HasMany<RiwayatPembayaran, $this>
+     */
+    public function riwayatPembayaran(): HasMany
+    {
+        return $this->hasMany(RiwayatPembayaran::class, 'id_keuangan')->orderBy('id');
     }
 
     /**

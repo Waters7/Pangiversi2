@@ -318,7 +318,8 @@ class AdministrasiController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate(
-            $this->rules() + ['password' => ['required', 'string', 'min:8', 'confirmed']]
+            $this->rules() + ['password' => ['required', 'string', 'min:8', 'confirmed']],
+            $this->pesan(),
         );
 
         $user = User::create([
@@ -327,6 +328,7 @@ class AdministrasiController extends Controller
             'nip' => $validated['nip'],
             'role' => $validated['role'],
             'jabatan' => $validated['jabatan'] ?? null,
+            'no_hp' => $validated['no_hp'] ?? null,
             'id_unit' => $validated['id_unit'] ?? null,
             'id_atasan' => $validated['id_atasan'] ?? null,
             'password' => Hash::make($validated['password']),
@@ -342,11 +344,11 @@ class AdministrasiController extends Controller
     }
 
     /**
-     * Update user profile (nama, email, nip, role, penempatan).
+     * Update user profile (nama, email, nip, no. handphone, role, penempatan).
      */
     public function update(Request $request, User $user): RedirectResponse
     {
-        $validated = $request->validate($this->rules($user));
+        $validated = $request->validate($this->rules($user), $this->pesan());
 
         // Seorang pegawai tidak boleh menjadi atasan bagi dirinya sendiri.
         if (($validated['id_atasan'] ?? null) == $user->id) {
@@ -491,8 +493,21 @@ class AdministrasiController extends Controller
             'nip' => ['required', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($user?->id)],
             'role' => ['required', Rule::in(array_keys(User::roleOptions()))],
             'jabatan' => ['nullable', 'string', 'max:255'],
+            // Nomor WhatsApp dipakai tim keuangan menagih berkas; aturannya
+            // sama dengan isian di halaman Profil.
+            'no_hp' => ['nullable', 'string', 'max:25', 'regex:/^[0-9+\-\s]+$/'],
             'id_unit' => ['nullable', 'exists:unit_kerja,id'],
             'id_atasan' => ['nullable', 'exists:users,id'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function pesan(): array
+    {
+        return [
+            'no_hp.regex' => 'Nomor handphone hanya boleh berisi angka, spasi, tanda plus, atau tanda hubung.',
         ];
     }
 }

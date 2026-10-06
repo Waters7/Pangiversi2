@@ -136,6 +136,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.13',
+                'tanggal' => '6 Oktober 2026',
+                'butir' => [
+                    'Rincian Saya — baik Daftar Riil Saya maupun Rincian Biaya Saya — kini menyebut pada Status Pembayaran siapa bendahara yang membayarkan uang muka, pelunasan, dan transport lokal, beserta tautan Lihat bukti bayar untuk membuka bukti transfernya.',
+                    'Administrasi Sistem → Pengguna: nomor handphone (WhatsApp) dapat diisi saat menambah maupun menyunting pengguna.',
+                ],
+            ],
+            [
                 'versi' => '2.5.12',
                 'tanggal' => '6 Oktober 2026',
                 'butir' => [

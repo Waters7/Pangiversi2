@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
+use App\Models\RiwayatPembayaran;
 use App\Models\Usulan;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -49,6 +50,8 @@ class PemantauBerkas
     {
         $berkas->loadMissing([
             'usulan.laporan.pimpinan', 'usulan.keuangan.rincianBiaya', 'usulan.daftarRiil',
+            // Pencatat dan bukti tiap pembayaran, untuk butir Status Pembayaran.
+            'usulan.keuangan.dokumenKeuangan', 'usulan.keuangan.riwayatPembayaran.pencatat',
             // Dibaca PenagihDokumen saat menilai apakah pelaksana sudah tercantum di nominatif.
             'usulan.dokumen', 'usulan.tiket', 'usulan.notaTransport', 'usulan.kategoriPerjadin',
             'ppk', 'validator', 'pembayar',
@@ -65,7 +68,10 @@ class PemantauBerkas
      */
     public function untuk(DaftarRiil $berkas): array
     {
-        $berkas->loadMissing(['usulan.laporan.pimpinan', 'usulan.keuangan', 'ppk', 'validator', 'pembayar']);
+        $berkas->loadMissing([
+            'usulan.laporan.pimpinan', 'usulan.keuangan.dokumenKeuangan', 'usulan.keuangan.riwayatPembayaran.pencatat',
+            'ppk', 'validator', 'pembayar',
+        ]);
 
         return [
             'tanda_tangan' => $this->tandaTangan($berkas),
@@ -212,7 +218,10 @@ class PemantauBerkas
     private function butirUangMuka(?Keuangan $keuangan): array
     {
         if ($keuangan?->uangMukaTerbayar()) {
-            return $this->butir('Uang muka', self::SELESAI, $keuangan->tanggal_transfer, null, null, $keuangan->uang_muka);
+            $catatan = $this->catatanTerakhir($keuangan, RiwayatPembayaran::JENIS_UANG_MUKA);
+
+            return $this->butir('Uang muka', self::SELESAI, $keuangan->tanggal_transfer, $this->dibayarOleh($catatan), null,
+                $keuangan->uang_muka, $this->bukti($keuangan->dokumenKeuangan?->transfer_uang_muka, $catatan));
         }
 
         return $this->butir('Uang muka', self::MENUNGGU, null, null, 'Menunggu bendahara', $keuangan?->uang_muka);
@@ -224,8 +233,11 @@ class PemantauBerkas
     private function butirPelunasan(?Usulan $usulan, ?Keuangan $keuangan): array
     {
         if ($keuangan?->sudahLunas()) {
-            return $this->butir('Pelunasan', self::SELESAI, $keuangan->tanggal_pelunasan, null,
-                $keuangan->kode_konfirmasi_bayar ? 'Kode bendahara '.$keuangan->kode_konfirmasi_bayar : null, $keuangan->sisa);
+            $catatan = $this->catatanTerakhir($keuangan, RiwayatPembayaran::JENIS_PELUNASAN);
+
+            return $this->butir('Pelunasan', self::SELESAI, $keuangan->tanggal_pelunasan, $this->dibayarOleh($catatan),
+                $keuangan->kode_konfirmasi_bayar ? 'Kode bendahara '.$keuangan->kode_konfirmasi_bayar : null, $keuangan->sisa,
+                $this->bukti($keuangan->dokumenKeuangan?->transfer_sisa, $catatan));
         }
 
         $laporan = $usulan?->laporan;
@@ -253,7 +265,9 @@ class PemantauBerkas
         }
 
         if ($berkas->sudahDibayar()) {
-            return $this->butir($label, self::SELESAI, $berkas->dibayar_at, $berkas->pembayar?->nama, 'Dibayar terpisah', $berkas->total_riil);
+            return $this->butir($label, self::SELESAI, $berkas->dibayar_at,
+                $berkas->pembayar ? 'Dibayar oleh '.$berkas->pembayar->nama : null, 'Dibayar terpisah', $berkas->total_riil,
+                filled($berkas->bukti_bayar) ? $berkas->bukti_bayar : null);
         }
 
         $ikutPelunasan = $keuangan?->sudahLunas()
@@ -263,7 +277,10 @@ class PemantauBerkas
             && $berkas->ditandatangani_at->lte($keuangan->tanggal_pelunasan->copy()->endOfDay());
 
         if ($ikutPelunasan) {
-            return $this->butir($label, self::SELESAI, $keuangan->tanggal_pelunasan, null, 'Dibayar bersama pelunasan', $berkas->total_riil);
+            $catatan = $this->catatanTerakhir($keuangan, RiwayatPembayaran::JENIS_PELUNASAN);
+
+            return $this->butir($label, self::SELESAI, $keuangan->tanggal_pelunasan, $this->dibayarOleh($catatan),
+                'Dibayar bersama pelunasan', $berkas->total_riil, $this->bukti($keuangan->dokumenKeuangan?->transfer_sisa, $catatan));
         }
 
         return $this->butir($label, self::MENUNGGU, null, null,
@@ -272,11 +289,34 @@ class PemantauBerkas
     }
 
     /**
-     * @return array{label: string, keadaan: string, waktu: ?CarbonInterface, oleh: ?string, keterangan: ?string, nominal: ?float}
+     * Catatan jurnal terakhir sejenis — pembayaran yang sedang berlaku, sebab
+     * pembatalan tercatat dengan jenisnya sendiri.
      */
-    private function butir(string $label, string $keadaan, ?CarbonInterface $waktu, ?string $oleh, ?string $keterangan, ?float $nominal = null): array
+    private function catatanTerakhir(Keuangan $keuangan, string $jenis): ?RiwayatPembayaran
     {
-        return compact('label', 'keadaan', 'waktu', 'oleh', 'keterangan', 'nominal');
+        return $keuangan->riwayatPembayaran->where('jenis', $jenis)->sortByDesc('id')->first();
+    }
+
+    private function dibayarOleh(?RiwayatPembayaran $catatan): ?string
+    {
+        return $catatan?->pencatat ? 'Dibayar oleh '.$catatan->pencatat->nama : null;
+    }
+
+    /**
+     * Berkas bukti transfer yang berlaku: yang terpasang pada dokumen keuangan,
+     * atau yang terlampir pada jurnalnya.
+     */
+    private function bukti(?string $berkas, ?RiwayatPembayaran $catatan): ?string
+    {
+        return filled($berkas) ? $berkas : (filled($catatan?->bukti) ? $catatan->bukti : null);
+    }
+
+    /**
+     * @return array{label: string, keadaan: string, waktu: ?CarbonInterface, oleh: ?string, keterangan: ?string, nominal: ?float, bukti: ?string}
+     */
+    private function butir(string $label, string $keadaan, ?CarbonInterface $waktu, ?string $oleh, ?string $keterangan, ?float $nominal = null, ?string $bukti = null): array
+    {
+        return compact('label', 'keadaan', 'waktu', 'oleh', 'keterangan', 'nominal', 'bukti');
     }
 
     private function nominatifUntuk(Usulan $usulan): ?DaftarNominatif

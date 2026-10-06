@@ -13,6 +13,7 @@ use App\Services\JalurPersetujuan;
 use App\Services\PemantauBerkas;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -493,5 +494,39 @@ class RincianSayaTest extends TestCase
 
         $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'tanda_tangan')['Daftar riil transport lokal']['keadaan']);
         $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'pembayaran')['Transport lokal']['keadaan']);
+    }
+
+    /**
+     * Pembayaran yang sudah dicatat bendahara menyebut siapa yang membayar
+     * dan menautkan bukti transfernya — pada kedua submenu Rincian Saya.
+     */
+    public function test_status_pembayaran_menyebut_bendahara_dan_bukti_bayar(): void
+    {
+        $this->berkasSampaiKePelaksana();
+        $bendahara = User::factory()->create(['role' => User::ROLE_BENDAHARA, 'nama' => 'Siti Bendahara']);
+        $this->usulan->keuangan->update(['total' => 2_000_000, 'uang_muka' => 1_600_000, 'sisa' => 400_000]);
+
+        $this->actingAs($bendahara)
+            ->post(route('keuangan.bayar-uang-muka', $this->usulan), [
+                'tanggal_transfer' => today()->toDateString(),
+                'bukti_transfer' => UploadedFile::fake()->create('bukti-uang-muka.pdf', 40, 'application/pdf'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $bukti = $this->usulan->keuangan->fresh()->dokumenKeuangan->transfer_uang_muka;
+
+        foreach (['rincian-saya.rincian-biaya', 'rincian-saya.daftar-riil'] as $submenu) {
+            $halaman = $this->actingAs($this->pelaksana)
+                ->get(route($submenu))
+                ->assertOk()
+                ->assertSee('Dibayar oleh Siti Bendahara')
+                ->assertSee(route('berkas.lihat', $bukti))
+                ->assertSee('Lihat bukti bayar');
+
+            $pembayaran = $this->butirPantau($halaman, 'pembayaran');
+            $this->assertSame(PemantauBerkas::SELESAI, $pembayaran['Uang muka']['keadaan']);
+            $this->assertSame($bukti, $pembayaran['Uang muka']['bukti']);
+            $this->assertNull($pembayaran['Pelunasan']['bukti'], 'Pelunasan belum dibayar, jadi belum berbukti.');
+        }
     }
 }

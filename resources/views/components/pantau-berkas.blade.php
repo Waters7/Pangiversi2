@@ -68,6 +68,13 @@
                                         {{ $butir['keterangan'] }}
                                     @endif
                                 </p>
+                                @if (! empty($butir['bukti']))
+                                    <a href="{{ route('berkas.lihat', $butir['bukti']) }}" target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                                        Lihat bukti bayar
+                                    </a>
+                                @endif
                             </div>
                         </li>
                     @endforeach

@@ -501,6 +501,8 @@
                 seluruh tanda tangan — tim keuangan, Anda, PPK, konfirmasi Direktur atas laporan,
                 daftar nominatif — serta pembayaran uang muka, pelunasan, dan transport lokal,
                 lengkap dengan tanggal dan kodenya, supaya Anda tahu berkas berhenti di mana.
+                Pembayaran yang sudah dicatat bendahara menyebut siapa yang membayarkannya, dan
+                tautan <strong>Lihat bukti bayar</strong> membuka bukti transfernya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Sikapi tiap dokumen sendiri-sendiri">
@@ -870,7 +872,9 @@
         <div class="p-6">
             <x-panduan-langkah nomor="1" judul="Kelola akun pengguna">
                 Menu <strong>Administrasi Sistem → Pengguna</strong> memuat seluruh pengguna beserta
-                peran, unit kerja, dan atasannya. Kolom login terakhir memperlihatkan siapa yang belum
+                peran, unit kerja, dan atasannya. Saat menambah atau menyunting pengguna, nomor
+                handphone (WhatsApp) dapat diisi langsung — nomor itulah yang dipakai tim keuangan
+                menagih berkas. Kolom login terakhir memperlihatkan siapa yang belum
                 pernah masuk sama sekali. Submenu <strong>Impor &amp; Ekspor</strong> memuat data
                 pengguna massal lewat CSV.
             </x-panduan-langkah>
