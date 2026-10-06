@@ -136,6 +136,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.12',
+                'tanggal' => '6 Oktober 2026',
+                'butir' => [
+                    'Menu Keuangan → Input Rincian Biaya kini menampilkan navigasi halaman: daftarnya dibagi sepuluh baris per halaman, dan sebelumnya baris setelah halaman pertama tidak dapat dibuka — "17 data" tetapi yang tampil hanya sepuluh. Halaman Persetujuan mendapat perbaikan yang sama.',
+                ],
+            ],
+            [
                 'versi' => '2.5.11',
                 'tanggal' => '2 Oktober 2026',
                 'butir' => [

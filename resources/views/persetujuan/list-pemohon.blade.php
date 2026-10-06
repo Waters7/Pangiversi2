@@ -148,6 +148,7 @@
             </table>
         </div>
 
+        <x-pagination :paginator="$usulan" />
     </div>
 
 </div>

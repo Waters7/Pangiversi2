@@ -165,6 +165,10 @@
                 </tbody>
             </table>
         </div>
+
+        {{-- Daftarnya dibagi per halaman; tanpa navigasi ini baris setelah
+             halaman pertama tidak terjangkau sama sekali. --}}
+        <x-pagination :paginator="$usulan" />
     </div>
 
 </div>
