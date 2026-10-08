@@ -136,6 +136,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.16',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Perbaikan: menyunting baris rincian biaya ke kategori Biaya Penyelenggaraan tidak lagi berujung galat 500, dan nominal biaya penyelenggaraan dari berkas pelaksana kini benar-benar masuk ke rincian biaya. Nominal yang dulu tertinggal disusulkan sekali jalan oleh administrator.',
+                ],
+            ],
+            [
                 'versi' => '2.5.15',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [
