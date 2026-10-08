@@ -97,28 +97,24 @@
                 $nomor = 0;
 
                 // Susunan resmi dokumen: transportasi (pesawat/kereta/bus), uang
-                // harian, transportasi lokal, biaya akomodasi, biaya
-                // penyelenggaraan, lalu lainnya. Tiap kelompok berjudul, dan
-                // transport lokal — yang datang dari daftar riil, bukan dari
-                // baris rincian — disisipkan pada urutannya.
+                // harian, biaya akomodasi, biaya penyelenggaraan, lalu lainnya.
+                // Transport lokal tidak tercetak di sini — ia dipertanggung-
+                // jawabkan dan dicetak lewat Daftar Pengeluaran Riil.
                 $judulKelompok = [
                     KategoriBiaya::Transport->value => 'Transportasi (Pesawat / Kereta / Bus)',
                     KategoriBiaya::UangHarian->value => 'Uang Harian',
-                    KategoriBiaya::TransportLokal->value => 'Transportasi Lokal',
                     KategoriBiaya::Penginapan->value => 'Biaya Akomodasi',
                     KategoriBiaya::Penyelenggaraan->value => 'Biaya Penyelenggaraan',
                     KategoriBiaya::Lainnya->value => 'Biaya Lainnya',
                 ];
 
-                $adaIsi = $rincianPerKategori->flatten(1)->isNotEmpty() || $transportLokal->isNotEmpty();
+                $adaIsi = $rincianPerKategori->flatten(1)->isNotEmpty();
             @endphp
 
             @foreach (KategoriBiaya::urutanCetak() as $kategori)
-                @php
-                    $baris = $kategori === KategoriBiaya::TransportLokal
-                        ? $transportLokal
-                        : ($rincianPerKategori->get($kategori->value) ?? collect());
-                @endphp
+                @continue($kategori === KategoriBiaya::TransportLokal)
+
+                @php $baris = $rincianPerKategori->get($kategori->value) ?? collect(); @endphp
 
                 @continue($baris->isEmpty())
 
@@ -130,45 +126,24 @@
                 @foreach ($baris as $item)
                     @php $nomor++; @endphp
 
-                    @if ($kategori === KategoriBiaya::TransportLokal)
-                        {{-- Nominal dari nota pelaksana lewat Daftar Pengeluaran Riil,
-                             dibayarkan terpisah saat pelunasan — tetapi bagian dari
-                             biaya perjalanan, jadi tercantum di sini. --}}
-                        <tr>
-                            <td class="tengah">{{ $nomor }}</td>
-                            <td>{{ $item->uraian }}</td>
-                            <td class="kanan">Rp {{ number_format($item->nominal, 0, ',', '.') }}</td>
-                            <td class="tengah">Riil</td>
-                        </tr>
-                    @else
-                        <tr class="kategori">
-                            <td class="tengah">{{ $nomor }}</td>
-                            {{-- Baris lama masih bernama "Biaya Hotel"; dokumen menyebutnya
-                                 Uang Penginapan tanpa menulis ulang datanya. --}}
-                            <td>{{ preg_replace('/^Biaya Hotel\b/', 'Uang Penginapan', $item->komponen) }}</td>
-                            <td class="kanan">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
-                            <td class="tengah ket">{{ $item->keterangan && $item->keterangan !== $item->komponen ? str_replace('→', '-', $item->keterangan) : '' }}</td>
-                        </tr>
+                    <tr class="kategori">
+                        <td class="tengah">{{ $nomor }}</td>
+                        {{-- Baris lama masih bernama "Biaya Hotel"; dokumen menyebutnya
+                             Uang Penginapan tanpa menulis ulang datanya. --}}
+                        <td>{{ preg_replace('/^Biaya Hotel\b/', 'Uang Penginapan', $item->komponen) }}</td>
+                        <td class="kanan">Rp {{ number_format($item->jumlah, 0, ',', '.') }}</td>
+                        <td class="tengah ket">{{ $item->keterangan && $item->keterangan !== $item->komponen ? str_replace('→', '-', $item->keterangan) : '' }}</td>
+                    </tr>
 
-                        @if ($item->tampilkanPerkalian())
-                            <tr class="sub">
-                                <td></td>
-                                <td>{{ $item->volume }} {{ $item->satuan }} × Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        @endif
+                    @if ($item->tampilkanPerkalian())
+                        <tr class="sub">
+                            <td></td>
+                            <td>{{ $item->volume }} {{ $item->satuan }} × Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
                     @endif
                 @endforeach
-
-                @if ($kategori === KategoriBiaya::TransportLokal)
-                    <tr class="subjumlah">
-                        <td></td>
-                        <td>Subtotal transportasi lokal (Daftar Pengeluaran Riil)</td>
-                        <td class="kanan">Rp {{ number_format($totalTransportLokal, 0, ',', '.') }}</td>
-                        <td></td>
-                    </tr>
-                @endif
             @endforeach
 
             @unless ($adaIsi)
@@ -179,7 +154,7 @@
 
             <tr class="jumlah">
                 <td class="tengah" colspan="2">JUMLAH</td>
-                <td class="kanan">Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}</td>
+                <td class="kanan">Rp {{ number_format($total, 0, ',', '.') }}</td>
                 <td></td>
             </tr>
         </tbody>
@@ -204,7 +179,7 @@
             <td>
                 Manado, {{ $tanggalBendahara?->translatedFormat('d F Y') ?? '……………………' }}<br>
                 Telah dibayar sejumlah<br>
-                Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                Rp {{ number_format($total, 0, ',', '.') }}
                 <div class="kotak-ttd">
                     @if ($qrBendahara && $dok->tampil('qr'))
                         {{-- Konfirmasi bendahara terbit setelah pembayaran lunas --}}
@@ -226,7 +201,7 @@
             <td>
                 Manado, {{ $tanggalPelaksana?->translatedFormat('d F Y') ?? '……………………' }}<br>
                 Telah menerima jumlah uang<br>
-                Sebesar Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
+                Sebesar Rp {{ number_format($total, 0, ',', '.') }}
                 <div class="kotak-ttd">
                     @if ($qrPelaksana && $dok->tampil('qr'))
                         {{-- Kode yang sama dengan QR pelaksana pada daftar pengeluaran riil --}}
@@ -255,9 +230,9 @@
                 <div class="rampung">
                     <h2>Perhitungan SPD Rampung</h2>
                     <table class="hitung">
-                        <tr><td>Ditetapkan sejumlah</td><td>: Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}</td></tr>
+                        <tr><td>Ditetapkan sejumlah</td><td>: Rp {{ number_format($total, 0, ',', '.') }}</td></tr>
                         <tr><td>Yang telah dibayarkan semula</td><td>: Rp {{ number_format($dibayarkan, 0, ',', '.') }}</td></tr>
-                        <tr><td>Sisa kurang / lebih</td><td>: Rp {{ number_format($totalKeseluruhan - $dibayarkan, 0, ',', '.') }}</td></tr>
+                        <tr><td>Sisa kurang / lebih</td><td>: Rp {{ number_format($total - $dibayarkan, 0, ',', '.') }}</td></tr>
                     </table>
                 </div>
                 @endif

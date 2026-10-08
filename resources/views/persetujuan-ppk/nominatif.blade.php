@@ -129,6 +129,7 @@
                             {{ $nominatif->status_label }}
                         </span>
 
+                        @can('menandatangani-daftar-riil')
                         @unless ($nominatif->sudahDitandatangani())
                             <form method="POST" action="{{ route('persetujuan.nominatif.tanda-tangan', $nominatif) }}"
                                   x-data
@@ -150,6 +151,7 @@
                                 </button>
                             </form>
                         @endif
+                        @endcan
 
                         <a href="{{ route('laporan.nominatif.cetak', $nominatif) }}"
                            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl transition">

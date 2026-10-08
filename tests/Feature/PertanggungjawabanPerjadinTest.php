@@ -307,15 +307,22 @@ class PertanggungjawabanPerjadinTest extends TestCase
     }
 
     /**
-     * Total keuangan hanya memuat yang masuk rincian biaya; nota
-     * transport lokal tidak ikut karena tempatnya di daftar riil.
+     * Total keuangan hanya memuat yang masuk rincian biaya dan sudah
+     * divalidasi; nota transport lokal tidak ikut karena tempatnya di
+     * daftar riil.
      */
     public function test_total_keuangan_ikut_terhitung_ulang(): void
     {
         $this->simpanTiket(ArahTiket::Pergi);
         $this->simpanNota([1 => 50_000]);
 
-        $this->assertSame(2_450_000.0, $this->usulan->fresh('keuangan')->keuangan->total);
+        $keuangan = $this->usulan->fresh('keuangan')->keuangan;
+        $this->assertSame(0.0, $keuangan->total);
+
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $keuangan->rincianBiaya()->sole()]));
+
+        $this->assertSame(2_450_000.0, $keuangan->fresh()->total);
     }
 
     // ── Validasi tim keuangan ──

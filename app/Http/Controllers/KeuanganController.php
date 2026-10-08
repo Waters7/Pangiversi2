@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CaraBayarBiaya;
 use App\Enums\DokumenCetak;
 use App\Enums\IsianBiaya;
 use App\Enums\KategoriBiaya;
@@ -26,9 +27,11 @@ use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
+use App\Services\RingkasanPembayaran;
 use App\Services\SinkronBiayaDokumen;
 use App\Services\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -51,12 +54,44 @@ class KeuanganController extends Controller
         private PemegangNominal $pemegang,
         private PencatatTransportLokal $transportLokal,
         private PemulihRincian $pemulih,
+        private RingkasanPembayaran $ringkasan,
     ) {}
+
+    /**
+     * Tahap pengerjaan keuangan sebuah perjadin, berurutan.
+     *
+     * Ditentukan dari berkasnya: belum dikirim ke pelaksana berarti masih
+     * diproses tim keuangan; sudah dikirim tetapi rincian belum disahkan
+     * PPK berarti menunggu pelaksana dan PPK; sudah disahkan berarti tinggal
+     * dibayarkan; lunas berarti selesai.
+     *
+     * @var array<string, array{label: string, badge: string}>
+     */
+    private const TAHAP = [
+        'diproses' => ['label' => 'Sedang Diproses', 'badge' => 'bg-amber-100 text-amber-700'],
+        'dikirim' => ['label' => 'Dikirim ke Pelaksana', 'badge' => 'bg-sky-100 text-sky-700'],
+        'pembayaran' => ['label' => 'Proses Pembayaran', 'badge' => 'bg-blue-100 text-blue-700'],
+        'selesai' => ['label' => 'Selesai', 'badge' => 'bg-violet-100 text-violet-700'],
+    ];
+
+    /**
+     * Pilihan urutan daftar perjadin.
+     *
+     * @var array<string, string>
+     */
+    private const URUTAN = [
+        'terbaru' => 'Usulan terbaru',
+        'terlama' => 'Usulan terlama',
+        'berangkat-terbaru' => 'Tanggal berangkat terbaru',
+        'berangkat-terlama' => 'Tanggal berangkat terlama',
+        'nomor' => 'Nomor usulan (A–Z)',
+    ];
 
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $status = $request->input('status');
+        $status = array_key_exists((string) $request->input('status'), self::TAHAP) ? $request->input('status') : null;
+        $urut = array_key_exists((string) $request->input('urut'), self::URUTAN) ? $request->input('urut') : 'terbaru';
 
         // Perjadin yang sudah selesai tetap dibuka di sini: tim keuangan
         // masih membutuhkannya untuk menelusuri berkas dan mencetak ulang
@@ -71,16 +106,18 @@ class KeuanganController extends Controller
                     ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$search}%"));
             }));
 
-        $jumlahStatus = [
-            'berjalan' => (clone $dasar())->where('status', 'disetujui')->count(),
-            'selesai' => (clone $dasar())->where('status', 'selesai')->count(),
-        ];
+        $jumlahStatus = collect(self::TAHAP)
+            ->map(fn (array $tahap, string $kunci) => $this->saringTahap($dasar(), $kunci)->count())
+            ->all();
 
         $usulan = $dasar()
-            ->with('user', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen', 'spd')
-            ->when($status === 'berjalan', fn ($q) => $q->where('status', 'disetujui'))
-            ->when($status === 'selesai', fn ($q) => $q->where('status', 'selesai'))
-            ->latest()
+            ->with('user', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen', 'spd', 'daftarRiil')
+            ->when($status, fn ($q) => $this->saringTahap($q, $status))
+            ->when($urut === 'terbaru', fn ($q) => $q->latest())
+            ->when($urut === 'terlama', fn ($q) => $q->oldest())
+            ->when($urut === 'berangkat-terbaru', fn ($q) => $q->latest('tanggal_mulai'))
+            ->when($urut === 'berangkat-terlama', fn ($q) => $q->oldest('tanggal_mulai'))
+            ->when($urut === 'nomor', fn ($q) => $q->orderBy('no_usulan'))
             ->paginate(10)
             ->withQueryString();
 
@@ -90,13 +127,53 @@ class KeuanganController extends Controller
             $item->berkas_kurang = $this->penagih->berkasKurang($item);
             $item->tautan_wa = $this->penagih->tautanWhatsapp($item);
             $item->alasan_tanpa_wa = $this->penagih->alasanTidakTersedia($item);
+            $item->tahap_keuangan = self::TAHAP[$this->tahapDari($item)];
         });
 
         return view('keuangan.keuangan', [
             'usulan' => $usulan,
             'status' => $status,
+            'urut' => $urut,
+            'pilihanUrut' => self::URUTAN,
+            'tahap' => self::TAHAP,
             'jumlahStatus' => $jumlahStatus,
         ]);
+    }
+
+    /**
+     * Saring perjadin pada satu tahap. Tahapnya saling lepas: tiap perjadin
+     * hanya berada pada tahap terjauh yang sudah dicapainya.
+     *
+     * @param  Builder<Usulan>  $query
+     * @return Builder<Usulan>
+     */
+    private function saringTahap(Builder $query, string $tahap): Builder
+    {
+        $selesai = fn (Builder $q) => $q->where(fn (Builder $w) => $w
+            ->where('status', 'selesai')
+            ->orWhereHas('keuangan', fn (Builder $k) => $k->where('status', Keuangan::STATUS_LUNAS)));
+        $disahkan = fn (Builder $q) => $q->whereHas('daftarRiil', fn (Builder $d) => $d->whereNotNull('rincian_ditandatangani_at'));
+        $dikirim = fn (Builder $q) => $q->whereHas('daftarRiil', fn (Builder $d) => $d->whereNotNull('dikirim_ke_pegawai_at'));
+
+        return match ($tahap) {
+            'selesai' => $selesai($query),
+            'pembayaran' => $disahkan($query->whereNot($selesai)),
+            'dikirim' => $dikirim($query->whereNot($selesai)->whereNot($disahkan)),
+            default => $query->whereNot($selesai)->whereNot($disahkan)->whereNot($dikirim),
+        };
+    }
+
+    /**
+     * Tahap satu perjadin yang relasinya sudah dimuat — padanan saringTahap().
+     */
+    private function tahapDari(Usulan $usulan): string
+    {
+        return match (true) {
+            $usulan->status === 'selesai' || $usulan->keuangan?->sudahLunas() => 'selesai',
+            $usulan->daftarRiil->contains(fn (DaftarRiil $d) => $d->rincian_ditandatangani_at !== null) => 'pembayaran',
+            $usulan->daftarRiil->contains(fn (DaftarRiil $d) => $d->dikirim_ke_pegawai_at !== null) => 'dikirim',
+            default => 'diproses',
+        };
     }
 
     /**
@@ -159,15 +236,22 @@ class KeuanganController extends Controller
         $komponenBiaya = KomponenBiaya::aktif()->orderBy('nama')->get();
         $kategoriBiaya = KategoriBiaya::untukTimKeuangan();
 
+        // Siapa membayar komponen mana — untuk tabel status bayar dan kartu
+        // ringkasan bendahara — serta baris berkas yang dihapus tim keuangan.
+        $ringkasanBayar = $this->ringkasan->untuk($usulan);
+        $rincianTerhapus = $usulan->keuangan->rincianBiaya()->onlyTrashed()->latest('deleted_at')->get();
+
+        $data = compact('usulan', 'komponenBiaya', 'kategoriBiaya', 'ringkasanBayar', 'rincianTerhapus');
+
         if ($usulan->keuangan->status === 'lunas') {
-            return view('keuangan.paid', compact('usulan', 'komponenBiaya', 'kategoriBiaya'));
+            return view('keuangan.paid', $data);
         }
 
         if ($usulan->keuangan->status === 'bayar sebagian') {
-            return view('keuangan.partial-paid', compact('usulan', 'komponenBiaya', 'kategoriBiaya'));
+            return view('keuangan.partial-paid', $data);
         }
 
-        return view('keuangan.unpaid', compact('usulan', 'komponenBiaya', 'kategoriBiaya'));
+        return view('keuangan.unpaid', $data);
     }
 
     /**
@@ -177,12 +261,11 @@ class KeuanganController extends Controller
     {
         $usulan->load('user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta');
 
-        // Baris rincian resmi. Transport lokal tidak tercatat sebagai baris di
-        // sini — ia dipertanggungjawabkan lewat Daftar Pengeluaran Riil — jadi
-        // disaring tegas agar baris warisan atau salah ketik tidak menyelinap;
-        // ia dicantumkan di bawah lewat daftar riilnya sendiri.
+        // Hanya baris sah yang tercetak: tulisan tim keuangan dan nominal
+        // pelaksana yang sudah divalidasi. Transport lokal tidak termasuk —
+        // ia dicetak pada Daftar Pengeluaran Riil.
         $rincian = ($usulan->keuangan?->rincianBiaya ?? collect())
-            ->reject(fn (RincianBiaya $item) => $item->kategori === KategoriBiaya::TransportLokal)
+            ->filter(fn (RincianBiaya $item) => $item->terhitung())
             ->values();
 
         $total = (float) $rincian->sum('jumlah');
@@ -203,39 +286,30 @@ class KeuanganController extends Controller
             ? DaftarRiil::where('id_peserta', $peserta->id)->sudahDitandatangani()->first()
             : null;
 
-        // Transport lokal ikut tercetak sebagai kelompoknya sendiri, diambil
-        // dari daftar riil peserta ini apa pun tahapnya: dokumen rincian biaya
-        // harus memuat seluruh biaya perjalanan, dan transport lokal bagian
-        // darinya walau dibayarkan terpisah saat pelunasan.
-        $riilTransport = $peserta
-            ? DaftarRiil::with('rincian')->where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
+        // Berkas peserta ini pada tahap mana pun — sumber tanggal pelaksana
+        // menyetujui rinciannya.
+        $berkasPeserta = $peserta
+            ? DaftarRiil::where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
             : null;
-        $transportLokal = $riilTransport?->rincian ?? collect();
-        $totalTransportLokal = (float) ($riilTransport?->total_riil ?? $transportLokal->sum('nominal'));
-        $totalKeseluruhan = $total + $totalTransportLokal;
 
         $keuangan = $usulan->keuangan;
 
-        // Yang sudah dibayarkan mengikuti apa yang benar-benar keluar: uang
-        // muka, sisa saat pelunasan, dan transport lokal bila sudah diganti —
-        // entah lewat pelunasan atau lewat pembayaran transport tersendiri.
+        // Yang sudah dibayarkan atas rincian ini: uang muka, ditambah sisanya
+        // bila sudah dilunasi. Penggantian transport lokal tercatat pada
+        // Daftar Pengeluaran Riil, bukan di sini.
         $dibayarkan = (float) ($keuangan?->uang_muka ?? 0)
-            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0)
-            + ($riilTransport?->sudahDibayar() ? $totalTransportLokal : 0);
+            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0);
 
         $pdf = Pdf::loadView('keuangan.cetak-rincian', [
             'usulan' => $usulan,
             'peserta' => $peserta,
             'rincianPerKategori' => $rincianPerKategori,
             'total' => $total,
-            'transportLokal' => $transportLokal,
             // Tanggal pelaksana menyetujui rincian ini — tercetak di atas tanda
             // tangannya, dari daftar riil pada tahap mana pun.
-            'tanggalPelaksana' => $riilTransport?->rincian_disetujui_at ?? $riilTransport?->disetujui_pegawai_at,
-            'totalTransportLokal' => $totalTransportLokal,
-            'totalKeseluruhan' => $totalKeseluruhan,
+            'tanggalPelaksana' => $berkasPeserta?->rincian_disetujui_at ?? $berkasPeserta?->disetujui_pegawai_at,
             'dibayarkan' => $dibayarkan,
-            'terbilang' => $this->terbilang->konversi($totalKeseluruhan),
+            'terbilang' => $this->terbilang->konversi($total),
             'bendahara' => User::where('role', User::ROLE_BENDAHARA)->first(),
             'ppk' => User::where('role', User::ROLE_PPK)->first(),
             'daftarRiil' => $daftarRiil,
@@ -332,6 +406,8 @@ class KeuanganController extends Controller
         // tercetak dan daftar nominatif menumpang di atasnya.
         $this->kunci->pastikanRincianTerbuka($usulan);
 
+        $this->pastikanRincianMilikUsulan($usulan, $rincian);
+
         // Baris dari berkas pelaksana adalah isian pelaksana itu sendiri: tim
         // keuangan boleh mengoreksi angkanya, tetapi tidak memilihkan isiannya.
         $dariBerkas = $rincian->dariDokumen();
@@ -393,36 +469,122 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Hapus rincian biaya.
+     * Hapus komponen rincian biaya. Hak hapusnya dijaga rute.
+     *
+     * Baris dari berkas pelaksana ditandai terhapus, bukan dibuang: dengan
+     * begitu ia tidak tersalin lagi dari berkasnya setiap kali halaman
+     * dibuka, dan dapat dikembalikan bila keliru. Bila pelaksana kemudian
+     * mengubah nominalnya, baris itu tampil lagi untuk diperiksa.
      */
     public function destroyRincian(Request $request, Usulan $usulan, RincianBiaya $rincian)
     {
         $this->pastikanBolehMengelolaBiaya($request);
         abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
+        $this->pastikanRincianMilikUsulan($usulan, $rincian);
 
         // Angka yang sudah ditandatangani tidak boleh bergeser: dokumen
         // tercetak dan daftar nominatif menumpang di atasnya.
         $this->kunci->pastikanRincianTerbuka($usulan);
 
-        // Baris dari berkas pelaksana tidak dihapus: ia akan tersalin lagi dari
-        // berkasnya. Yang tidak dibayarkan dikoreksi nominalnya.
-        if ($rincian->dariDokumen()) {
-            return redirect()->route('keuangan.detail', $usulan->no_usulan)
-                ->with('error', "\"{$rincian->komponen}\" berasal dari berkas pelaksana, jadi tidak dihapus — koreksi nominalnya lewat tombol ubah (nol bila tidak dibayarkan), atau minta pelaksana mengubah isiannya.");
+        $komponen = $rincian->komponen;
+        $dariBerkas = $rincian->dariDokumen();
+
+        if ($dariBerkas) {
+            $rincian->delete();
+        } else {
+            $rincian->forceDelete();
         }
 
-        $komponen = $rincian->komponen;
-        $rincian->delete();
         $usulan->keuangan->hitungTotal();
 
         $this->audit->catat(
             AuditLog::AKSI_BIAYA,
-            "Komponen biaya \"{$komponen}\" dihapus dari usulan {$usulan->no_usulan}.",
+            "Komponen biaya \"{$komponen}\" dihapus dari usulan {$usulan->no_usulan}"
+                .($dariBerkas ? ' (nominal dari berkas pelaksana).' : '.'),
             ['usulan' => $usulan],
         );
 
         return redirect()->route('keuangan.detail', $usulan->no_usulan)
-            ->with('success', 'Rincian biaya berhasil dihapus.');
+            ->with('success', $dariBerkas
+                ? "\"{$komponen}\" dari berkas pelaksana dihapus dari rincian biaya dan tidak lagi dihitung. Ia tampil lagi hanya bila pelaksana mengubah nominalnya, dan dapat dikembalikan dari daftar di bawah tabel."
+                : 'Rincian biaya berhasil dihapus.');
+    }
+
+    /**
+     * Kembalikan baris berkas pelaksana yang terhapus ke rincian biaya.
+     * Nominalnya diperiksa ulang sebelum terhitung lagi.
+     */
+    public function kembalikanRincian(Request $request, Usulan $usulan, RincianBiaya $rincian): RedirectResponse
+    {
+        $this->pastikanBolehMengelolaBiaya($request);
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
+        $this->pastikanRincianMilikUsulan($usulan, $rincian);
+        $this->kunci->pastikanRincianTerbuka($usulan);
+
+        abort_unless($rincian->trashed(), 422, 'Baris ini tidak sedang terhapus.');
+
+        $rincian->restore();
+        $rincian->update(['divalidasi_at' => null, 'id_validator' => null]);
+        $usulan->keuangan->hitungTotal();
+
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Komponen biaya \"{$rincian->komponen}\" dikembalikan ke rincian biaya usulan {$usulan->no_usulan}.",
+            ['usulan' => $usulan],
+        );
+
+        return redirect()->route('keuangan.detail', $usulan->no_usulan)
+            ->with('success', "\"{$rincian->komponen}\" dikembalikan ke rincian biaya — periksa lalu validasi lagi nominalnya.");
+    }
+
+    /**
+     * Tim keuangan mengonfirmasi cara bayar sebuah komponen: lewat uang muka,
+     * atau dibayar pelaksana dahulu lalu diganti saat pelunasan.
+     *
+     * Setelah uang muka ditransfer, pilihan tidak dapat dibalik — uangnya
+     * sudah keluar — tetapi cara yang berlaku masih dapat dikonfirmasi.
+     */
+    public function caraBayarRincian(Request $request, Usulan $usulan, RincianBiaya $rincian): RedirectResponse
+    {
+        abort_unless($request->user()->bisaMemvalidasiBiaya(), 403, 'Cara bayar komponen dikonfirmasi tim keuangan.');
+        $this->pastikanRincianMilikUsulan($usulan, $rincian);
+
+        $validated = $request->validate([
+            'cara_bayar' => ['required', Rule::enum(CaraBayarBiaya::class)],
+        ], [
+            'cara_bayar.required' => 'Pilih cara bayar komponen ini.',
+        ]);
+
+        $keuangan = $usulan->keuangan;
+        $cara = CaraBayarBiaya::from($validated['cara_bayar']);
+        $kembali = redirect()->route('keuangan.detail', $usulan->no_usulan);
+
+        if ($rincian->kategori === KategoriBiaya::UangHarian) {
+            return $kembali->with('error', 'Uang harian selalu dibayarkan 80% lewat uang muka dan 20% saat pelunasan.');
+        }
+
+        if ($keuangan->sudahLunas()) {
+            return $kembali->with('error', 'Pembayaran sudah lunas, jadi cara bayar komponennya tidak diubah lagi.');
+        }
+
+        if ($keuangan->uangMukaTerbayar() && $cara !== $rincian->caraBayar()) {
+            return $kembali->with('error', "Uang muka sudah ditransfer, jadi cara bayar \"{$rincian->komponen}\" tidak dapat diubah lagi. Koreksi nominal sesudahnya masuk sisa bayar.");
+        }
+
+        $rincian->update([
+            'cara_bayar' => $cara,
+            'cara_bayar_dikonfirmasi_at' => now(),
+            'id_pengonfirmasi_bayar' => $request->user()->id,
+        ]);
+        $keuangan->hitungTotal();
+
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Cara bayar \"{$rincian->komponen}\" pada usulan {$usulan->no_usulan} dikonfirmasi: {$cara->label()}.",
+            ['usulan' => $usulan],
+        );
+
+        return $kembali->with('success', "Cara bayar \"{$rincian->komponen}\" dikonfirmasi: {$cara->label()}.");
     }
 
     /**
@@ -470,6 +632,11 @@ class KeuanganController extends Controller
                 .'. Batalkan pembayarannya lebih dulu bila keliru.');
         }
         $path = $request->file('bukti_transfer')->store('keuangan/uang-muka', 'public');
+
+        // Nominal yang ditransfer dihitung dari baris sah saat ini, lalu
+        // dicatat komponen mana saja yang ikut di dalamnya.
+        $keuangan->hitungTotal();
+        $keuangan->catatCaraBayarUangMuka();
 
         $keuangan->update([
             'tanggal_transfer' => $request->tanggal_transfer,
@@ -669,6 +836,10 @@ class KeuanganController extends Controller
         $keuangan->update(['tanggal_transfer' => null, 'status' => Keuangan::STATUS_BELUM]);
         $keuangan->dokumenKeuangan?->update(['transfer_uang_muka' => '']);
 
+        // Uang muka yang batal ditransfer kembali dihitung dari cara bayar
+        // tiap komponen.
+        $keuangan->hitungTotal();
+
         RiwayatPembayaran::catat(
             $keuangan,
             RiwayatPembayaran::JENIS_BATAL_UANG_MUKA,
@@ -820,6 +991,9 @@ class KeuanganController extends Controller
             'id_validator' => $request->user()->id,
         ]);
 
+        // Nominal yang sudah divalidasi baru terhitung pada total dan cetakan.
+        $usulan->keuangan->hitungTotal();
+
         $this->audit->catat(
             AuditLog::AKSI_BIAYA,
             "Nominal \"{$rincian->komponen}\" pada usulan {$usulan->no_usulan} divalidasi.",
@@ -843,6 +1017,7 @@ class KeuanganController extends Controller
         $this->pastikanRincianMilikUsulan($usulan, $rincian);
 
         $rincian->update(['divalidasi_at' => null, 'id_validator' => null]);
+        $usulan->keuangan->hitungTotal();
 
         $this->audit->catat(
             AuditLog::AKSI_BIAYA,

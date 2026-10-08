@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CaraBayarBiaya;
 use App\Enums\KategoriBiaya;
 use App\Services\TautanVerifikasi;
 use Database\Factories\KeuanganFactory;
@@ -94,20 +95,38 @@ class Keuangan extends Model
     /**
      * Hitung ulang total, uang muka, dan sisa dari rincian biaya.
      *
-     * Yang dipotong 80/20 hanya uang harian. Komponen lain — tiket pesawat
-     * dan biaya hotel — sudah dibayarkan instansi, jadi masuk uang muka
-     * seutuhnya. Sisanya tinggal 20% uang harian, yang dilunasi setelah
-     * daftar nominatif terbit.
+     * Yang dihitung hanya baris sah — tulisan tim keuangan dan nominal
+     * pelaksana yang sudah divalidasi. Uang harian dibagi 80/20; komponen
+     * lain masuk uang muka seutuhnya, kecuali yang dibayar pelaksana lebih
+     * dahulu: itu diganti saat pelunasan, jadi masuk sisa bayar.
+     *
+     * Uang muka yang sudah ditransfer tidak bergeser lagi — uangnya sudah
+     * keluar. Perubahan sesudahnya, baris baru maupun koreksi, seluruhnya
+     * jatuh pada sisa bayar.
      */
     public function hitungTotal(): void
     {
-        $total = (float) $this->rincianBiaya()->sum('jumlah');
+        $rincian = $this->rincianBiaya()->terhitung()->get();
+        $total = (float) $rincian->sum('jumlah');
 
-        $uangHarian = (float) $this->rincianBiaya()
-            ->where('kategori', KategoriBiaya::UangHarian->value)
+        if ($this->uangMukaTerbayar()) {
+            $this->update([
+                'total' => $total,
+                'sisa' => $total - (float) $this->uang_muka,
+            ]);
+
+            return;
+        }
+
+        $uangHarian = (float) $rincian
+            ->filter(fn (RincianBiaya $baris) => $baris->kategori === KategoriBiaya::UangHarian)
             ->sum('jumlah');
 
-        $sisa = $uangHarian * (1 - self::PORSI_UANG_HARIAN_DI_MUKA);
+        $penggantian = (float) $rincian
+            ->filter(fn (RincianBiaya $baris) => $baris->caraBayar() === CaraBayarBiaya::Penggantian)
+            ->sum('jumlah');
+
+        $sisa = $uangHarian * (1 - self::PORSI_UANG_HARIAN_DI_MUKA) + $penggantian;
 
         $this->update([
             'total' => $total,
@@ -117,12 +136,30 @@ class Keuangan extends Model
     }
 
     /**
-     * Uang harian yang tercatat pada rincian biaya — dasar pembagian
-     * 80/20 di atas.
+     * Saat uang muka ditransfer, catat komponen mana yang ikut di dalamnya.
+     *
+     * Komponen sah yang cara bayarnya belum ditentukan memang terhitung
+     * masuk uang muka; nominal pelaksana yang belum divalidasi tidak ikut,
+     * jadi kelak diganti saat pelunasan.
+     */
+    public function catatCaraBayarUangMuka(): void
+    {
+        $this->rincianBiaya()
+            ->whereNull('cara_bayar')
+            ->where('kategori', '!=', KategoriBiaya::UangHarian->value)
+            ->get()
+            ->each(fn (RincianBiaya $baris) => $baris->update([
+                'cara_bayar' => $baris->terhitung() ? CaraBayarBiaya::UangMuka : CaraBayarBiaya::Penggantian,
+            ]));
+    }
+
+    /**
+     * Uang harian sah pada rincian biaya — dasar pembagian 80/20 di atas.
      */
     public function uangHarian(): float
     {
         return (float) $this->rincianBiaya()
+            ->terhitung()
             ->where('kategori', KategoriBiaya::UangHarian->value)
             ->sum('jumlah');
     }

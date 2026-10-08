@@ -230,7 +230,7 @@
       {{-- Persetujuan PPK. Bukan lagi validasi usulan — penugasan sudah
            disahkan lewat SPD — melainkan berkas keuangan yang menunggu
            keputusan dan tanda tangan PPK. --}}
-      @can('menandatangani-daftar-riil')
+      @can('melihat-persetujuan')
       <div x-data="{ ppkOpen: {{ request()->routeIs('persetujuan.*') ? 'true' : 'false' }} }">
           <button
             type="button"

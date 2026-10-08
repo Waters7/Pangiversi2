@@ -37,7 +37,15 @@ class PenentuHakAkses
 
     public function punya(string $kode, Kemampuan $kemampuan): bool
     {
-        return in_array($kemampuan, $this->kemampuan($kode), true);
+        $dimiliki = $this->kemampuan($kode);
+
+        foreach ([$kemampuan, ...$kemampuan->tercakupOleh()] as $cukup) {
+            if (in_array($cukup, $dimiliki, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

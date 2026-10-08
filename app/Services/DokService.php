@@ -210,8 +210,11 @@ class DokService
     {
         $dokumen = $this->dokumen($usulan);
 
+        // Penginapan yang sudah termasuk biaya penyelenggaraan tidak berbill hotel.
+        $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
+
         $request->validate([
-            'bill_hotel' => [$this->aturanBerkas($dokumen, 'bill_hotel'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'bill_hotel' => [$tanpaBillHotel ? 'nullable' : $this->aturanBerkas($dokumen, 'bill_hotel'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'bill_hotel_no_transaksi' => ['nullable', 'string', 'max:100'],
             'bill_hotel_nominal' => ['nullable', 'numeric', 'min:0'],
             'kwintasi' => [$this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
@@ -256,6 +259,7 @@ class DokService
 
         $request->validate([
             'penyelenggaraan_ada' => ['required', 'in:0,1'],
+            'penyelenggaraan_termasuk_penginapan' => ['nullable', 'boolean'],
             'penyelenggaraan_nominal' => [$ada && ! $nominalDariKeuangan ? 'required' : 'nullable', 'numeric', 'min:1'],
             'penyelenggaraan_invoice' => ['nullable', 'string', 'max:100'],
             'penyelenggaraan_bukti' => [
@@ -274,6 +278,7 @@ class DokService
 
             $data = [
                 'penyelenggaraan_ada' => false,
+                'penyelenggaraan_termasuk_penginapan' => false,
                 'penyelenggaraan_nominal' => null,
                 'penyelenggaraan_invoice' => null,
                 'penyelenggaraan_bukti' => null,
@@ -292,6 +297,7 @@ class DokService
 
         return $this->simpanBerkas($request, $usulan, ['penyelenggaraan_bukti'], [
             'penyelenggaraan_ada' => true,
+            'penyelenggaraan_termasuk_penginapan' => $request->boolean('penyelenggaraan_termasuk_penginapan'),
             'penyelenggaraan_nominal' => $nominalDariKeuangan ? null : (float) $request->input('penyelenggaraan_nominal'),
             'penyelenggaraan_invoice' => $request->input('penyelenggaraan_invoice') ?: null,
         ]);

@@ -106,7 +106,8 @@ class PersetujuanPpkController extends Controller
         return [
             'usulan' => $usulan,
             'berkas' => $berkas,
-            'total' => (float) $rincian->sum('jumlah'),
+            // Hanya baris sah yang dibayarkan — sama dengan cetakannya.
+            'total' => (float) $rincian->filter->terhitung()->sum('jumlah'),
             'belum_divalidasi' => $belumDivalidasi,
             'peserta' => $usulan->peserta->firstWhere('id_user', $usulan->id_user) ?? $usulan->peserta->first(),
             // Jalur rincian punya tanda tangannya sendiri: menandatangani

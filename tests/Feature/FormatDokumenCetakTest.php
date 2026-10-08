@@ -15,8 +15,8 @@ use App\Models\Usulan;
 use App\Services\PenyusunNominatif;
 use App\Services\QrCodeService;
 use App\Services\SinkronBiayaDokumen;
-use App\Services\Terbilang;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -62,6 +62,9 @@ class FormatDokumenCetakTest extends TestCase
 
         $this->lengkapiPertanggungjawaban($this->usulan);
         app(SinkronBiayaDokumen::class)->selaraskan($this->usulan->fresh());
+
+        // Nominal pelaksana baru tercetak setelah divalidasi tim keuangan.
+        RincianBiaya::query()->update(['divalidasi_at' => now()]);
     }
 
     // ── Nama komponen ──
@@ -113,40 +116,50 @@ class FormatDokumenCetakTest extends TestCase
         );
     }
 
-    // ── Transport lokal tercantum pada rincian biaya ──
+    // ── Transport lokal dicetak pada daftar riil, bukan rincian biaya ──
 
     /**
-     * Baris rincian tetap tanpa transport lokal (nominalnya dibayar terpisah
-     * lewat daftar riil), tetapi dokumen rincian biaya harus memuat seluruh
-     * biaya perjalanan — jadi transport lokal dicantumkan sebagai kelompoknya
-     * sendiri, dan jumlah akhirnya ikut menghitungnya.
+     * Transport lokal dipertanggungjawabkan dan dicetak lewat Daftar
+     * Pengeluaran Riil, jadi tidak tercantum lagi pada cetakan rincian biaya.
      */
-    public function test_cetakan_rincian_mencantumkan_transport_lokal(): void
+    public function test_cetakan_rincian_tidak_memuat_transport_lokal(): void
     {
         $html = $this->htmlRincian();
 
-        $this->assertStringContainsString('Transportasi Lokal', $html);
-        $this->assertStringContainsString($this->daftar()->rincian->first()->uraian, $html);
-        $this->assertStringContainsString('Subtotal transportasi lokal', $html);
+        $this->assertStringNotContainsString('Transportasi Lokal', $html);
+        $this->assertStringNotContainsString($this->daftar()->rincian->first()->uraian, $html);
+        $this->assertStringNotContainsString('Subtotal transportasi lokal', $html);
     }
 
-    public function test_jumlah_pada_cetakan_rincian_menghitung_transport_lokal(): void
+    public function test_jumlah_pada_cetakan_rincian_tanpa_transport_lokal(): void
     {
-        $rincian = (float) $this->rincian()->sum('jumlah');
-        $transport = (float) $this->daftar()->total_riil;
+        $this->assertGreaterThan(0, (float) $this->daftar()->total_riil);
 
-        $this->assertGreaterThan(0, $transport);
+        $rincian = number_format((float) $this->rincian()->sum('jumlah'), 0, ',', '.');
 
-        $keseluruhan = number_format($rincian + $transport, 0, ',', '.');
+        $this->assertStringContainsString("Ditetapkan sejumlah</td><td>: Rp {$rincian}", $this->htmlRincian());
+    }
 
-        $this->assertStringContainsString('JUMLAH', $this->htmlRincian());
-        $this->assertStringContainsString("Ditetapkan sejumlah</td><td>: Rp {$keseluruhan}", $this->htmlRincian());
+    /**
+     * Nominal pelaksana yang belum divalidasi tampil pada tabel detail
+     * keuangan, tetapi belum tercetak maupun terjumlah.
+     */
+    public function test_cetakan_rincian_hanya_memuat_baris_yang_divalidasi(): void
+    {
+        $hotel = $this->rincian()->first(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::Penginapan);
+        $hotel->update(['divalidasi_at' => null]);
+
+        $sah = number_format((float) $this->rincian()->where('id', '!=', $hotel->id)->sum('jumlah'), 0, ',', '.');
+        $html = $this->htmlRincian();
+
+        $this->assertStringNotContainsString($hotel->komponen, $html);
+        $this->assertStringNotContainsString('Biaya Akomodasi', $html);
+        $this->assertStringContainsString("Ditetapkan sejumlah</td><td>: Rp {$sah}", $html);
     }
 
     /**
      * Susunan resmi dokumen: transportasi (pesawat/kereta/bus), uang harian,
-     * transportasi lokal, biaya akomodasi — transport lokal disisipkan pada
-     * urutannya, bukan ditempel di paling bawah.
+     * lalu biaya akomodasi.
      */
     public function test_cetakan_rincian_menyusun_kelompok_sesuai_urutan_resmi(): void
     {
@@ -154,11 +167,11 @@ class FormatDokumenCetakTest extends TestCase
 
         $posisi = array_map(
             fn (string $judul) => strpos($html, $judul),
-            ['Transportasi (Pesawat / Kereta / Bus)', 'Transportasi Lokal', 'Biaya Akomodasi'],
+            ['Transportasi (Pesawat / Kereta / Bus)', 'Biaya Akomodasi'],
         );
 
         $this->assertNotContains(false, $posisi);
-        $this->assertTrue($posisi[0] < $posisi[1] && $posisi[1] < $posisi[2]);
+        $this->assertTrue($posisi[0] < $posisi[1]);
     }
 
     /** Di atas "Telah menerima jumlah uang" tercetak tempat dan tanggal pelaksana menyetujui. */
@@ -202,53 +215,26 @@ class FormatDokumenCetakTest extends TestCase
     }
 
     /**
-     * HTML dokumen rincian, dirender dengan data yang sama seperti cetak PDF.
+     * HTML dokumen rincian, dirender dengan data yang dipakai cetak PDF.
+     *
+     * Teks di dalam PDF terkompresi, jadi data yang diserahkan controller
+     * kepada templatnya ditangkap, lalu templat itu dirender ulang sebagai
+     * HTML — penyaringan baris oleh controller ikut teruji.
      */
     private function htmlRincian(): string
     {
-        $balasan = $this->actingAs($this->timKeuangan)
+        $data = null;
+        View::composer('keuangan.cetak-rincian', function ($view) use (&$data): void {
+            $data ??= $view->getData();
+        });
+
+        $this->actingAs($this->timKeuangan)
             ->get(route('keuangan.cetak-rincian', $this->usulan->no_usulan))
             ->assertOk();
 
-        // Teks di dalam PDF terkompresi, jadi templatnya dirender ulang
-        // sebagai HTML dari data yang identik dengan yang dipakai cetakan.
-        return view('keuangan.cetak-rincian', $this->dataCetakRincian())->render();
-    }
+        $this->assertNotNull($data);
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function dataCetakRincian(): array
-    {
-        $usulan = $this->usulan->fresh(['user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta']);
-        $rincian = $usulan->keuangan->rincianBiaya
-            ->reject(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::TransportLokal)
-            ->values();
-        $daftar = $this->daftar()->load('rincian');
-        $total = (float) $rincian->sum('jumlah');
-        $totalTransport = (float) $daftar->total_riil;
-
-        return [
-            'usulan' => $usulan,
-            'peserta' => $this->peserta,
-            'rincianPerKategori' => $rincian
-                ->groupBy(fn (RincianBiaya $b) => $b->kategori->value)
-                ->sortBy(fn ($baris, $kategori) => KategoriBiaya::dari($kategori)->urutan()),
-            'total' => $total,
-            'transportLokal' => $daftar->rincian,
-            'tanggalPelaksana' => $daftar->rincian_disetujui_at ?? $daftar->disetujui_pegawai_at,
-            'totalTransportLokal' => $totalTransport,
-            'totalKeseluruhan' => $total + $totalTransport,
-            'dibayarkan' => 0.0,
-            'terbilang' => app(Terbilang::class)->konversi($total + $totalTransport),
-            'bendahara' => null,
-            'ppk' => $this->ppk,
-            'daftarRiil' => null,
-            'keuangan' => $usulan->keuangan,
-            'qrPelaksana' => null,
-            'qrPpk' => null,
-            'qrBendahara' => null,
-        ];
+        return view('keuangan.cetak-rincian', $data)->render();
     }
 
     public function test_cetakan_kedua_dokumen_terbentuk(): void

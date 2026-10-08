@@ -58,6 +58,14 @@
         </div>
 
         <div class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-slate-100">
+            {{-- Peran yang hanya melihat persetujuan membaca statusnya saja. --}}
+            @cannot('menandatangani-daftar-riil')
+                <p class="text-xs text-slate-400 self-center">
+                    {{ $nominatif->sudahDitandatangani() ? 'Sudah ditandatangani PPK.' : 'Menunggu tanda tangan PPK.' }}
+                </p>
+            @endcannot
+
+            @can('menandatangani-daftar-riil')
             @unless ($nominatif->sudahDitandatangani())
                 <form method="POST" action="{{ route('persetujuan.nominatif.tanda-tangan', $nominatif) }}"
                       x-data
@@ -79,6 +87,7 @@
                     </button>
                 </form>
             @endif
+            @endcan
 
             @if ($nominatif->sudahDikirim())
                 <p class="text-xs text-slate-400 self-center">

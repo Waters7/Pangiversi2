@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Keuangan;
 use App\Models\Usulan;
 use App\Services\PemulihRincian;
 use Illuminate\Console\Command;
@@ -11,6 +12,10 @@ use Illuminate\Console\Command;
  * biaya maupun daftar riil, dan memindahkan baris transport lokal yang
  * dulu tersembunyi di rincian biaya — untuk seluruh usulan sekaligus.
  * Halaman rincian biaya memulihkan usulannya sendiri saat dibuka.
+ *
+ * Sesudahnya total, uang muka, dan sisa rincian yang belum lunas dihitung
+ * ulang menurut aturan yang berlaku, supaya angka tersimpan tidak tertinggal
+ * dari aturan perhitungan yang berubah.
  */
 class SelaraskanBiayaBerkas extends Command
 {
@@ -30,8 +35,6 @@ class SelaraskanBiayaBerkas extends Command
 
         if ($usulan->isEmpty()) {
             $this->info('Tidak ada nominal berkas yang tertinggal dari rincian biaya maupun daftar riil.');
-
-            return self::SUCCESS;
         }
 
         foreach ($usulan as $satu) {
@@ -39,6 +42,21 @@ class SelaraskanBiayaBerkas extends Command
                 $this->line("{$satu->no_usulan}: {$catatan}.");
             }
         }
+
+        // Yang sudah lunas dibiarkan: angkanya sudah dibayarkan apa adanya.
+        $dihitung = 0;
+
+        Keuangan::where('status', '!=', Keuangan::STATUS_LUNAS)
+            ->when($this->argument('nomor') !== [], fn ($q) => $q->whereHas(
+                'usulan',
+                fn ($u) => $u->whereIn('no_usulan', $this->argument('nomor')),
+            ))
+            ->each(function (Keuangan $keuangan) use (&$dihitung): void {
+                $keuangan->hitungTotal();
+                $dihitung++;
+            });
+
+        $this->info("{$dihitung} rincian biaya yang belum lunas dihitung ulang.");
 
         return self::SUCCESS;
     }

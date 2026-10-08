@@ -22,16 +22,14 @@
 
     <x-mode-lihat-keuangan />
 
-    {{-- Perjadin yang sudah selesai tetap terbuka di sini: tim keuangan
-         masih menelusurinya dan mencetak ulang dokumennya. --}}
+    {{-- Tahap pengerjaan keuangan: masih diproses tim keuangan, sudah
+         dikirim ke pelaksana, tinggal dibayarkan, atau selesai. Perjadin yang
+         selesai tetap terbuka di sini untuk ditelusuri dan dicetak ulang. --}}
     <x-tab-status
         :aksi="route('keuangan')"
         :terpilih="$status"
-        :tab="[
-            '' => ['label' => 'Semua', 'jumlah' => array_sum($jumlahStatus)],
-            'berjalan' => ['label' => 'Sedang Berjalan', 'jumlah' => $jumlahStatus['berjalan'], 'badge' => 'bg-teal-100 text-teal-700'],
-            'selesai' => ['label' => 'Selesai', 'jumlah' => $jumlahStatus['selesai'], 'badge' => 'bg-violet-100 text-violet-700'],
-        ]" />
+        :tab="['' => ['label' => 'Semua', 'jumlah' => array_sum($jumlahStatus)]]
+            + collect($tahap)->map(fn ($isi, $kunci) => $isi + ['jumlah' => $jumlahStatus[$kunci]])->all()" />
 
     {{-- ── List Pejadin ── --}}
     <form method="GET" action="{{ route('keuangan') }}">
@@ -47,13 +45,20 @@
                             placeholder="Cari no. usulan, kegiatan, lokasi, instansi..."
                             class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                 </div>
+                <select name="urut" aria-label="Urutkan" onchange="this.form.submit()"
+                        class="px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @foreach ($pilihanUrut as $nilai => $label)
+                        <option value="{{ $nilai }}" @selected($urut === $nilai)>{{ $label }}</option>
+                    @endforeach
+                </select>
+
                 <button type="submit"
                         class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">
                     Filter
                 </button>
 
-                @if(request('search') || request('status'))
-                    <a href="{{ route('persetujuan') }}"
+                @if(request('search') || request('status') || request('urut'))
+                    <a href="{{ route('keuangan') }}"
                         class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
                         Reset
                     </a>
@@ -83,7 +88,7 @@
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Pemohon</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Tujuan</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Periode</th>
-                        <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Status</th>
+                        <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Tahap & Pembayaran</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Aksi</th>
                     </tr>
                 </thead>
@@ -123,7 +128,10 @@
                             </td>
 
                             <td class="px-4 py-4">
-                                <div class="flex items-center justify-center">
+                                <div class="flex flex-col items-center justify-center gap-1.5">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $item->tahap_keuangan['badge'] }}">
+                                        {{ $item->tahap_keuangan['label'] }}
+                                    </span>
                                     @php
                                         $statusConfig = match($item->keuangan?->status) {
                                             'bayar sebagian'  => ['label' => 'Bayar Sebagian',  'class' => 'bg-blue-50 text-blue-600'],

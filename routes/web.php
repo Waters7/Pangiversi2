@@ -185,7 +185,9 @@ Route::middleware('auth')->group(function () {
         });
 
     // Meja kerja PPK: berkas yang menunggu verifikasi dan tanda tangannya.
-    Route::middleware('can:menandatangani-daftar-riil')->prefix('persetujuan')->group(function () {
+    // Halamannya dapat dibuka peran yang diberi hak melihat persetujuan;
+    // menandatangani dan mengirim tetap khusus penandatangan.
+    Route::middleware('can:melihat-persetujuan')->prefix('persetujuan')->group(function () {
         Route::get('/rincian-biaya', [PersetujuanPpkController::class, 'rincianBiaya'])->name('persetujuan.rincian-biaya');
         Route::get('/daftar-riil', [PersetujuanPpkController::class, 'daftarRiil'])->name('persetujuan.daftar-riil');
 
@@ -193,8 +195,11 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/nominatif', [PersetujuanPpkController::class, 'nominatif'])->name('persetujuan.nominatif');
         Route::get('/nominatif/{nominatif}', [PersetujuanPpkController::class, 'nominatifDetail'])->name('persetujuan.nominatif.detail');
-        Route::put('/nominatif/{nominatif}/tanda-tangan', [PersetujuanPpkController::class, 'tandaTanganiNominatif'])->name('persetujuan.nominatif.tanda-tangan');
-        Route::put('/nominatif/{nominatif}/kirim', [PersetujuanPpkController::class, 'kirimNominatif'])->name('persetujuan.nominatif.kirim');
+
+        Route::middleware('can:menandatangani-daftar-riil')->group(function () {
+            Route::put('/nominatif/{nominatif}/tanda-tangan', [PersetujuanPpkController::class, 'tandaTanganiNominatif'])->name('persetujuan.nominatif.tanda-tangan');
+            Route::put('/nominatif/{nominatif}/kirim', [PersetujuanPpkController::class, 'kirimNominatif'])->name('persetujuan.nominatif.kirim');
+        });
     });
 
     // Persetujuan berjenjang — atasan langsung, PPK, pimpinan, super administrator
@@ -245,7 +250,15 @@ Route::middleware('auth')->group(function () {
         Route::get('/{usulan:no_usulan}/cetak-rincian', [KeuanganController::class, 'cetakRincian'])->name('keuangan.cetak-rincian');
         Route::post('/{usulan:no_usulan}/rincian', [KeuanganController::class, 'storeRincian'])->name('keuangan.rincian.store');
         Route::put('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'updateRincian'])->name('keuangan.rincian.update');
-        Route::delete('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'destroyRincian'])->name('keuangan.rincian.destroy');
+        Route::delete('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'destroyRincian'])
+            ->middleware('can:menghapus-rincian-biaya')->name('keuangan.rincian.destroy');
+
+        // Baris dari berkas pelaksana yang terhapus dapat dikembalikan.
+        Route::put('/{usulan:no_usulan}/rincian/{rincian}/kembalikan', [KeuanganController::class, 'kembalikanRincian'])
+            ->middleware('can:menghapus-rincian-biaya')->withTrashed()->name('keuangan.rincian.kembalikan');
+
+        // Cara bayar tiap komponen: lewat uang muka, atau diganti saat pelunasan.
+        Route::put('/{usulan:no_usulan}/rincian/{rincian}/cara-bayar', [KeuanganController::class, 'caraBayarRincian'])->name('keuangan.rincian.cara-bayar');
 
         // Transport lokal tulisan tim keuangan pada daftar riil pelaksana.
         Route::delete('/{usulan:no_usulan}/transport-lokal/{baris}', [KeuanganController::class, 'destroyTransportLokal'])->name('keuangan.transport-lokal.destroy');

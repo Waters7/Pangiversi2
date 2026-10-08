@@ -17,7 +17,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-sm">Uang Muka Sudah Dibayar</h3>
-                    <p class="text-xs text-slate-400">Menunggu LPJ & pembayaran sisa 20%</p>
+                    <p class="text-xs text-slate-400">Menunggu LPJ & pembayaran sisa</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 border border-teal-200 text-xs font-bold rounded-full">
@@ -80,14 +80,14 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-sm">Proses Pembayaran Sisa</h3>
-                    <p class="text-xs text-slate-400">Transfer sisa 20% setelah LPJ lengkap & terverifikasi</p>
+                    <p class="text-xs text-slate-400">20% uang harian dan penggantian komponen yang dibayar pelaksana dahulu</p>
                 </div>
             </div>
         </div>
         <div class="p-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-                    <p class="text-xs text-blue-600 mb-1 font-medium">20% — Sisa Bayar</p>
+                    <p class="text-xs text-blue-600 mb-1 font-medium">Sisa Bayar</p>
                     <p class="text-xl font-bold text-blue-700">Rp {{ number_format($usulan->keuangan->sisa, 0, ',', '.') }}</p>
                 </div>
                 <div class="bg-slate-50 rounded-xl p-4 text-center">
@@ -95,6 +95,8 @@
                     <p class="text-xl font-bold text-slate-800">Rp {{ number_format($usulan->keuangan->total, 0, ',', '.') }}</p>
                 </div>
             </div>
+            <x-kartu-komponen-bayar :ringkasan="$ringkasanBayar" />
+
             {{-- Syarat pelunasan yang dijaga di penyimpanan ditampilkan juga di
                  sini, supaya bendahara tahu sebelum mengunggah bukti transfer. --}}
             @php $laporanPerjadin = $usulan->laporan; @endphp

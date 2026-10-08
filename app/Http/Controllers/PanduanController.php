@@ -136,6 +136,18 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.22',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Hak akses baru: Menghapus komponen rincian biaya (Keuangan → Hapus) dan Melihat persetujuan (Persetujuan → Lihat) — yang terakhir membuka menu Persetujuan tanpa ikut menandatangani.',
+                    'Komponen pada tabel rincian biaya dapat dihapus kembali. Nominal dari berkas pelaksana yang dihapus tidak tersalin lagi kecuali pelaksana mengubahnya, dan dapat dikembalikan.',
+                    'Hanya baris tulisan tim keuangan dan nominal pelaksana yang sudah divalidasi yang terhitung pada total, uang muka, sisa bayar, dan cetakan rincian biaya. Transport lokal tidak lagi tercetak pada rincian biaya — ia tercetak pada daftar riil.',
+                    'Tabel Status Pembayaran Komponen: tiap komponen dibayarkan lewat uang muka atau dibayar pelaksana dahulu lalu diganti saat pelunasan, dikonfirmasi tim keuangan. Kartu ringkasan komponen membantu bendahara saat mencatat uang muka, dan uang muka yang sudah ditransfer tidak bergeser lagi.',
+                    'Bill hotel tidak ditagih bila penginapan sudah termasuk biaya penyelenggaraan.',
+                    'Daftar Input Rincian Biaya dipilah per tahap — Sedang Diproses, Dikirim ke Pelaksana, Proses Pembayaran, Selesai — dan dapat diurutkan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.21',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [

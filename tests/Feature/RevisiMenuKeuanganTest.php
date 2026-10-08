@@ -141,7 +141,7 @@ class RevisiMenuKeuanganTest extends TestCase
             ->assertSee('Selesai');
 
         $this->assertSame(1, $halaman->viewData('jumlahStatus')['selesai']);
-        $this->assertSame(1, $halaman->viewData('jumlahStatus')['berjalan']);
+        $this->assertSame(1, $halaman->viewData('jumlahStatus')['diproses']);
 
         $disaring = $this->actingAs($this->timKeuangan)
             ->get(route('keuangan', ['status' => 'selesai']))
@@ -149,6 +149,73 @@ class RevisiMenuKeuanganTest extends TestCase
 
         $this->assertSame(1, $disaring->viewData('usulan')->total());
         $this->assertTrue($disaring->viewData('usulan')->contains($selesai));
+    }
+
+    /**
+     * Perjadin pada tahap yang sudah ditempuhnya: masih diproses tim
+     * keuangan, dikirim ke pelaksana, tinggal dibayarkan, atau selesai.
+     *
+     * @param  array<string, mixed>  $berkas
+     */
+    private function perjadinBertahap(array $berkas, string $statusKeuangan = Keuangan::STATUS_BELUM): Usulan
+    {
+        $usulan = Usulan::factory()->create(['status' => StatusUsulan::Disetujui->value]);
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $usulan->id, 'status' => $statusKeuangan]);
+
+        if ($berkas !== []) {
+            $peserta = PesertaUsulan::factory()->create(['id_usulan' => $usulan->id]);
+            DaftarRiil::create(['id_usulan' => $usulan->id, 'id_peserta' => $peserta->id, 'total_riil' => 0] + $berkas);
+        }
+
+        return $usulan;
+    }
+
+    public function test_daftar_keuangan_disaring_menurut_tahap_pengerjaan(): void
+    {
+        $dikirim = $this->perjadinBertahap(['dikirim_ke_pegawai_at' => now()]);
+        $pembayaran = $this->perjadinBertahap(['dikirim_ke_pegawai_at' => now(), 'rincian_ditandatangani_at' => now()]);
+        $lunas = $this->perjadinBertahap(['rincian_ditandatangani_at' => now()], Keuangan::STATUS_LUNAS);
+
+        $halaman = $this->actingAs($this->timKeuangan)->get(route('keuangan'))->assertOk();
+
+        $this->assertSame(
+            ['diproses' => 1, 'dikirim' => 1, 'pembayaran' => 1, 'selesai' => 1],
+            $halaman->viewData('jumlahStatus'),
+        );
+
+        foreach (['diproses' => $this->usulan, 'dikirim' => $dikirim, 'pembayaran' => $pembayaran, 'selesai' => $lunas] as $tahap => $usulan) {
+            $disaring = $this->actingAs($this->timKeuangan)
+                ->get(route('keuangan', ['status' => $tahap]))
+                ->assertOk();
+
+            $this->assertSame([$usulan->id], $disaring->viewData('usulan')->pluck('id')->all(), "Tahap {$tahap}");
+        }
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan'))
+            ->assertSeeInOrder(['Proses Pembayaran', $pembayaran->no_usulan])
+            ->assertSee('Dikirim ke Pelaksana');
+    }
+
+    public function test_daftar_keuangan_dapat_diurutkan(): void
+    {
+        $this->usulan->update(['tanggal_mulai' => '2026-03-01', 'no_usulan' => 'PJ-B']);
+        $lain = Usulan::factory()->create([
+            'status' => StatusUsulan::Disetujui->value,
+            'tanggal_mulai' => '2026-01-01',
+            'no_usulan' => 'PJ-A',
+        ]);
+
+        $urutan = fn (string $urut) => $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan', ['urut' => $urut]))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->all();
+
+        $this->assertSame([$this->usulan->id, $lain->id], $urutan('berangkat-terbaru'));
+        $this->assertSame([$lain->id, $this->usulan->id], $urutan('berangkat-terlama'));
+        $this->assertSame([$lain->id, $this->usulan->id], $urutan('nomor'));
     }
 
     // ── Laporan rincian biaya lengkap tanda tangan ──

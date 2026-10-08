@@ -469,7 +469,9 @@
                         <strong>Biaya penyelenggaraan</strong> (kontribusi atau registrasi kegiatan) ditanya
                         dulu ada atau tidak. Bila ada: isi nominal, unggah bukti bayar, dan nomor invoice
                         bila diterbitkan penyelenggara; nominalnya tercantum pada rincian biaya di bawah
-                        uang penginapan. Bila tidak, kolomnya tidak ditampilkan.
+                        uang penginapan. Bila tidak, kolomnya tidak ditampilkan. Bila biaya itu sudah
+                        termasuk hotel, centang <strong>Sudah termasuk penginapan (hotel)</strong>: bill hotel
+                        tidak perlu diunggah dan uang penginapan tidak dibayarkan terpisah.
                     </p>
                 </div>
             </div>
@@ -603,7 +605,10 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Buka Keuangan → Input Rincian Biaya">
-                Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
+                Tab <strong>Sedang Diproses</strong>, <strong>Dikirim ke Pelaksana</strong>,
+                <strong>Proses Pembayaran</strong>, dan <strong>Selesai</strong> memilah perjadin menurut
+                tahapnya, dan pilihan urutan di samping kotak cari mengurutkannya menurut tanggal usulan,
+                tanggal berangkat, atau nomor usulan. Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
                 dan pada kotak keterangan di halaman rinciannya — membuka surat tugas pelaksana sebagai acuan
                 lama perjalanan dan komponen yang dibiayai. Nominal dari dokumen yang diunggah
                 pelaksana sudah diselaraskan lebih dulu, jadi Anda memeriksa dan menyesuaikan —
@@ -617,10 +622,17 @@
             <x-panduan-langkah nomor="3" judul="Validasi tiap komponen">
                 Nominal yang diisi pelaksana selalu tampil sebagai baris dan dapat Anda koreksi lewat tombol
                 ubah; koreksinya tetap bertahan meski pelaksana menyimpan ulang berkasnya, kecuali pelaksana
-                mengubah nominal itu sendiri. Baris dari berkas pelaksana tidak dihapus — beri nominal nol bila
-                tidak dibayarkan. Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
+                mengubah nominal itu sendiri. Hanya baris tulisan tim keuangan dan nominal pelaksana yang
+                sudah divalidasi yang terhitung pada total, uang muka, sisa bayar, dan cetakan rincian biaya.
+                Komponen yang tidak dibayarkan dapat dihapus lewat tombol hapus — bagi peran yang diberi hak
+                <strong>Menghapus komponen rincian biaya</strong>; baris dari berkas pelaksana yang dihapus tidak
+                tersalin lagi kecuali pelaksana mengubah nominalnya, dan dapat dikembalikan dari daftar di bawah
+                tabel. Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
                 validasi tersimpan, memuat komponen dan nominal yang akan dinyatakan benar;
-                mencabut validasi juga dikonfirmasi dan tercatat pada jejak audit.
+                mencabut validasi juga dikonfirmasi dan tercatat pada jejak audit. Pada tabel
+                <strong>Status Pembayaran Komponen</strong>, konfirmasi cara bayar tiap komponen: dibayarkan
+                lewat uang muka, atau dibayar pelaksana dahulu sehingga diganti saat pelunasan dan masuk sisa
+                bayar. Uang harian selalu 80% uang muka dan 20% pelunasan.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Periksa transport lokal">
@@ -764,7 +776,10 @@
 
             <x-panduan-langkah nomor="2" judul="Catat uang muka">
                 Isi tanggal transfer dan unggah buktinya. Kelengkapan berkas pelaksana ditampilkan
-                di tiap baris, sehingga terlihat mana yang belum boleh dilunasi.
+                di tiap baris, sehingga terlihat mana yang belum boleh dilunasi. Kartu di atas formulirnya
+                merinci uang harian, komponen yang dibayarkan lewat uang muka, penggantian saat pelunasan,
+                transport lokal, dan nominal yang masih menunggu validasi. Sesudah dicatat, uang muka tidak
+                bergeser lagi: komponen atau koreksi yang menyusul masuk sisa bayar.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Catat pelunasan">
@@ -939,7 +954,10 @@
                     mereka lewat notifikasi yang menyebut hak akses apa saja yang ditambahkan dan
                     dicabut beserta menunya. Hak <strong>Melihat seluruh usulan</strong> (Usulan
                     Perjadin → Lihat) membuka daftar usulan semua pegawai; menyunting dan menghapus
-                    tetap hanya bagi pelaksana, pembuat, atau peserta usulannya. Tombol
+                    tetap hanya bagi pelaksana, pembuat, atau peserta usulannya. Hak <strong>Menghapus
+                    komponen rincian biaya</strong> (Keuangan → Hapus) mengatur tombol hapus pada detail
+                    keuangan, dan hak <strong>Melihat persetujuan</strong> (Persetujuan → Lihat) membuka
+                    menu Persetujuan tanpa ikut menandatangani. Tombol
                     <strong>Tambah Peran</strong> membuat peran baru (kodenya dibuat dari nama) yang
                     langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
                     tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh

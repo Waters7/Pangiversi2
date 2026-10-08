@@ -48,7 +48,10 @@ class SinkronBiayaDokumen
 
         $hasil = ['ditambah' => 0, 'diperbarui' => 0, 'dihapus' => 0];
 
+        // Termasuk yang dihapus tim keuangan: baris itu tidak disalin lagi
+        // selama pelaksana tidak mengubah nominalnya.
         $tersimpan = $keuangan->rincianBiaya()
+            ->withTrashed()
             ->where('sumber', RincianBiaya::SUMBER_DOKUMEN)
             ->get()
             ->keyBy('kunci_sumber');
@@ -92,6 +95,12 @@ class SinkronBiayaDokumen
             // dan perubahannya lolos tanpa dilihat siapa pun.
             $periksaUlang = array_key_exists('jumlah', $diubah) || array_key_exists('komponen', $diubah);
 
+            // Baris yang dihapus tim keuangan kembali tampil bila pelaksana
+            // mengubah nominalnya: angka baru itu perlu diperiksa.
+            if ($lama->trashed() && $periksaUlang) {
+                $lama->restore();
+            }
+
             $lama->update($diubah + ['isi_berkas' => $baris]
                 + ($periksaUlang ? ['divalidasi_at' => null, 'id_validator' => null] : []));
             $hasil['diperbarui']++;
@@ -102,9 +111,10 @@ class SinkronBiayaDokumen
 
         if ($usang->isNotEmpty()) {
             $hasil['dihapus'] = $keuangan->rincianBiaya()
+                ->withTrashed()
                 ->where('sumber', RincianBiaya::SUMBER_DOKUMEN)
                 ->whereIn('kunci_sumber', $usang->all())
-                ->delete();
+                ->forceDelete();
         }
 
         $keuangan->hitungTotal();
@@ -272,7 +282,9 @@ class SinkronBiayaDokumen
 
         $dokumen = $usulan->dokumen->last();
 
-        if ($dokumen && $dokumen->bill_hotel_nominal > 0 && ! $ditetapkanKeuangan(IsianBiaya::Penginapan)) {
+        // Penginapan yang sudah termasuk biaya penyelenggaraan tidak disalin
+        // sebagai uang penginapan, supaya hotel yang sama tidak terbayar dua kali.
+        if ($dokumen && $dokumen->bill_hotel_nominal > 0 && ! $dokumen->penginapanTermasukPenyelenggaraan() && ! $ditetapkanKeuangan(IsianBiaya::Penginapan)) {
             // Sebutan resmi pada dokumen rincian: uang penginapan, bukan biaya hotel.
             $nama = 'Uang Penginapan';
 

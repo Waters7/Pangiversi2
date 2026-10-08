@@ -40,7 +40,13 @@ class PemulihRincian
             return true;
         }
 
-        $tercatat = $rincian->where('sumber', RincianBiaya::SUMBER_DOKUMEN)->pluck('kunci_sumber')->all();
+        // Baris yang sengaja dihapus tim keuangan terhitung tercatat — bukan
+        // tertinggal — supaya tidak tersalin lagi setiap kali halaman dibuka.
+        $tercatat = RincianBiaya::withTrashed()
+            ->where('id_keuangan', $usulan->keuangan?->id)
+            ->where('sumber', RincianBiaya::SUMBER_DOKUMEN)
+            ->pluck('kunci_sumber')
+            ->all();
 
         if (array_diff(array_keys($this->sinkron->barisDariDokumen($usulan)), $tercatat) !== []) {
             return true;

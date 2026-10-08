@@ -129,7 +129,7 @@
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                                             Ditandatangani
                                         </span>
-                                    @elseif ($jalur?->siapDitandatanganiPpk() && $baris['peserta'])
+                                    @elseif ($jalur?->siapDitandatanganiPpk() && $baris['peserta'] && auth()->user()->bisaMenandatanganiPersetujuan())
                                         <x-aksi-tanda-tangan
                                             :nama="'rincian-'.$berkas->id"
                                             judul="Tandatangani rincian biaya ini?"

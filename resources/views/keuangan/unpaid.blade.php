@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-sm">Konfirmasi Pembayaran Uang Muka</h3>
-                    <p class="text-xs text-slate-400">Transfer 80% dari estimasi biaya sebelum keberangkatan</p>
+                    <p class="text-xs text-slate-400">80% uang harian ditambah komponen yang dibayarkan di muka</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-full">
@@ -33,7 +33,7 @@
                     <p class="text-xl font-bold text-slate-800">Rp {{ number_format($usulan->keuangan->total, 0, ',', '.') }}</p>
                 </div>
                 <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
-                    <p class="text-xs text-amber-600 mb-1 font-medium">80% — Uang Muka</p>
+                    <p class="text-xs text-amber-600 mb-1 font-medium">Uang Muka</p>
                     <p class="text-xl font-bold text-amber-700">Rp {{ number_format($usulan->keuangan->uang_muka, 0, ',', '.') }}</p>
                 </div>
                 <div class="bg-slate-50 rounded-xl p-4 text-center">
@@ -41,6 +41,9 @@
                     <p class="text-xl font-bold text-slate-600">Rp {{ number_format($usulan->keuangan->sisa, 0, ',', '.') }}</p>
                 </div>
             </div>
+
+            {{-- Dari mana uang muka dan sisa bayar tersusun, per komponen. --}}
+            <x-kartu-komponen-bayar :ringkasan="$ringkasanBayar" />
             {{-- Form Upload — bukti pembayaran hanya untuk bendahara --}}
             @cannot('mencatat-pembayaran')
                 <p class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">

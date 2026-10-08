@@ -240,6 +240,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Menghapus komponen rincian biaya — terpisah dari menyusunnya.
+     */
+    public function bisaMenghapusRincianBiaya(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MenghapusRincianBiaya);
+    }
+
+    /**
+     * Menandatangani rincian biaya, daftar riil, dan daftar nominatif.
+     */
+    public function bisaMenandatanganiPersetujuan(): bool
+    {
+        return $this->punyaKemampuan(Kemampuan::MenandatanganiDaftarRiil);
+    }
+
+    /**
      * Boleh menetapkan tanggal dikeluarkan SPD sendiri, bukan mengikuti
      * tanggal pembuatan: pimpinan dan administrator selalu; peran lain
      * hanya selama super administrator membuka kuncinya untuk keperluan

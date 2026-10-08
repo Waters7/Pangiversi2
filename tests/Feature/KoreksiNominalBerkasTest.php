@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\ArahTiket;
 use App\Enums\KategoriBiaya;
+use App\Enums\Kemampuan;
 use App\Enums\StatusUsulan;
 use App\Models\Keuangan;
+use App\Models\Peran;
 use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
@@ -109,7 +111,8 @@ class KoreksiNominalBerkasTest extends TestCase
     public function test_baris_berkas_yang_tertinggal_disalin_lagi_saat_halaman_dibuka(): void
     {
         $this->simpanAkomodasi();
-        RincianBiaya::where('kunci_sumber', 'hotel')->delete();
+        // Seperti penyalinan yang dulu gagal: barisnya tidak pernah tersimpan.
+        RincianBiaya::where('kunci_sumber', 'hotel')->forceDelete();
 
         $this->actingAs($this->timKeuangan)
             ->get(route('keuangan.detail', $this->usulan))
@@ -120,16 +123,95 @@ class KoreksiNominalBerkasTest extends TestCase
         $this->assertSame(2_400_000.0, RincianBiaya::where('kunci_sumber', 'hotel')->sole()->jumlah);
     }
 
-    public function test_baris_dari_berkas_pelaksana_tidak_dihapus(): void
+    public function test_baris_berkas_yang_dihapus_tidak_disalin_lagi(): void
     {
         $this->simpanAkomodasi();
         $hotel = RincianBiaya::where('kunci_sumber', 'hotel')->sole();
 
         $this->actingAs($this->timKeuangan)
             ->delete(route('keuangan.rincian.destroy', [$this->usulan, $hotel]))
-            ->assertSessionHas('error');
+            ->assertSessionHas('success');
 
-        $this->assertModelExists($hotel);
+        $this->assertSoftDeleted($hotel);
+
+        // Halaman dibuka dan pelaksana menyimpan ulang seksi lain: baris yang
+        // sengaja dihapus tidak tersalin kembali.
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertDontSee('Nominal dari berkas pelaksana yang belum tercatat sudah disalin')
+            ->assertSee('Dihapus dari rincian');
+        $this->simpanAkomodasi();
+
+        $this->assertSame(0, RincianBiaya::where('kunci_sumber', 'hotel')->count());
+    }
+
+    public function test_baris_berkas_yang_dihapus_tampil_lagi_bila_nominalnya_diubah(): void
+    {
+        $this->simpanTiket(2_510_219);
+        $this->actingAs($this->timKeuangan)->delete(route('keuangan.rincian.destroy', [$this->usulan, $this->tiket()]));
+
+        $this->simpanTiket(2_600_000);
+
+        $this->assertSame(2_600_000.0, $this->tiket()->jumlah);
+        $this->assertNull($this->tiket()->divalidasi_at);
+    }
+
+    public function test_baris_berkas_yang_dihapus_dapat_dikembalikan(): void
+    {
+        $this->simpanAkomodasi();
+        $hotel = RincianBiaya::where('kunci_sumber', 'hotel')->sole();
+        $hotel->update(['divalidasi_at' => now()]);
+        $this->actingAs($this->timKeuangan)->delete(route('keuangan.rincian.destroy', [$this->usulan, $hotel]));
+
+        $this->actingAs($this->timKeuangan)
+            ->put(route('keuangan.rincian.kembalikan', [$this->usulan, $hotel]))
+            ->assertSessionHas('success');
+
+        $hotel = $hotel->fresh();
+        $this->assertFalse($hotel->trashed());
+        $this->assertNull($hotel->divalidasi_at);
+    }
+
+    public function test_menghapus_komponen_membutuhkan_hak_hapus(): void
+    {
+        $this->simpanAkomodasi();
+        $hotel = RincianBiaya::where('kunci_sumber', 'hotel')->sole();
+        $penyusun = User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]);
+        $tombolHapus = 'Hapus nominal dari berkas pelaksana ini?';
+
+        $this->actingAs($penyusun)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertSee($tombolHapus);
+
+        Peran::sinkronBawaan();
+        Peran::where('kode', User::ROLE_TIM_KEUANGAN)->sole()->aturHakAkses([
+            Kemampuan::MelihatKeuangan, Kemampuan::MengelolaBiaya, Kemampuan::MemvalidasiBiaya,
+        ]);
+
+        $this->actingAs($penyusun)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertDontSee($tombolHapus);
+
+        $this->actingAs($penyusun)
+            ->delete(route('keuangan.rincian.destroy', [$this->usulan, $hotel]))
+            ->assertForbidden();
+
+        $this->assertNotSoftDeleted($hotel);
+    }
+
+    public function test_komponen_usulan_lain_tidak_dapat_dihapus_lewat_usulan_ini(): void
+    {
+        $lain = Usulan::factory()->create(['status' => StatusUsulan::Disetujui->value]);
+        $keuanganLain = Keuangan::factory()->belumBayar()->create(['id_usulan' => $lain->id]);
+        $barisLain = RincianBiaya::factory()->create(['id_keuangan' => $keuanganLain->id]);
+
+        $this->actingAs($this->timKeuangan)
+            ->delete(route('keuangan.rincian.destroy', [$this->usulan, $barisLain]))
+            ->assertNotFound();
+
+        $this->assertModelExists($barisLain);
     }
 
     public function test_transport_lokal_tersembunyi_dipindah_saat_halaman_dibuka(): void

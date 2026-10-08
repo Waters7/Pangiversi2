@@ -202,6 +202,71 @@ class BiayaPenyelenggaraanTest extends TestCase
         $this->assertTrue(app(PenagihDokumen::class)->lengkap($this->usulan->fresh()));
     }
 
+    // ── Penginapan yang termasuk biaya penyelenggaraan ──
+
+    public function test_formulir_menanyakan_penginapan_termasuk_penyelenggaraan(): void
+    {
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $this->usulan->no_usulan))
+            ->assertOk()
+            ->assertSee('name="penyelenggaraan_termasuk_penginapan"', escape: false)
+            ->assertSee('Sudah termasuk penginapan (hotel)');
+    }
+
+    public function test_penginapan_termasuk_penyelenggaraan_tidak_menagih_bill_hotel(): void
+    {
+        $penagih = app(PenagihDokumen::class);
+        $this->simpan()->assertSessionHasNoErrors();
+
+        $this->assertContains('Bill hotel', $penagih->berkasKurang($this->usulan->fresh()));
+
+        $this->simpan(['penyelenggaraan_termasuk_penginapan' => '1'])->assertSessionHasNoErrors();
+
+        $this->assertTrue($this->dokumen()->penginapanTermasukPenyelenggaraan());
+        $this->assertNotContains('Bill hotel', $penagih->berkasKurang($this->usulan->fresh()));
+
+        $billHotel = collect($penagih->checklist($this->usulan->fresh()))->firstWhere('label', 'Bill Hotel');
+        $this->assertTrue($billHotel['terpenuhi']);
+        $this->assertStringContainsString('termasuk biaya penyelenggaraan', $billHotel['catatan']);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $this->usulan->no_usulan))
+            ->assertSee('bill hotel tidak perlu diunggah');
+    }
+
+    public function test_akomodasi_tersimpan_tanpa_bill_hotel_bila_termasuk_penyelenggaraan(): void
+    {
+        $akomodasi = fn () => $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'akomodasi',
+            'kwintasi' => UploadedFile::fake()->create('kuitansi.pdf', 10, 'application/pdf'),
+        ]);
+
+        $akomodasi()->assertSessionHasErrors('bill_hotel');
+
+        $this->simpan(['penyelenggaraan_termasuk_penginapan' => '1']);
+
+        $akomodasi()->assertSessionHasNoErrors();
+        $this->assertNotNull($this->dokumen()->kwintasi);
+    }
+
+    /** Hotel yang sama tidak terbayar dua kali: lewat paket dan lewat uang penginapan. */
+    public function test_uang_penginapan_tidak_disalin_bila_termasuk_penyelenggaraan(): void
+    {
+        $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
+            'section' => 'akomodasi',
+            'bill_hotel' => UploadedFile::fake()->create('bill.pdf', 10, 'application/pdf'),
+            'bill_hotel_no_transaksi' => '001',
+            'bill_hotel_nominal' => 2_400_000,
+            'kwintasi' => UploadedFile::fake()->create('kuitansi.pdf', 10, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(1, RincianBiaya::where('kunci_sumber', 'hotel')->count());
+
+        $this->simpan(['penyelenggaraan_termasuk_penginapan' => '1'])->assertSessionHasNoErrors();
+
+        $this->assertSame(0, RincianBiaya::withTrashed()->where('kunci_sumber', 'hotel')->count());
+        $this->assertNotNull($this->rincianPenyelenggaraan());
+    }
+
     // ── Rincian, cetakan, dan nominatif ──
 
     public function test_kategori_berada_di_bawah_uang_penginapan(): void
@@ -267,8 +332,7 @@ class BiayaPenyelenggaraanTest extends TestCase
         $rincian = $usulan->keuangan->rincianBiaya
             ->reject(fn (RincianBiaya $b) => $b->kategori === KategoriBiaya::TransportLokal);
         $daftarRiil = $usulan->daftarRiil->first();
-        $transportLokal = $daftarRiil?->rincian ?? collect();
-        $total = (float) $rincian->sum('jumlah') + (float) ($daftarRiil?->total_riil ?? 0);
+        $total = (float) $rincian->sum('jumlah');
 
         return [
             'usulan' => $usulan,
@@ -277,10 +341,7 @@ class BiayaPenyelenggaraanTest extends TestCase
             'rincianPerKategori' => $rincian
                 ->groupBy(fn (RincianBiaya $b) => $b->kategori->value)
                 ->sortBy(fn ($baris, $kategori) => KategoriBiaya::dari($kategori)->urutan()),
-            'total' => (float) $rincian->sum('jumlah'),
-            'transportLokal' => $transportLokal,
-            'totalTransportLokal' => (float) ($daftarRiil?->total_riil ?? 0),
-            'totalKeseluruhan' => $total,
+            'total' => $total,
             'terbilang' => app(Terbilang::class)->konversi($total),
             'daftarRiil' => $daftarRiil,
             'ppk' => null,

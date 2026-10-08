@@ -122,6 +122,7 @@ enum PeranPengguna: string
                 Kemampuan::MemvalidasiUsulan,
                 Kemampuan::MelihatKeuangan,
                 Kemampuan::MenandatanganiDaftarRiil,
+                Kemampuan::MelihatPersetujuan,
                 Kemampuan::MelihatJadwalPerjalanan,
                 Kemampuan::MelihatDashboardEksekutif,
                 Kemampuan::MelihatLaporan,
@@ -134,6 +135,7 @@ enum PeranPengguna: string
                 ...$dasar,
                 Kemampuan::MelihatKeuangan,
                 Kemampuan::MengelolaBiaya,
+                Kemampuan::MenghapusRincianBiaya,
                 Kemampuan::MencatatPembayaran,
                 // Menu Pembayaran memang khusus bendahara.
                 Kemampuan::MelihatPembayaran,
@@ -150,6 +152,7 @@ enum PeranPengguna: string
                 Kemampuan::MelihatKeuangan,
                 Kemampuan::MengelolaBiaya,
                 Kemampuan::MemvalidasiBiaya,
+                Kemampuan::MenghapusRincianBiaya,
                 Kemampuan::MelihatJadwalPerjalanan,
                 Kemampuan::MelihatDashboardEksekutif,
                 Kemampuan::MelihatLaporan,

@@ -2,17 +2,27 @@
 
 namespace App\Models;
 
+use App\Enums\CaraBayarBiaya;
 use App\Enums\IsianBiaya;
 use App\Enums\KategoriBiaya;
 use Database\Factories\RincianBiayaFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Satu komponen rincian biaya perjalanan dinas.
+ *
+ * Penghapusan bersifat lunak hanya untuk baris dari berkas pelaksana: baris
+ * itu ditandai terhapus supaya tidak tersalin lagi dari berkasnya, dan dapat
+ * dikembalikan. Baris tulisan tim keuangan dibuang sungguhan.
+ */
 class RincianBiaya extends Model
 {
     /** @use HasFactory<RincianBiayaFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'kategori',
@@ -28,6 +38,9 @@ class RincianBiaya extends Model
         'isian_pelaksana',
         'divalidasi_at',
         'id_validator',
+        'cara_bayar',
+        'cara_bayar_dikonfirmasi_at',
+        'id_pengonfirmasi_bayar',
         'id_keuangan',
     ];
 
@@ -49,7 +62,22 @@ class RincianBiaya extends Model
             'harga_satuan' => 'float',
             'jumlah' => 'float',
             'divalidasi_at' => 'datetime',
+            'cara_bayar' => CaraBayarBiaya::class,
+            'cara_bayar_dikonfirmasi_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Komponen yang baru tercatat setelah uang muka ditransfer jelas tidak
+        // ikut di dalam transfer itu: ia dibayarkan saat pelunasan.
+        static::creating(function (self $baris): void {
+            if ($baris->cara_bayar === null
+                && $baris->kategori !== KategoriBiaya::UangHarian
+                && Keuangan::whereKey($baris->id_keuangan)->whereNotNull('tanggal_transfer')->exists()) {
+                $baris->cara_bayar = CaraBayarBiaya::Penggantian;
+            }
+        });
     }
 
     /**
@@ -82,6 +110,52 @@ class RincianBiaya extends Model
     public function sudahDivalidasi(): bool
     {
         return ! $this->dariDokumen() || $this->divalidasi_at !== null;
+    }
+
+    /**
+     * Ikut dihitung pada total, uang muka, sisa bayar, dan cetak rincian.
+     *
+     * Hanya angka yang ditulis tim keuangan dan angka pelaksana yang sudah
+     * divalidasi: nominal yang belum diperiksa tampil pada tabel, tetapi
+     * belum menjadi angka yang dibayarkan. Transport lokal dihitung lewat
+     * Daftar Pengeluaran Riil.
+     */
+    public function terhitung(): bool
+    {
+        return $this->sudahDivalidasi() && $this->kategori !== KategoriBiaya::TransportLokal;
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     */
+    public function scopeTerhitung(Builder $query): void
+    {
+        $query->where('kategori', '!=', KategoriBiaya::TransportLokal->value)
+            ->where(fn (Builder $q) => $q
+                ->where('sumber', '!=', self::SUMBER_DOKUMEN)
+                ->orWhereNotNull('divalidasi_at'));
+    }
+
+    /**
+     * Cara komponen ini dibayarkan; null untuk uang harian, yang selalu
+     * dibagi 80% di muka dan 20% saat pelunasan. Yang belum ditentukan
+     * dihitung masuk uang muka.
+     */
+    public function caraBayar(): ?CaraBayarBiaya
+    {
+        if ($this->kategori === KategoriBiaya::UangHarian) {
+            return null;
+        }
+
+        return $this->cara_bayar ?? CaraBayarBiaya::UangMuka;
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function pengonfirmasiBayar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_pengonfirmasi_bayar');
     }
 
     /**

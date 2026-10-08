@@ -64,7 +64,11 @@ class PenagihDokumen
             $kurang = $kurang->concat($this->notaKurang($usulan));
         }
 
-        if ($diminta(BerkasLpj::BillHotel)) {
+        // Penginapan yang sudah dibayar lewat biaya penyelenggaraan tidak
+        // berbill hotel sendiri.
+        $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
+
+        if ($diminta(BerkasLpj::BillHotel) && ! $tanpaBillHotel) {
             if (blank($dokumen?->bill_hotel)) {
                 $kurang->push(self::LABEL['bill_hotel']);
             }
@@ -163,7 +167,14 @@ class PenagihDokumen
         }
 
         // Seksi 4 — akomodasi dan bukti biaya.
-        if ($diminta(BerkasLpj::BillHotel)) {
+        if ($diminta(BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan()) {
+            $baris[] = [
+                'label' => 'Bill Hotel',
+                'terpenuhi' => true,
+                'berkas' => filled($dokumen->bill_hotel) ? [['label' => 'Bill hotel', 'path' => $dokumen->bill_hotel]] : [],
+                'catatan' => 'Tidak perlu — penginapan termasuk biaya penyelenggaraan',
+            ];
+        } elseif ($diminta(BerkasLpj::BillHotel)) {
             $baris[] = [
                 'label' => 'Bill Hotel',
                 'terpenuhi' => filled($dokumen?->bill_hotel)

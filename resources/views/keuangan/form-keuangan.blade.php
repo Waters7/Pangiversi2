@@ -22,6 +22,13 @@
         && $alasanKunci === null
         && ($keuangan->status === 'belum bayar' || $isAdmin);
 
+    // Menghapus komponen adalah hak akses tersendiri pada menu Keuangan.
+    $bolehHapusRincian = $canEditRincian && auth()->user()->bisaMenghapusRincianBiaya();
+
+    // Siapa membayar komponen mana, dan baris berkas pelaksana yang dihapus.
+    $ringkasanBayar ??= app(\App\Services\RingkasanPembayaran::class)->untuk($usulan);
+    $rincianTerhapus ??= collect();
+
     // Satu komponen hanya dinominalkan satu pihak: yang sudah diisi pelaksana
     // beserta buktinya tidak dapat ditambahkan lagi di sini, dan yang
     // ditetapkan di sini mengunci isian pelaksana.
@@ -292,6 +299,8 @@
                                         <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
                                             Belum diperiksa
                                         </span>
+                                        {{-- Baru masuk total dan cetakan setelah divalidasi. --}}
+                                        <span class="block text-[11px] text-slate-400 mt-1">Belum dihitung</span>
                                     @endif
                                 </td>
 
@@ -321,10 +330,11 @@
                                                     <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
                                             </button>
-                                            {{-- Baris dari berkas pelaksana dikoreksi, tidak dihapus. --}}
-                                            @unless ($item->dariDokumen())
+                                            {{-- Baris dari berkas pelaksana yang dihapus tidak dihitung dan
+                                                 tidak tersalin ulang, kecuali pelaksana mengubah nominalnya. --}}
+                                            @if ($bolehHapusRincian)
                                             <form action="{{ route('keuangan.rincian.destroy', [$usulan->no_usulan, $item->id]) }}" method="POST"
-                                                  onsubmit="return confirm('Hapus komponen ini?')">
+                                                  onsubmit="return confirm({{ $item->dariDokumen() ? "'Hapus nominal dari berkas pelaksana ini? Barisnya tidak dihitung lagi dan tidak tersalin ulang, kecuali pelaksana mengubah nominalnya.'" : "'Hapus komponen ini?'" }})">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition" title="Hapus">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -332,7 +342,7 @@
                                                     </svg>
                                                 </button>
                                             </form>
-                                            @endunless
+                                            @endif
                                         </div>
                                     </td>
                                 @endif
@@ -441,17 +451,200 @@
                                 <td></td>
                                 @if($canEditRincian) <td></td> @endif
                             </tr>
+                            {{-- Hanya baris sah yang terhitung: nominal pelaksana yang
+                                 belum divalidasi disebut terpisah. --}}
+                            @if ($ringkasanBayar['menunggu']->isNotEmpty())
+                                <tr data-menunggu-validasi>
+                                    <td colspan="6" class="px-6 py-2 text-right text-xs font-semibold text-amber-600">
+                                        Menunggu validasi, belum dihitung ({{ $ringkasanBayar['menunggu']->count() }} baris)
+                                    </td>
+                                    <td class="px-4 py-2 text-right text-xs font-semibold text-amber-600">Rp {{ number_format($ringkasanBayar['nominal_menunggu'], 0, ',', '.') }}</td>
+                                    <td></td>
+                                    <td></td>
+                                    @if($canEditRincian) <td></td> @endif
+                                </tr>
+                            @endif
                         </tfoot>
                     @endif
                 </table>
             </div>
+
+            {{-- Nominal berkas pelaksana yang dihapus tim keuangan: tidak dihitung,
+                 tidak tersalin ulang, dan dapat dikembalikan bila keliru. --}}
+            @if ($rincianTerhapus->isNotEmpty())
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/60" data-rincian-terhapus>
+                    <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Dihapus dari rincian — tidak dihitung</p>
+                    <ul class="space-y-1.5">
+                        @foreach ($rincianTerhapus as $terhapus)
+                            <li class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                <span class="text-slate-600">
+                                    <span class="line-through">{{ $terhapus->komponen }}</span>
+                                    · Rp {{ number_format($terhapus->jumlah, 0, ',', '.') }}
+                                    <span class="text-slate-400">· dihapus {{ $terhapus->deleted_at->translatedFormat('d M Y H:i') }}</span>
+                                </span>
+                                @if ($bolehHapusRincian)
+                                    <form method="POST" action="{{ route('keuangan.rincian.kembalikan', [$usulan->no_usulan, $terhapus->id]) }}">
+                                        @csrf @method('PUT')
+                                        <button type="submit" class="text-[11px] font-bold text-teal-600 hover:text-teal-700">Kembalikan</button>
+                                    </form>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         </div>
+
+        {{-- ── STATUS PEMBAYARAN KOMPONEN ──
+             Tiap komponen sah beserta cara bayarnya: lewat uang muka, atau
+             dibayar pelaksana dahulu lalu diganti saat pelunasan sehingga
+             masuk sisa bayar. Tim keuangan mengonfirmasinya; bendahara
+             membaca dari sini apa yang sudah dan belum dibayarkan. --}}
+        @php
+            $bolehAturCaraBayar = auth()->user()->bisaMemvalidasiBiaya() && ! $keuangan->sudahLunas();
+            $uangMukaTerkirim = $keuangan->uangMukaTerbayar();
+        @endphp
+        @if ($ringkasanBayar['komponen'] !== [] || $ringkasanBayar['menunggu']->isNotEmpty())
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" data-status-bayar>
+                <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">Status Pembayaran Komponen</h3>
+                            <p class="text-xs text-slate-400">Dibayarkan lewat uang muka, atau dibayar pelaksana dahulu lalu diganti saat pelunasan</p>
+                        </div>
+                    </div>
+                    @if ($ringkasanBayar['belum_dikonfirmasi'] > 0)
+                        <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                            {{ $ringkasanBayar['belum_dikonfirmasi'] }} belum dikonfirmasi tim keuangan
+                        </span>
+                    @endif
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3 w-10">No</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Komponen</th>
+                                <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Uang Muka</th>
+                                <th class="text-right text-xs font-bold text-slate-500 uppercase px-4 py-3">Pelunasan</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Cara Bayar</th>
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            @foreach ($ringkasanBayar['komponen'] as $isi)
+                                @php
+                                    $barisBayar = $isi['baris'];
+                                    $cara = $isi['cara'];
+                                    $dikonfirmasi = $barisBayar->cara_bayar_dikonfirmasi_at !== null;
+                                @endphp
+                                <tr>
+                                    <td class="px-6 py-3 text-xs text-slate-400">{{ $loop->iteration }}</td>
+                                    <td class="px-4 py-3 font-semibold text-slate-700">
+                                        {{ $barisBayar->komponen }}
+                                        <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Rp {{ number_format($barisBayar->jumlah, 0, ',', '.') }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right tabular-nums {{ $isi['di_muka'] > 0 ? 'font-semibold text-amber-700' : 'text-slate-300' }}">
+                                        {{ $isi['di_muka'] > 0 ? 'Rp '.number_format($isi['di_muka'], 0, ',', '.') : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right tabular-nums {{ $isi['pelunasan'] > 0 ? 'font-semibold text-blue-700' : 'text-slate-300' }}">
+                                        {{ $isi['pelunasan'] > 0 ? 'Rp '.number_format($isi['pelunasan'], 0, ',', '.') : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if ($cara === null)
+                                            <span class="text-[11px] text-slate-500">80% uang muka · 20% pelunasan</span>
+                                        @elseif ($bolehAturCaraBayar && ! $uangMukaTerkirim)
+                                            <form method="POST" action="{{ route('keuangan.rincian.cara-bayar', [$usulan->no_usulan, $barisBayar->id]) }}" class="flex items-center gap-1.5">
+                                                @csrf @method('PUT')
+                                                <select name="cara_bayar" aria-label="Cara bayar {{ $barisBayar->komponen }}"
+                                                        class="px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent">
+                                                    @foreach (\App\Enums\CaraBayarBiaya::cases() as $pilihanCara)
+                                                        <option value="{{ $pilihanCara->value }}" @selected($pilihanCara === $cara)>{{ $pilihanCara->labelSingkat() }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="submit" class="px-2.5 py-1.5 bg-teal-500 hover:bg-teal-600 text-white text-[11px] font-bold rounded-lg transition">
+                                                    {{ $dikonfirmasi ? 'Simpan' : 'Konfirmasi' }}
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full {{ $cara->badge() }}">{{ $cara->labelSingkat() }}</span>
+                                            @if ($bolehAturCaraBayar && ! $dikonfirmasi)
+                                                <form method="POST" action="{{ route('keuangan.rincian.cara-bayar', [$usulan->no_usulan, $barisBayar->id]) }}" class="inline">
+                                                    @csrf @method('PUT')
+                                                    <input type="hidden" name="cara_bayar" value="{{ $cara->value }}">
+                                                    <button type="submit" class="ml-1 text-[11px] font-bold text-teal-600 hover:text-teal-700">Konfirmasi</button>
+                                                </form>
+                                            @endif
+                                        @endif
+                                        @if ($cara !== null)
+                                            <span class="block text-[11px] mt-1 {{ $dikonfirmasi ? 'text-slate-400' : 'text-amber-600' }}">
+                                                {{ $dikonfirmasi
+                                                    ? 'Dikonfirmasi '.($barisBayar->pengonfirmasiBayar?->nama ?? 'tim keuangan').' · '.$barisBayar->cara_bayar_dikonfirmasi_at->translatedFormat('d M Y')
+                                                    : 'Belum dikonfirmasi tim keuangan' }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="text-[11px] font-semibold {{ $isi['sudah_dibayar'] ? 'text-emerald-700' : 'text-slate-500' }}">{{ $isi['status'] }}</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            @foreach ($ringkasanBayar['menunggu'] as $barisMenunggu)
+                                <tr class="bg-slate-50/50">
+                                    <td class="px-6 py-3 text-xs text-slate-300">—</td>
+                                    <td class="px-4 py-3 text-slate-500">
+                                        {{ $barisMenunggu->komponen }}
+                                        <span class="block text-[11px] text-slate-400 mt-0.5">Rp {{ number_format($barisMenunggu->jumlah, 0, ',', '.') }}</span>
+                                    </td>
+                                    <td colspan="4" class="px-4 py-3 text-[11px] text-amber-600">
+                                        Menunggu validasi — belum dihitung pada uang muka maupun sisa bayar
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="border-t-2 border-slate-200 bg-slate-50">
+                            <tr>
+                                <td colspan="2" class="px-6 py-3 text-right text-sm font-bold text-slate-600">Jumlah</td>
+                                <td class="px-4 py-3 text-right text-sm font-bold text-amber-700 tabular-nums">Rp {{ number_format($keuangan->uang_muka, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3 text-right text-sm font-bold text-blue-700 tabular-nums">Rp {{ number_format($keuangan->sisa, 0, ',', '.') }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="px-6 py-3 border-t border-slate-100 space-y-1 text-[11px] text-slate-500 leading-relaxed">
+                    @if (abs($ringkasanBayar['selisih_sisa']) >= 1)
+                        <p>
+                            Sisa bayar {{ $ringkasanBayar['selisih_sisa'] > 0 ? 'lebih besar' : 'lebih kecil' }}
+                            Rp {{ number_format(abs($ringkasanBayar['selisih_sisa']), 0, ',', '.') }} dari jumlah per komponen:
+                            selisih perubahan nominal setelah uang muka ditransfer.
+                        </p>
+                    @endif
+                    @if ($ringkasanBayar['transport_lokal'] > 0)
+                        <p>
+                            Ditambah transport lokal Rp {{ number_format($ringkasanBayar['transport_lokal'], 0, ',', '.') }}
+                            dari Daftar Pengeluaran Riil, dibayarkan saat pelunasan setelah disahkan PPK.
+                        </p>
+                    @endif
+                    @if ($bolehAturCaraBayar && $uangMukaTerkirim)
+                        <p>Uang muka sudah ditransfer, jadi cara bayar tidak dapat diubah lagi — komponen yang tercatat sesudahnya diganti saat pelunasan.</p>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- ── TRANSPORT LOKAL ──
              Dipertanggungjawabkan lewat Daftar Pengeluaran Riil dan dibayar
-             saat pelunasan, jadi bukan baris rincian di atas — tetapi ia bagian
-             dari biaya perjalanan, sehingga dicantumkan di sini dan ikut
-             tercetak pada dokumen rincian biaya. --}}
+             saat pelunasan, jadi bukan baris rincian di atas dan tidak ikut
+             tercetak pada dokumen rincian biaya — ia tercetak pada daftar
+             riilnya sendiri. --}}
         @php
             $pesertaRiil = $usulan->peserta->firstWhere('id_user', $usulan->id_user) ?? $usulan->peserta->first();
             $riilTransport = $pesertaRiil ? $usulan->daftarRiil->firstWhere('id_peserta', $pesertaRiil->id) : null;

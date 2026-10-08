@@ -64,7 +64,7 @@ class PencatatTransportLokal
 
         $hasil = $this->tambah($usulan, $uraian, $nominal);
 
-        $baris->delete();
+        $baris->forceDelete();
         $usulan->keuangan?->hitungTotal();
 
         return $hasil;

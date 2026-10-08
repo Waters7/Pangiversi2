@@ -94,12 +94,17 @@
                                              dan disetujui pelaksana. Yang tersisa: mengesahkannya,
                                              atau mengembalikannya untuk diperbaiki. --}}
                                         @if ($item->siapDitandatanganiPpk() && ! $item->sudah_ditandatangani)
-                                            <x-aksi-tanda-tangan
-                                                :nama="'riil-'.$item->id"
-                                                judul="Tandatangani daftar pengeluaran riil ini?"
-                                                :ringkas="$usulan->no_usulan.' · Rp '.number_format($item->total_riil, 0, ',', '.')"
-                                                :aksi-tanda-tangan="route('daftar-riil.tanda-tangan', [$usulan->no_usulan, $item->id_peserta])"
-                                                :aksi-kembalikan="route('daftar-riil.kembalikan', [$usulan->no_usulan, $item->id_peserta])" />
+                                            {{-- Peran yang hanya melihat persetujuan tidak ikut menandatangani. --}}
+                                            @can('menandatangani-daftar-riil')
+                                                <x-aksi-tanda-tangan
+                                                    :nama="'riil-'.$item->id"
+                                                    judul="Tandatangani daftar pengeluaran riil ini?"
+                                                    :ringkas="$usulan->no_usulan.' · Rp '.number_format($item->total_riil, 0, ',', '.')"
+                                                    :aksi-tanda-tangan="route('daftar-riil.tanda-tangan', [$usulan->no_usulan, $item->id_peserta])"
+                                                    :aksi-kembalikan="route('daftar-riil.kembalikan', [$usulan->no_usulan, $item->id_peserta])" />
+                                            @else
+                                                <span class="text-xs text-slate-400">Menunggu tanda tangan PPK</span>
+                                            @endcan
                                         @endif
 
                                         @if ($item->sudah_ditandatangani)

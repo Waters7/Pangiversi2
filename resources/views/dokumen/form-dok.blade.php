@@ -458,7 +458,12 @@
                     </div>
 
                     <div class="p-6 space-y-5">
-                        @if ($minta(\App\Enums\BerkasLpj::BillHotel))
+                        @if ($minta(\App\Enums\BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan())
+                        <p class="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 leading-relaxed" data-tanpa-bill-hotel>
+                            Penginapan sudah termasuk biaya penyelenggaraan (bagian 5), jadi bill hotel tidak perlu diunggah
+                            dan uang penginapan tidak dibayarkan terpisah.
+                        </p>
+                        @elseif ($minta(\App\Enums\BerkasLpj::BillHotel))
                         <x-unggah-berkas
                             nama="bill_hotel"
                             label="Bill hotel"
@@ -466,6 +471,9 @@
                             terima=".pdf,.jpg,.jpeg,.png"
                             keterangan="PDF, JPG, atau PNG — maks. 2 MB."
                             :terkunci="$terkunci" />
+                        <p class="-mt-3 text-[11px] text-slate-500">
+                            Penginapan dibayar lewat biaya penyelenggaraan? Nyatakan pada bagian 5 — bill hotel lalu tidak perlu diunggah.
+                        </p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -587,6 +595,19 @@
                                 terima=".pdf,.jpg,.jpeg,.png"
                                 keterangan="Kuitansi, invoice lunas, atau bukti transfer — PDF, JPG, atau PNG, maks. 2 MB."
                                 :terkunci="$terkunci" />
+
+                            {{-- Hotel yang sudah dibayar lewat paket penyelenggaraan tidak
+                                 ditagih bill hotelnya dan tidak dibayarkan dua kali. --}}
+                            <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                                <input type="hidden" name="penyelenggaraan_termasuk_penginapan" value="0">
+                                <input type="checkbox" name="penyelenggaraan_termasuk_penginapan" value="1" @disabled($terkunci)
+                                       @checked(old('penyelenggaraan_termasuk_penginapan', $dokumen?->penyelenggaraan_termasuk_penginapan))
+                                       class="mt-0.5 rounded text-teal-500 focus:ring-teal-400">
+                                <span class="text-sm text-slate-700">
+                                    <span class="font-semibold">Sudah termasuk penginapan (hotel)</span>
+                                    <span class="block text-xs text-slate-500 mt-0.5">Bill hotel pada bagian 4 tidak perlu diunggah, dan uang penginapan tidak dibayarkan terpisah.</span>
+                                </span>
+                            </label>
                         </div>
 
                         @unless ($terkunci)

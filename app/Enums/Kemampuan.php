@@ -33,9 +33,24 @@ enum Kemampuan: string
      */
     case MemvalidasiBiaya = 'memvalidasi-biaya';
 
+    /**
+     * Menghapus komponen pada tabel rincian biaya detail keuangan.
+     *
+     * Dipisahkan dari MengelolaBiaya supaya sebuah peran dapat diberi hak
+     * menyusun dan mengoreksi angka tanpa hak membuang barisnya.
+     */
+    case MenghapusRincianBiaya = 'menghapus-rincian-biaya';
+
     case MencatatPembayaran = 'mencatat-pembayaran';
 
     case MenandatanganiDaftarRiil = 'menandatangani-daftar-riil';
+
+    /**
+     * Membuka menu Persetujuan — rincian biaya, daftar riil, daftar
+     * nominatif, dan riwayat tanda tangan — tanpa ikut menandatangani.
+     * Yang berhak menandatangani dengan sendirinya boleh membukanya.
+     */
+    case MelihatPersetujuan = 'melihat-persetujuan';
 
     case MelihatJadwalPerjalanan = 'melihat-jadwal-perjalanan';
 
@@ -122,12 +137,14 @@ enum Kemampuan: string
             self::MelihatKeuangan => 'Melihat data keuangan',
             self::MengelolaBiaya => 'Menginput rincian biaya',
             self::MemvalidasiBiaya => 'Memvalidasi nominal biaya',
+            self::MenghapusRincianBiaya => 'Menghapus komponen rincian biaya',
             self::MencatatPembayaran => 'Mencatat pembayaran dan bukti bayar',
             self::MelihatPembayaran => 'Membuka menu pembayaran bendahara',
             self::MengubahTanggalSpd => 'Mengubah tanggal terbit SPD',
             self::MengisiPengikutSpd => 'Mengisi pengikut pada SPD',
             self::MengonfirmasiLaporanPerjadin => 'Mengonfirmasi laporan perjalanan dinas',
             self::MenandatanganiDaftarRiil => 'Menandatangani daftar pengeluaran riil',
+            self::MelihatPersetujuan => 'Melihat persetujuan dan riwayat tanda tangan',
             self::MelihatJadwalPerjalanan => 'Melihat jadwal keberangkatan',
             self::MelihatDashboardEksekutif => 'Melihat dashboard eksekutif',
             self::MelihatLaporan => 'Melihat laporan dan rekap',
@@ -158,12 +175,30 @@ enum Kemampuan: string
             self::MelihatDashboardEksekutif,
             self::MelihatLaporan,
             self::MelihatArsipPerjadin,
-            self::MelihatJejakAudit => JenisAkses::Lihat,
+            self::MelihatJejakAudit,
+            self::MelihatPersetujuan => JenisAkses::Lihat,
 
             self::MenghapusMasterData,
-            self::MenghapusPengguna => JenisAkses::Hapus,
+            self::MenghapusPengguna,
+            self::MenghapusRincianBiaya => JenisAkses::Hapus,
 
             default => JenisAkses::Ubah,
+        };
+    }
+
+    /**
+     * Kemampuan lain yang dengan sendirinya mencakup kemampuan ini.
+     *
+     * Yang berhak menandatangani persetujuan tentu boleh membuka menunya,
+     * meski kotak "lihat"-nya tidak dicentang pada matriks hak akses.
+     *
+     * @return list<self>
+     */
+    public function tercakupOleh(): array
+    {
+        return match ($this) {
+            self::MelihatPersetujuan => [self::MenandatanganiDaftarRiil],
+            default => [],
         };
     }
 }

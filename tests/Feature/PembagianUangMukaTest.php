@@ -2,16 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CaraBayarBiaya;
 use App\Enums\KategoriBiaya;
 use App\Enums\PeranPengguna;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\PesertaUsulan;
+use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -213,5 +218,139 @@ class PembagianUangMukaTest extends TestCase
             ->assertOk()
             ->assertSee(route('daftar-riil.kirim-pegawai', [$this->usulan->no_usulan, $peserta]))
             ->assertDontSee('belum divalidasi');
+    }
+
+    // ── Cara bayar tiap komponen ──
+
+    private function baris(string $komponen): RincianBiaya
+    {
+        return $this->keuangan->rincianBiaya()->where('komponen', $komponen)->sole();
+    }
+
+    private function aturCaraBayar(RincianBiaya $baris, CaraBayarBiaya $cara, ?User $oleh = null): TestResponse
+    {
+        return $this->actingAs($oleh ?? User::factory()->create(['role' => PeranPengguna::TimKeuangan->value]))
+            ->put(route('keuangan.rincian.cara-bayar', [$this->usulan, $baris]), ['cara_bayar' => $cara->value]);
+    }
+
+    /**
+     * Tiket yang sudah dibayar pelaksana dengan uangnya sendiri diganti saat
+     * pelunasan, jadi masuk sisa bayar — bukan uang muka.
+     */
+    public function test_komponen_dibayar_pelaksana_dahulu_masuk_sisa_bayar(): void
+    {
+        $this->tambah(KategoriBiaya::Transport, 'Tiket Pergi', 2_450_000);
+        $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_590_000);
+
+        $this->aturCaraBayar($this->baris('Tiket Pergi'), CaraBayarBiaya::Penggantian)->assertSessionHas('success');
+
+        $keuangan = $this->keuangan->fresh();
+        $this->assertSame(2_768_000.0, $keuangan->sisa);
+        $this->assertSame(1_272_000.0, $keuangan->uang_muka);
+        $this->assertNotNull($this->baris('Tiket Pergi')->cara_bayar_dikonfirmasi_at);
+    }
+
+    public function test_uang_harian_tidak_memakai_pilihan_cara_bayar(): void
+    {
+        $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_590_000);
+
+        $this->aturCaraBayar($this->baris('Uang harian'), CaraBayarBiaya::Penggantian)->assertSessionHas('error');
+
+        $this->assertNull($this->baris('Uang harian')->cara_bayar);
+    }
+
+    public function test_cara_bayar_dikonfirmasi_tim_keuangan_bukan_bendahara(): void
+    {
+        $this->tambah(KategoriBiaya::Transport, 'Tiket Pergi', 2_450_000);
+
+        $this->aturCaraBayar(
+            $this->baris('Tiket Pergi'),
+            CaraBayarBiaya::Penggantian,
+            User::factory()->create(['role' => PeranPengguna::Bendahara->value]),
+        )->assertForbidden();
+
+        $this->assertNull($this->baris('Tiket Pergi')->cara_bayar);
+    }
+
+    /** Nominal pelaksana yang belum diperiksa tampil, tetapi belum dibayarkan. */
+    public function test_nominal_pelaksana_baru_terhitung_setelah_divalidasi(): void
+    {
+        $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_000_000);
+        $tiket = $this->keuangan->rincianBiaya()->create([
+            'kategori' => KategoriBiaya::Transport->value, 'komponen' => 'Tiket Pergi', 'volume' => 1, 'satuan' => 'OK',
+            'harga_satuan' => 2_450_000, 'jumlah' => 2_450_000,
+            'sumber' => RincianBiaya::SUMBER_DOKUMEN, 'kunci_sumber' => 'tiket:pergi',
+        ]);
+        $this->keuangan->hitungTotal();
+
+        $this->assertSame(1_000_000.0, $this->keuangan->fresh()->total);
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::TimKeuangan->value]))
+            ->put(route('keuangan.rincian.validasi', [$this->usulan, $tiket]));
+
+        $this->assertSame(3_450_000.0, $this->keuangan->fresh()->total);
+    }
+
+    /**
+     * Uang muka yang sudah ditransfer tidak bergeser: komponen yang tercatat
+     * sesudahnya diganti saat pelunasan.
+     */
+    public function test_uang_muka_yang_sudah_ditransfer_tidak_bergeser(): void
+    {
+        Storage::fake('public');
+        $this->usulan->update(['status' => StatusUsulan::Disetujui->value]);
+        $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_000_000);
+        $tiketBelumDiperiksa = $this->keuangan->rincianBiaya()->create([
+            'kategori' => KategoriBiaya::Transport->value, 'komponen' => 'Tiket Pergi', 'volume' => 1, 'satuan' => 'OK',
+            'harga_satuan' => 2_450_000, 'jumlah' => 2_450_000,
+            'sumber' => RincianBiaya::SUMBER_DOKUMEN, 'kunci_sumber' => 'tiket:pergi',
+        ]);
+        $this->tambah(KategoriBiaya::Penginapan, 'Uang Penginapan', 800_000);
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::Bendahara->value]))
+            ->post(route('keuangan.bayar-uang-muka', $this->usulan), [
+                'tanggal_transfer' => '2026-10-01',
+                'bukti_transfer' => UploadedFile::fake()->create('transfer.pdf', 10, 'application/pdf'),
+            ])
+            ->assertSessionHas('success');
+
+        $this->keuangan->refresh();
+        $this->assertSame(1_600_000.0, $this->keuangan->uang_muka);
+        $this->assertSame(CaraBayarBiaya::UangMuka, $this->baris('Uang Penginapan')->cara_bayar);
+        $this->assertSame(CaraBayarBiaya::Penggantian, $tiketBelumDiperiksa->fresh()->cara_bayar);
+
+        // Tiket divalidasi, komponen baru tercatat, dan penginapan yang ikut
+        // uang muka dikoreksi sesudah transfer: seluruhnya jatuh pada sisa
+        // bayar, uang muka tetap.
+        $tiketBelumDiperiksa->update(['divalidasi_at' => now()]);
+        $this->baris('Uang Penginapan')->update(['harga_satuan' => 900_000, 'jumlah' => 900_000]);
+        $this->tambah(KategoriBiaya::Lainnya, 'Biaya lain', 100_000);
+
+        $keuangan = $this->keuangan->fresh();
+        $this->assertSame(1_600_000.0, $keuangan->uang_muka);
+        $this->assertSame(200_000.0 + 2_450_000.0 + 100_000.0 + 100_000.0, $keuangan->sisa);
+        $this->assertSame(CaraBayarBiaya::Penggantian, $this->baris('Biaya lain')->cara_bayar);
+
+        // Cara bayarnya tidak dapat dibalik lagi, tetapi masih dapat dikonfirmasi.
+        $this->aturCaraBayar($this->baris('Uang Penginapan'), CaraBayarBiaya::Penggantian)->assertSessionHas('error');
+        $this->aturCaraBayar($this->baris('Uang Penginapan'), CaraBayarBiaya::UangMuka)->assertSessionHas('success');
+        $this->assertSame(1_600_000.0, $this->keuangan->fresh()->uang_muka);
+    }
+
+    public function test_tabel_status_bayar_dan_kartu_bendahara_tampil(): void
+    {
+        $this->tambah(KategoriBiaya::Transport, 'Tiket Pergi', 2_450_000);
+        $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_590_000);
+        $this->baris('Tiket Pergi')->update(['cara_bayar' => CaraBayarBiaya::Penggantian]);
+        $this->keuangan->hitungTotal();
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::Bendahara->value]))
+            ->get(route('keuangan.detail', $this->usulan->no_usulan))
+            ->assertOk()
+            ->assertSee('Status Pembayaran Komponen')
+            ->assertSee('Menunggu pelunasan — masuk sisa bayar')
+            ->assertSee('80% uang muka · 20% pelunasan')
+            ->assertSeeInOrder(['Penggantian saat pelunasan', 'Rp 2.450.000', '1 komponen dibayar pelaksana dahulu'])
+            ->assertSee('Cara bayar 1 komponen belum dikonfirmasi tim keuangan');
     }
 }

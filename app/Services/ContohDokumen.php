@@ -153,19 +153,15 @@ class ContohDokumen
         $keuangan->dikonfirmasi_bayar_at = $this->kembali->copy()->addDays(10);
 
         $totalBiaya = $biaya->sum('jumlah');
-        $totalTransportLokal = (int) $riil->total_riil;
 
         return [
             'usulan' => $usulan,
             'peserta' => $peserta,
             'rincianPerKategori' => $biaya->groupBy(fn (RincianBiaya $b) => $b->kategori),
             'total' => $totalBiaya,
-            'transportLokal' => $riil->rincian,
             'tanggalPelaksana' => $this->kembali->copy()->addDays(4),
-            'totalTransportLokal' => $totalTransportLokal,
-            'totalKeseluruhan' => $totalBiaya + $totalTransportLokal,
             'dibayarkan' => 5_000_000,
-            'terbilang' => app(Terbilang::class)->konversi($totalBiaya + $totalTransportLokal),
+            'terbilang' => app(Terbilang::class)->konversi($totalBiaya),
             'bendahara' => $this->pejabat('CONTOH — Bendahara Pengeluaran', 'Bendahara Pengeluaran'),
             'ppk' => $this->pejabat('CONTOH — Pejabat Pembuat Komitmen', 'Pejabat Pembuat Komitmen'),
             'daftarRiil' => $riil,
