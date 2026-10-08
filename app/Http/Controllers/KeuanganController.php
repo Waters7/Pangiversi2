@@ -19,6 +19,7 @@ use App\Services\AuditService;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PemegangNominal;
+use App\Services\PemulihRincian;
 use App\Services\PenagihDokumen;
 use App\Services\PencatatTransportLokal;
 use App\Services\PengaturanDokumen;
@@ -49,6 +50,7 @@ class KeuanganController extends Controller
         private PengirimanBerkas $pengiriman,
         private PemegangNominal $pemegang,
         private PencatatTransportLokal $transportLokal,
+        private PemulihRincian $pemulih,
     ) {}
 
     public function index(Request $request)
@@ -142,6 +144,15 @@ class KeuanganController extends Controller
                 'status' => 'belum bayar',
             ]);
             $usulan->load('peserta', 'daftarRiil.rincian', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
+        }
+
+        // Nominal yang diisi pelaksana harus selalu tampil pada tabelnya agar
+        // dapat diperiksa dan dikoreksi. Baris yang tertinggal — terhapus,
+        // atau penyalinannya dulu gagal — disalin ulang saat halaman dibuka.
+        if ($this->pemulih->perlu($usulan) && $this->kunci->unggahanPelaksana($usulan) === null) {
+            $this->pemulih->pulihkan($usulan);
+            $usulan->load('dokumen', 'peserta', 'daftarRiil.rincian', 'keuangan.rincianBiaya', 'keuangan.dokumenKeuangan');
+            session()->now('success', 'Nominal dari berkas pelaksana yang belum tercatat sudah disalin ke rincian biaya dan transport lokal.');
         }
 
         // Standar biaya dipakai untuk mengisi otomatis satuan dan harga di form rincian.
@@ -392,6 +403,13 @@ class KeuanganController extends Controller
         // Angka yang sudah ditandatangani tidak boleh bergeser: dokumen
         // tercetak dan daftar nominatif menumpang di atasnya.
         $this->kunci->pastikanRincianTerbuka($usulan);
+
+        // Baris dari berkas pelaksana tidak dihapus: ia akan tersalin lagi dari
+        // berkasnya. Yang tidak dibayarkan dikoreksi nominalnya.
+        if ($rincian->dariDokumen()) {
+            return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                ->with('error', "\"{$rincian->komponen}\" berasal dari berkas pelaksana, jadi tidak dihapus — koreksi nominalnya lewat tombol ubah (nol bila tidak dibayarkan), atau minta pelaksana mengubah isiannya.");
+        }
 
         $komponen = $rincian->komponen;
         $rincian->delete();

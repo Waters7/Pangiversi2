@@ -24,6 +24,7 @@ class RincianBiaya extends Model
         'keterangan',
         'sumber',
         'kunci_sumber',
+        'isi_berkas',
         'isian_pelaksana',
         'divalidasi_at',
         'id_validator',
@@ -44,6 +45,7 @@ class RincianBiaya extends Model
         return [
             'kategori' => KategoriBiaya::class,
             'isian_pelaksana' => IsianBiaya::class,
+            'isi_berkas' => 'array',
             'harga_satuan' => 'float',
             'jumlah' => 'float',
             'divalidasi_at' => 'datetime',

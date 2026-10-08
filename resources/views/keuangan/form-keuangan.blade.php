@@ -260,6 +260,13 @@
                                     {{ $item->komponen }}
                                     @if ($item->dariDokumen())
                                         <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Nominal dari pelaksana</span>
+                                        {{-- Koreksi tim keuangan tetap bertahan; angka asli pelaksana
+                                             disebut supaya selisihnya terbaca. --}}
+                                        @if (isset($isianPelaksana[$item->kunci_sumber]) && (float) $isianPelaksana[$item->kunci_sumber] !== (float) $item->jumlah)
+                                            <span class="block text-[11px] font-semibold text-amber-600 mt-0.5">
+                                                Dikoreksi tim keuangan — isian pelaksana Rp {{ number_format($isianPelaksana[$item->kunci_sumber], 0, ',', '.') }}
+                                            </span>
+                                        @endif
                                     @elseif ($item->isianYangDiwakili() !== [])
                                         <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Mengunci isian {{ $item->isian_pelaksana->label() }} pada berkas pelaksana</span>
                                     @elseif ($item->kategori === \App\Enums\KategoriBiaya::Transport && $item->isian_pelaksana === null)
@@ -314,6 +321,8 @@
                                                     <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
                                             </button>
+                                            {{-- Baris dari berkas pelaksana dikoreksi, tidak dihapus. --}}
+                                            @unless ($item->dariDokumen())
                                             <form action="{{ route('keuangan.rincian.destroy', [$usulan->no_usulan, $item->id]) }}" method="POST"
                                                   onsubmit="return confirm('Hapus komponen ini?')">
                                                 @csrf @method('DELETE')
@@ -323,6 +332,7 @@
                                                     </svg>
                                                 </button>
                                             </form>
+                                            @endunless
                                         </div>
                                     </td>
                                 @endif

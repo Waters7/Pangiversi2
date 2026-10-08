@@ -60,23 +60,41 @@ class SinkronBiayaDokumen
                 $keuangan->rincianBiaya()->create($baris + [
                     'sumber' => RincianBiaya::SUMBER_DOKUMEN,
                     'kunci_sumber' => $kunci,
+                    'isi_berkas' => $baris,
                 ]);
                 $hasil['ditambah']++;
 
                 continue;
             }
 
+            // Baris dari sebelum pembanding ini ada diadopsi apa adanya:
+            // isinya bisa jadi sudah dikoreksi tim keuangan.
+            if ($lama->isi_berkas === null) {
+                $lama->update(['isi_berkas' => $baris]);
+
+                continue;
+            }
+
+            // Hanya kolom yang diubah pelaksana sejak penyalinan terakhir yang
+            // ditulis; koreksi tim keuangan atas kolom lain tetap bertahan.
+            $diubah = array_filter(
+                $baris,
+                fn ($nilai, string $kolom) => ! $this->sama($lama->isi_berkas[$kolom] ?? null, $nilai),
+                ARRAY_FILTER_USE_BOTH,
+            );
+
+            if ($diubah === []) {
+                continue;
+            }
+
             // Nominal yang berubah setelah divalidasi harus diperiksa ulang.
             // Tanpa ini, pelaksana dapat menaikkan angka yang sudah disetujui
             // dan perubahannya lolos tanpa dilihat siapa pun.
-            $berubah = (float) $lama->jumlah !== (float) $baris['jumlah']
-                || $lama->komponen !== $baris['komponen'];
+            $periksaUlang = array_key_exists('jumlah', $diubah) || array_key_exists('komponen', $diubah);
 
-            $lama->update($baris + ($berubah ? ['divalidasi_at' => null, 'id_validator' => null] : []));
-
-            if ($lama->wasChanged()) {
-                $hasil['diperbarui']++;
-            }
+            $lama->update($diubah + ['isi_berkas' => $baris]
+                + ($periksaUlang ? ['divalidasi_at' => null, 'id_validator' => null] : []));
+            $hasil['diperbarui']++;
         }
 
         // Nominal yang dikosongkan pelaksana ikut dicabut dari rincian.
@@ -330,6 +348,17 @@ class SinkronBiayaDokumen
     public function seluruhnyaTervalidasi(Usulan $usulan): bool
     {
         return $this->menungguValidasi($usulan)->isEmpty();
+    }
+
+    /**
+     * Dua isian berkas sama — angka dibandingkan sebagai angka, supaya
+     * 1200000 dan 1200000.0 tidak terbaca berubah.
+     */
+    private function sama(mixed $lama, mixed $baru): bool
+    {
+        return is_numeric($lama) && is_numeric($baru)
+            ? (float) $lama === (float) $baru
+            : $lama === $baru;
     }
 
     private function keuangan(Usulan $usulan): Keuangan

@@ -136,6 +136,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.21',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Nominal yang diisi pelaksana — tiket, bill hotel, biaya penyelenggaraan — selalu tampil pada tabel rincian biaya agar dapat dikoreksi tim keuangan; baris yang tertinggal disalin kembali saat halamannya dibuka, dan baris dari berkas pelaksana tidak dapat dihapus.',
+                    'Koreksi tim keuangan atas nominal pelaksana tidak lagi tertimpa ketika pelaksana menyimpan ulang berkasnya; baru berubah bila pelaksana mengubah nominal itu sendiri. Isian asli pelaksana tetap disebut di bawah baris yang dikoreksi.',
+                ],
+            ],
+            [
                 'versi' => '2.5.20',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [

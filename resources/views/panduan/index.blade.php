@@ -615,7 +615,10 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Validasi tiap komponen">
-                Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
+                Nominal yang diisi pelaksana selalu tampil sebagai baris dan dapat Anda koreksi lewat tombol
+                ubah; koreksinya tetap bertahan meski pelaksana menyimpan ulang berkasnya, kecuali pelaksana
+                mengubah nominal itu sendiri. Baris dari berkas pelaksana tidak dihapus — beri nominal nol bila
+                tidak dibayarkan. Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
                 validasi tersimpan, memuat komponen dan nominal yang akan dinyatakan benar;
                 mencabut validasi juga dikonfirmasi dan tercatat pada jejak audit.
             </x-panduan-langkah>
