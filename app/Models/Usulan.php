@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class Usulan extends Model
 {
@@ -297,6 +298,91 @@ class Usulan extends Model
     public function bolehDisunting(): bool
     {
         return $this->status_enum->bolehDisunting();
+    }
+
+    /**
+     * Usulan lain milik pelaksana yang sama untuk perjalanan yang sama —
+     * tanggal berangkat dan kembali sama, serta surat tugas atau SPD sama.
+     * Biasanya terjadi karena usulan yang sama terkirim dua kali.
+     */
+    public function kembaran(): ?self
+    {
+        return self::kembaranUntuk(collect([$this]))[$this->id] ?? null;
+    }
+
+    /**
+     * Kembaran tiap usulan dalam satu daftar, dicari dengan satu kueri —
+     * daftar usulan memeriksanya untuk setiap baris.
+     *
+     * @param  Collection<int, self>  $daftar
+     * @return array<int, self> Id usulan => kembarannya yang paling lama.
+     */
+    public static function kembaranUntuk(Collection $daftar): array
+    {
+        if ($daftar->isEmpty()) {
+            return [];
+        }
+
+        $kunci = fn (self $usulan) => $usulan->id_user.'|'.Carbon::parse($usulan->tanggal_mulai)->toDateString()
+            .'|'.Carbon::parse($usulan->tanggal_selesai)->toDateString();
+
+        $calon = self::query()
+            ->whereIn('id_user', $daftar->pluck('id_user')->unique()->all())
+            ->whereIn('tanggal_mulai', $daftar->map(fn (self $usulan) => $usulan->getRawOriginal('tanggal_mulai'))->unique()->all())
+            ->orderBy('id')
+            ->get(['id', 'id_user', 'no_usulan', 'tanggal_mulai', 'tanggal_selesai', 'no_tugas', 'id_spd'])
+            ->groupBy($kunci);
+
+        $hasil = [];
+
+        foreach ($daftar as $usulan) {
+            $kembar = ($calon->get($kunci($usulan)) ?? collect())->first(fn (self $lain) => $lain->id !== $usulan->id
+                && ((blank($usulan->no_tugas) && ! $usulan->id_spd)
+                    || (filled($usulan->no_tugas) && $lain->no_tugas === $usulan->no_tugas)
+                    || ($usulan->id_spd && $lain->id_spd === $usulan->id_spd)));
+
+            if ($kembar) {
+                $hasil[$usulan->id] = $kembar;
+            }
+        }
+
+        return $hasil;
+    }
+
+    /**
+     * Usulan kembar boleh dihapus pelaksana walau sudah diajukan — selama
+     * belum ada uang yang keluar dan berkasnya belum ditandatangani PPK.
+     */
+    public function bolehDihapusSebagaiDuplikat(): bool
+    {
+        if ($this->status_enum === StatusUsulan::Selesai || $this->keuangan?->uangMukaTerbayar()) {
+            return false;
+        }
+
+        if ($this->keuangan?->riwayatPembayaran()->exists()) {
+            return false;
+        }
+
+        if (DaftarRiil::where('id_usulan', $this->id)->sudahDitandatangani()->exists()) {
+            return false;
+        }
+
+        return $this->kembaran() !== null;
+    }
+
+    /**
+     * Usulan ini milik pengguna itu — sebagai pelaksana, pembuatnya, atau
+     * peserta rombongannya — atau ia super administrator.
+     *
+     * Hak "Melihat seluruh usulan" hanya membuka daftarnya; menyunting dan
+     * menghapus tetap urusan pihak yang terkait dengan usulan.
+     */
+    public function bolehDikelolaOleh(User $pengguna): bool
+    {
+        return $pengguna->isAdmin()
+            || $this->id_user === $pengguna->id
+            || $this->id_pembuat === $pengguna->id
+            || $this->peserta->contains('id_user', $pengguna->id);
     }
 
     /**

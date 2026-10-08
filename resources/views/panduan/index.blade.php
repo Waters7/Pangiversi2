@@ -307,6 +307,11 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Pilih kategori perjalanan dengan benar">
+                <span class="block mb-1.5">
+                    SPD yang berangkutan <strong>udara</strong> atau <strong>laut</strong> pasti perjalanan luar
+                    kota: kategori dalam kota tertutup dan usulannya ditolak bila tetap dipilih. Bila muncul
+                    peringatan itu, periksa lagi apakah SPD yang dipilih memang benar.
+                </span>
                 Kategori menentukan berkas apa yang nanti ditagih sistem. Perjalanan
                 <strong>dalam kota</strong> tidak akan diminta tiket, penginapan, maupun kuitansi
                 penyelenggara / hotel;
@@ -334,6 +339,11 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="7" judul="Pantau di Daftar Usulan Perjadin" :terakhir="true">
+                <span class="block mb-1.5">
+                    Usulan yang terkirim dua kali — pelaksana, tanggal, dan surat tugas atau SPD-nya sama —
+                    ditandai <strong>Duplikat</strong>. Hapus salah satunya sendiri, walau sudah diajukan,
+                    selama belum ada pembayaran dan berkasnya belum ditandatangani PPK.
+                </span>
                 Usulan yang terkirim langsung tampil berstatus <strong>Konfirmasi</strong>, beserta tahap
                 berikutnya yang sedang ditunggu &mdash; biasanya pembayaran uang muka. Tombol mata di kolom Aksi
                 membuka detail dan pelacakan berkasnya.
@@ -920,7 +930,11 @@
                     peran — bawaan maupun buatan — beserta matriks menu: tiap kemampuan berada pada
                     kolom <strong>Lihat</strong>, <strong>Ubah</strong>, atau <strong>Hapus</strong>
                     menunya. Centang yang diizinkan, lalu simpan; perubahan berlaku seketika bagi
-                    semua pengguna berperan itu dan tercatat pada jejak audit. Tombol
+                    semua pengguna berperan itu, tercatat pada jejak audit, dan dikabarkan kepada
+                    mereka lewat notifikasi yang menyebut hak akses apa saja yang ditambahkan dan
+                    dicabut beserta menunya. Hak <strong>Melihat seluruh usulan</strong> (Usulan
+                    Perjadin → Lihat) membuka daftar usulan semua pegawai; menyunting dan menghapus
+                    tetap hanya bagi pelaksana, pembuat, atau peserta usulannya. Tombol
                     <strong>Tambah Peran</strong> membuat peran baru (kodenya dibuat dari nama) yang
                     langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
                     tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh

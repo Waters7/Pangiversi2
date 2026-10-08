@@ -141,6 +141,10 @@ class KategoriPerjadinTest extends TestCase
     {
         $kategori = KategoriPerjadin::firstWhere('kode', 'DK-HDP');
 
+        // Perjalanan dalam kota memakai SPD berangkutan darat — SPD udara atau
+        // laut pasti ke luar kota.
+        $this->spdMilik($this->pengusul)->update(['alat_angkut' => 'Angkutan Darat']);
+
         $this->actingAs($this->pengusul)
             ->post(route('usulan.store'), $this->dataUsulan(['id_kategori_perjadin' => $kategori->id]));
 

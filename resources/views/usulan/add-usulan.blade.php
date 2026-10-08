@@ -75,6 +75,9 @@
             kategoriBerSpd: {{ Js::from($kategoriBerSpd) }},
             get butuhSpd() { return this.spdSelalu || this.kategoriBerSpd.includes(String(this.idKategori)); },
             get spd() { return this.daftarSpd.find(s => String(s.id) === String(this.idSpd)) ?? null; },
+            // SPD berangkutan udara atau laut pasti perjalanan luar kota.
+            get spdUdaraLaut() { return !! (this.spd && this.spd.udara_laut); },
+            kategoriDalamKota: {{ Js::from($kategoriPerjadin->flatten()->where('dalam_kota', true)->pluck('id')->map(fn ($id) => (string) $id)->values()) }},
             /*
               Salin isi SPD ke formulir. Kolom yang sudah ditulis saat membuat
               SPD tidak diketik ulang di sini — selain merepotkan, dua angka
@@ -84,6 +87,11 @@
             salinDariSpd() {
               const s = this.spd;
               if (! s) { return; }
+
+              // Kategori dalam kota tidak berlaku bagi SPD udara atau laut.
+              if (s.udara_laut && this.kategoriDalamKota.includes(String(this.idKategori))) {
+                this.idKategori = '';
+              }
 
               this.$refs.lokasi.value = s.tempat_tujuan ?? '';
               this.$refs.tanggalMulai.value = s.tanggal_berangkat ?? '';
@@ -408,8 +416,22 @@
                         </div>
 
                         {{-- Kategori Perjalanan Dinas — daftarnya disaring menurut jalur. --}}
-                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin" x-model="idKategori"
+                        <x-pilih-kategori-perjadin :kategori="$kategoriPerjadin" x-model="idKategori" tutup-dalam-kota="spdUdaraLaut"
                                                    keterangan="Hanya kategori untuk jalur {{ mb_strtolower($jenis->label()) }} yang ditampilkan." />
+
+                        {{-- SPD udara atau laut pasti luar kota: kategori dalam kota tertutup,
+                             supaya pelaksana sadar bila SPD yang dipilih keliru. --}}
+                        <div x-show="spdUdaraLaut" x-cloak class="-mt-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                            SPD terpilih memakai <strong x-text="spd?.alat_angkut"></strong> — perjalanan dengan angkutan udara atau
+                            laut adalah perjalanan <strong>luar kota</strong>, jadi kategori dalam kota tidak dapat dipilih.
+                            @if ($jenis === \App\Enums\JenisPerjadin::DalamKota)
+                                Bila SPD-nya benar, ajukan lewat
+                                <a href="{{ route('usulan.create', ['jenis' => \App\Enums\JenisPerjadin::LuarKota->value]) }}" class="font-semibold underline">Perjalanan Luar Kota</a>;
+                                bila keliru, pilih SPD perjalanan dalam kota yang sesuai.
+                            @else
+                                Bila SPD yang dipilih keliru, pilih SPD yang sesuai dengan perjalanan ini.
+                            @endif
+                        </div>
 
                         {{-- Lokasi Tujuan + Instansi --}}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

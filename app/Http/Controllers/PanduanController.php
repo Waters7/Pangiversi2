@@ -136,6 +136,23 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.19',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Usulan dengan SPD berangkutan udara atau laut wajib berkategori luar kota: kategori dalam kota tertutup pada formulir dan ditolak saat dikirim, supaya pelaksana tidak keliru memilih SPD.',
+                    'Usulan yang terkirim dua kali ditandai Duplikat pada daftar dan detail usulan, dan dapat dihapus sendiri oleh pelaksananya walau sudah diajukan — selama belum ada pembayaran dan belum ditandatangani PPK.',
+                    'Perbaikan: notifikasi dan jejak audit yang panjang tidak lagi gagal disimpan di MySQL (galat 500), misalnya pengingat berkas, pemberitahuan bendahara, dan perubahan hak akses.',
+                ],
+            ],
+            [
+                'versi' => '2.5.18',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Perbaikan: hak akses Melihat seluruh usulan yang diberikan lewat Peran & Hak Akses kini benar-benar membuka daftar Usulan Perjadin semua pegawai — sebelumnya hanya super administrator yang melihatnya. Menyunting dan menghapus tetap hanya bagi pelaksana, pembuat, atau peserta usulannya.',
+                    'Pengguna menerima notifikasi Hak akses Anda diperbarui setiap kali hak akses perannya diubah, menyebut apa saja yang ditambahkan dan dicabut beserta menunya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.17',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [

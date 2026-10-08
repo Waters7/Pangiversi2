@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Kegiatan;
 use App\Models\KomponenBiaya;
 use App\Models\LokasiTujuan;
 use App\Models\TahunAnggaran;
@@ -21,6 +22,18 @@ class MasterDataTest extends TestCase
     }
 
     // ── Kontrol akses ──
+
+    public function test_jenis_kegiatan_dapat_disunting(): void
+    {
+        $kegiatan = Kegiatan::create(['nama' => 'Rapat koordinasi']);
+
+        $this->actingAs($this->administrator())
+            ->put(route('kegiatan.update', $kegiatan), ['nama' => 'Rapat koordinasi wilayah'])
+            ->assertRedirect(route('kegiatan.index'))
+            ->assertSessionHas('success', 'Kegiatan "Rapat koordinasi wilayah" berhasil diperbarui.');
+
+        $this->assertSame('Rapat koordinasi wilayah', $kegiatan->fresh()->nama);
+    }
 
     public function test_halaman_master_data_menolak_pegawai_biasa(): void
     {

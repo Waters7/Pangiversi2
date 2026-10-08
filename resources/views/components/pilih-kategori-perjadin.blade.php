@@ -2,6 +2,9 @@
     'kategori' => collect(),
     'terpilih' => null,
     'keterangan' => null,
+    // Ekspresi Alpine: bila bernilai benar, kategori dalam kota tidak dapat
+    // dipilih — misalnya karena SPD-nya berangkutan udara atau laut.
+    'tutupDalamKota' => null,
 ])
 
 {{-- Kategori perjalanan dinas, dikelompokkan sesuai daftar resmi. --}}
@@ -23,7 +26,7 @@
             <optgroup label="{{ $grup }}">
                 @foreach ($daftar as $item)
                     <option value="{{ $item->id }}"
-                        @selected((string) old('id_kategori_perjadin', $terpilih) === (string) $item->id)>
+                        @selected((string) old('id_kategori_perjadin', $terpilih) === (string) $item->id)@if ($tutupDalamKota && $item->dalam_kota) x-bind:disabled="{{ $tutupDalamKota }}"@endif>
                         {{ $item->nama }}
                     </option>
                 @endforeach

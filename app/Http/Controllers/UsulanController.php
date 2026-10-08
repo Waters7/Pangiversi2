@@ -22,6 +22,7 @@ use App\Services\PelacakUsulan;
 use App\Services\PenomoranPerjadin;
 use App\Services\RekamPenghapusan;
 use App\Services\WorkflowUsulan;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,11 @@ class UsulanController extends Controller
         $status = $request->input('status');
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
-        $isAdmin = $request->user()->isAdmin();
+
+        // Hak akses "Melihat seluruh usulan" (menu Usulan Perjadin → Lihat)
+        // yang menentukan, bukan peran super administrator semata: peran yang
+        // diberi hak itu lewat Peran & Hak Akses ikut melihat usulan semua pegawai.
+        $lihatSemua = $request->user()->bisaMelihatSemuaUsulan();
 
         // Usulan milik sendiri maupun usulan kelompok yang mendaftarkan pengguna
         // ini sebagai peserta — keduanya masuk ke akun yang bersangkutan.
@@ -62,10 +67,10 @@ class UsulanController extends Controller
             });
         };
 
-        $myUsulan = Usulan::when(! $isAdmin, $terkaitSaya);
+        $myUsulan = Usulan::when(! $lihatSemua, $terkaitSaya);
 
         $usulan = Usulan::with('user', 'kegiatan', 'kategoriPerjadin', 'peserta', 'pembuat')
-            ->when(! $isAdmin, $terkaitSaya)
+            ->when(! $lihatSemua, $terkaitSaya)
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('no_usulan', 'like', "%{$search}%")
@@ -89,8 +94,18 @@ class UsulanController extends Controller
         // kueri tambahan per usulan.
         $this->pelacak->siapkan($usulan->getCollection());
 
-        $usulan->getCollection()->each(function (Usulan $item): void {
+        // Usulan yang terkirim dua kali ditandai, dan pelaksananya boleh
+        // menghapus salah satunya walau sudah diajukan. Dicari sekali untuk
+        // seluruh halaman, bukan per baris.
+        $kembaranHalaman = Usulan::kembaranUntuk($usulan->getCollection());
+
+        $usulan->getCollection()->each(function (Usulan $item) use ($kembaranHalaman): void {
             $item->langkah_berikutnya = $this->pelacak->langkahBerikutnya($item);
+
+            $kembaran = $kembaranHalaman[$item->id] ?? null;
+            $item->kembaran_id = $kembaran?->id;
+            $item->kembaran_no = $kembaran?->no_usulan;
+            $item->boleh_hapus_duplikat = $kembaran !== null && ! $item->bolehDisunting() && $item->bolehDihapusSebagaiDuplikat();
         });
 
         $totalUsulan = (clone $myUsulan)->count();
@@ -134,6 +149,7 @@ class UsulanController extends Controller
             'bulan',
             'tahunTersedia',
             'jumlahBulan',
+            'lihatSemua',
         ));
     }
 
@@ -241,6 +257,7 @@ class UsulanController extends Controller
                 'lama_hari' => $spd->lama_hari,
                 'maksud' => $spd->maksud,
                 'alat_angkut' => $spd->alat_angkut,
+                'udara_laut' => $spd->lewatUdaraAtauLaut(),
                 'instansi_pembebanan' => $spd->instansi_pembebanan,
                 // Rekan sepelaksana pada SPD yang sama — ditampilkan sebagai
                 // keterangan; masing-masing mengajukan usulannya sendiri.
@@ -252,6 +269,23 @@ class UsulanController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Kategori dalam kota ditolak bagi SPD berangkutan udara atau laut —
+     * supaya pelaksana tidak keliru memilih SPD atau kategorinya.
+     */
+    private function aturanAngkutanLuarKota(?SuratPerjalananDinas $spd): Closure
+    {
+        return function (string $atribut, mixed $nilai, Closure $gagal) use ($spd): void {
+            if (! $spd?->lewatUdaraAtauLaut() || ! KategoriPerjadin::find($nilai)?->dalam_kota) {
+                return;
+            }
+
+            $gagal("SPD yang dipilih memakai {$spd->alat_angkut} — perjalanan dengan angkutan udara atau laut adalah "
+                .'perjalanan luar kota, jadi kategorinya tidak boleh dalam kota. Pilih kategori luar kota, atau pilih '
+                .'SPD lain bila SPD ini keliru.');
+        };
     }
 
     public function show(Usulan $usulan)
@@ -281,6 +315,8 @@ class UsulanController extends Controller
 
     public function edit(Usulan $usulan)
     {
+        abort_unless($usulan->bolehDikelolaOleh(request()->user()), 403, 'Hanya pelaksana, pembuat, atau peserta usulan ini yang dapat menyuntingnya.');
+
         if (! $usulan->bolehDisunting() && ! request()->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
                 ->with('error', 'Usulan hanya dapat diedit selama berstatus draft, ditolak, atau perlu revisi.');
@@ -299,6 +335,8 @@ class UsulanController extends Controller
 
     public function update(Request $request, Usulan $usulan)
     {
+        abort_unless($usulan->bolehDikelolaOleh($request->user()), 403, 'Hanya pelaksana, pembuat, atau peserta usulan ini yang dapat menyuntingnya.');
+
         if (! $usulan->bolehDisunting() && ! $request->user()->isAdmin()) {
             return redirect()->route('usulan.show', $usulan)
                 ->with('error', 'Usulan hanya dapat diedit selama berstatus draft, ditolak, atau perlu revisi.');
@@ -314,7 +352,7 @@ class UsulanController extends Controller
 
         $request->validate([
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
-            'id_kategori_perjadin' => ['required', Rule::in($usulan->jalur()->idKategori())],
+            'id_kategori_perjadin' => ['required', Rule::in($usulan->jalur()->idKategori()), $this->aturanAngkutanLuarKota($usulan->spd)],
             'no_tugas' => ['required', 'string', 'max:255'],
             'no_spd' => [$butuhSpd ? 'required' : 'nullable', 'string', 'max:255', new NomorSpdUnik($usulan)],
             'spd_ditandatangani' => [$butuhSpd && ! $sudahAdaSpd ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
@@ -400,6 +438,10 @@ class UsulanController extends Controller
             : null;
         $suratTugasDariSpd = $spdTerpilih?->punyaSuratTugas() ?? false;
 
+        // Diingat sebelum dikosongkan di bawah: SPD udara atau laut tetap
+        // menandakan perjalanan luar kota, apa pun jalur yang dipilih.
+        $spdDipilih = $spdTerpilih;
+
         // Jalur yang dipilih pada langkah pertama menentukan berkas yang
         // diminta dan kategori perjadin yang boleh dipakai. Kiriman tanpa
         // jalur — draf lama atau pemanggilan langsung — disimpulkan dari
@@ -430,7 +472,7 @@ class UsulanController extends Controller
             'no_spd' => [$butuhSpd ? 'required' : 'nullable', 'string', 'max:255', new NomorSpdUnik],
             'spd_ditandatangani' => [$butuhSpd ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'id_kegiatan' => ['required', 'exists:kegiatan,id'],
-            'id_kategori_perjadin' => ['required', Rule::in($jenis->idKategori())],
+            'id_kategori_perjadin' => ['required', Rule::in($jenis->idKategori()), $this->aturanAngkutanLuarKota($spdDipilih)],
             'no_tugas' => [filled($spdTerpilih?->no_tugas) ? 'nullable' : 'required', 'string', 'max:255'],
             'lokasi' => ['required', 'string', 'max:255'],
             'instansi' => ['required', 'string', 'max:255'],
@@ -703,8 +745,15 @@ class UsulanController extends Controller
 
     public function destroy(Usulan $usulan)
     {
-        if (! $usulan->bolehDisunting() && ! request()->user()->isAdmin()) {
-            return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft, ditolak, atau perlu revisi.');
+        abort_unless($usulan->bolehDikelolaOleh(request()->user()), 403, 'Hanya pelaksana, pembuat, atau peserta usulan ini yang dapat menghapusnya.');
+
+        // Usulan kembar boleh dihapus walau sudah diajukan, selama belum ada
+        // pembayaran dan belum ditandatangani PPK.
+        $kembaran = $usulan->bolehDisunting() ? null : $usulan->kembaran();
+        $duplikat = $kembaran !== null && $usulan->bolehDihapusSebagaiDuplikat();
+
+        if (! $usulan->bolehDisunting() && ! $duplikat && ! request()->user()->isAdmin()) {
+            return back()->with('error', 'Usulan hanya dapat dihapus jika berstatus draft, ditolak, atau perlu revisi — atau bila usulan ini kembaran usulan lain yang belum dibayarkan.');
         }
 
         $noUsulan = $usulan->no_usulan;
@@ -715,7 +764,9 @@ class UsulanController extends Controller
 
         $usulan->delete();
 
-        return redirect()->route('usulan.list')->with('success', "Usulan {$noUsulan} berhasil dihapus.");
+        return redirect()->route('usulan.list')->with('success', $duplikat
+            ? "Usulan {$noUsulan} dihapus sebagai duplikat — usulan {$kembaran->no_usulan} tetap berjalan."
+            : "Usulan {$noUsulan} berhasil dihapus.");
     }
 
     /**

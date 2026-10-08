@@ -654,10 +654,26 @@
                     Kembali ke List
                 </a>
 
-                @if($usulan->bolehDisunting())
+                @php
+                    // Usulan yang terkirim dua kali boleh dihapus pelaksananya walau
+                    // sudah diajukan, selama belum dibayar dan belum ditandatangani PPK.
+                    $kembaran = $usulan->bolehDisunting() ? null : $usulan->kembaran();
+                    $hapusDuplikat = $kembaran !== null && $usulan->bolehDihapusSebagaiDuplikat();
+                @endphp
+
+                @if ($kembaran)
+                    <p class="px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-xs text-red-700 leading-relaxed">
+                        Usulan ini tampak kembar dengan
+                        <a href="{{ route('usulan.show', $kembaran) }}" class="font-semibold underline">{{ $kembaran->no_usulan }}</a>
+                        — pelaksana, tanggal, dan surat tugasnya sama.
+                        {{ $hapusDuplikat ? 'Hapus salah satunya agar tidak diproses dua kali.' : 'Salah satunya sudah dibayar atau ditandatangani, jadi hubungi tim keuangan.' }}
+                    </p>
+                @endif
+
+                @if(($usulan->bolehDisunting() || $hapusDuplikat) && $usulan->bolehDikelolaOleh(auth()->user()))
                     <form method="POST" action="{{ route('usulan.destroy', $usulan) }}"
                           x-data
-                          @submit.prevent="if(confirm('Hapus usulan {{ $usulan->no_usulan }}?\nTindakan ini tidak dapat dibatalkan.')) $el.submit()">
+                          @submit.prevent="if(confirm('Hapus usulan {{ $usulan->no_usulan }}{{ $hapusDuplikat ? ' sebagai duplikat' : '' }}?\nTindakan ini tidak dapat dibatalkan.')) $el.submit()">
                         @csrf
                         @method('DELETE')
                         <button type="submit"

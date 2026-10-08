@@ -69,6 +69,18 @@ class SuratPerjalananDinas extends Model
     }
 
     /**
+     * SPD ini berangkutan udara atau laut — perjalanan yang pasti ke luar
+     * kota, jadi usulannya tidak boleh berkategori dalam kota.
+     */
+    public function lewatUdaraAtauLaut(): bool
+    {
+        $alat = mb_strtolower((string) $this->alat_angkut);
+
+        return str_contains($alat, 'udara') || str_contains($alat, 'laut')
+            || str_contains($alat, 'pesawat') || str_contains($alat, 'kapal');
+    }
+
+    /**
      * @return HasMany<SpdPelaksana, $this>
      */
     public function pelaksana(): HasMany

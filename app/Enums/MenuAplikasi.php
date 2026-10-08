@@ -108,6 +108,20 @@ enum MenuAplikasi: string
     }
 
     /**
+     * Menu tempat sebuah kemampuan berada pada matriks hak akses.
+     */
+    public static function untuk(Kemampuan $kemampuan): ?self
+    {
+        foreach (self::cases() as $menu) {
+            if (in_array($kemampuan, $menu->kemampuan(), true)) {
+                return $menu;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Setiap kemampuan harus punya tepat satu menu, supaya tidak ada yang
      * luput dari matriks. Dipakai uji otomatis.
      *

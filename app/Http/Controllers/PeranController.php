@@ -6,8 +6,11 @@ use App\Enums\JenisAkses;
 use App\Enums\Kemampuan;
 use App\Enums\MenuAplikasi;
 use App\Models\AuditLog;
+use App\Models\Notifikasi;
 use App\Models\Peran;
+use App\Models\User;
 use App\Services\AuditService;
+use App\Services\NotifikasiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,7 +23,10 @@ use Illuminate\View\View;
  */
 class PeranController extends Controller
 {
-    public function __construct(private AuditService $audit) {}
+    public function __construct(
+        private AuditService $audit,
+        private NotifikasiService $notifikasi,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -92,9 +98,12 @@ class PeranController extends Controller
 
         $this->audit->catat(AuditLog::AKSI_PENGGUNA, $this->uraianPerubahan($peran, $sebelum, $sesudah));
 
+        $diberiTahu = $this->beritahuPemegangPeran($request->user(), $peran, $sebelum, $sesudah);
+
         return redirect()
             ->route('administrasi.peran', ['peran' => $peran->kode])
-            ->with('success', "Hak akses peran \"{$peran->nama}\" tersimpan.");
+            ->with('success', "Hak akses peran \"{$peran->nama}\" tersimpan."
+                .($diberiTahu > 0 ? " {$diberiTahu} pengguna peran ini diberi tahu perubahannya." : ''));
     }
 
     /**
@@ -120,6 +129,51 @@ class PeranController extends Controller
      * @param  list<string>  $sebelum
      * @param  list<string>  $sesudah
      */
+    /**
+     * Pengguna yang memegang peran ini diberi tahu hak akses apa saja yang
+     * ditambahkan dan dicabut, beserta menunya — tanpa itu mereka tidak tahu
+     * mengapa menunya berubah, atau bahwa ada menu yang kini terbuka.
+     *
+     * @param  list<string>  $sebelum
+     * @param  list<string>  $sesudah
+     * @return int Jumlah pengguna yang diberi tahu.
+     */
+    private function beritahuPemegangPeran(User $pengubah, Peran $peran, array $sebelum, array $sesudah): int
+    {
+        $uraikan = fn (array $nilai) => implode('; ', array_map(function (string $kode): string {
+            $kemampuan = Kemampuan::from($kode);
+            $menu = MenuAplikasi::untuk($kemampuan);
+
+            return $kemampuan->label().($menu ? " (menu {$menu->label()})" : '');
+        }, array_values($nilai)));
+
+        $ditambah = array_diff($sesudah, $sebelum);
+        $dicabut = array_diff($sebelum, $sesudah);
+
+        if ($ditambah === [] && $dicabut === []) {
+            return 0;
+        }
+
+        $pesan = "Hak akses peran {$peran->nama} diperbarui oleh {$pengubah->nama}.";
+
+        if ($ditambah !== []) {
+            $pesan .= ' Ditambahkan: '.$uraikan($ditambah).'.';
+        }
+
+        if ($dicabut !== []) {
+            $pesan .= ' Dicabut: '.$uraikan($dicabut).'.';
+        }
+
+        $pesan .= ' Perubahan langsung berlaku; muat ulang halaman bila menunya belum berubah.';
+
+        return $this->notifikasi->kirimKePeran(
+            [$peran->kode],
+            'Hak akses Anda diperbarui',
+            $pesan,
+            ['tipe' => Notifikasi::TIPE_INFO, 'url' => route('dashboard')],
+        )->count();
+    }
+
     private function uraianPerubahan(Peran $peran, array $sebelum, array $sesudah): string
     {
         $label = fn (string $nilai) => Kemampuan::from($nilai)->label();
