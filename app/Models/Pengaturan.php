@@ -79,6 +79,27 @@ class Pengaturan extends Model
     public const INTEGRASI_HARI = 'integrasi_hari';
 
     /**
+     * Peringatan WhatsApp saat aplikasi tidak dapat diakses (menu
+     * Pemantauan Server): sakelar, nomor penerima, gateway beserta tokennya
+     * (rahasia, terenkripsi), alamat peladen Wablas, dan jeda pengingat
+     * selama gangguan belum pulih.
+     */
+    public const PERINGATAN_AKTIF = 'peringatan_server_aktif';
+
+    public const PERINGATAN_NOMOR = 'peringatan_server_nomor';
+
+    public const PERINGATAN_ULANG_MENIT = 'peringatan_server_ulang_menit';
+
+    public const WA_GATEWAY = 'wa_gateway';
+
+    public const WA_TOKEN = 'wa_token';
+
+    public const WA_URL_WABLAS = 'wa_url_wablas';
+
+    /** Kuota penyimpanan akun hosting dalam MB — pembanding ukuran aplikasi. */
+    public const KUOTA_PENYIMPANAN_MB = 'kuota_penyimpanan_mb';
+
+    /**
      * Nilai bawaan bila belum pernah diatur.
      *
      * @var array<string, string>
@@ -93,6 +114,9 @@ class Pengaturan extends Model
         self::INTEGRASI_JADWAL => 'harian',
         self::INTEGRASI_JAM => '06:00',
         self::INTEGRASI_HARI => '1',
+        self::PERINGATAN_AKTIF => '0',
+        self::PERINGATAN_ULANG_MENIT => '60',
+        self::WA_GATEWAY => 'fonnte',
     ];
 
     private const CACHE = 'pengaturan.semua';

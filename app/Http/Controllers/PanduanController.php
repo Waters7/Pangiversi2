@@ -136,6 +136,15 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.15',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Rincian biaya tidak lagi mencatat satu komponen dua kali. Nominal tiket, bill hotel, atau biaya penyelenggaraan yang ditetapkan tim keuangan mengunci kolom nominal yang sama pada berkas pelaksana; sebaliknya komponen yang sudah diisi pelaksana beserta buktinya tidak dapat ditambahkan tim keuangan. Baris transport tim keuangan kini menyebut tiket yang diwakilinya — pergi, pulang, PP, atau bukan tiket pelaksana — dan transport lokal tidak lagi ditulis di rincian biaya karena berasal dari nota pelaksana.',
+                    'Administrasi Sistem → Pemantauan Server (super administrator): ukuran aplikasi di peladen — berkas unggahan per jenis, basis data, log, pustaka — beserta pertumbuhan hariannya dan pemakaian kuota hosting.',
+                    'Peringatan WhatsApp otomatis saat aplikasi tidak dapat diakses: situs, basis data, dan penyimpanan diperiksa tiap menit; nomor yang diatur menerima peringatan, pengingat selama belum pulih, dan kabar saat kembali normal, lewat gateway Fonnte atau Wablas.',
+                ],
+            ],
+            [
                 'versi' => '2.5.14',
                 'tanggal' => '6 Oktober 2026',
                 'butir' => [

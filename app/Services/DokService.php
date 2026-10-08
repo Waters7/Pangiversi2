@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ArahTiket;
+use App\Enums\IsianBiaya;
 use App\Enums\RuasTransport;
 use App\Models\Dokumen;
 use App\Models\Usulan;
@@ -14,7 +15,10 @@ use Illuminate\Support\Facades\Storage;
  */
 class DokService
 {
-    public function __construct(private SinkronBiayaDokumen $sinkron) {}
+    public function __construct(
+        private SinkronBiayaDokumen $sinkron,
+        private PemegangNominal $pemegang,
+    ) {}
 
     /**
      * @return bool Berhasil menyimpan sesuatu.
@@ -59,6 +63,11 @@ class DokService
 
         $tiket = $usulan->tiket()->firstOrNew(['arah' => $arah->value]);
 
+        // Harga yang sudah ditetapkan tim keuangan tidak diisi lagi di sini:
+        // kolomnya terkunci dan nilai kiriman apa pun diabaikan, supaya tiket
+        // yang sama tidak tercatat dua kali pada rincian biaya.
+        $hargaDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::dariArah($arah));
+
         $data = $request->validate([
             'kota_asal' => ['required', 'string', 'max:100'],
             'kota_tujuan' => ['required', 'string', 'max:100'],
@@ -66,7 +75,7 @@ class DokService
             'kode_booking' => ['required', 'string', 'max:50'],
             // Harga yang dicatat adalah yang tertera pada tiket, sudah termasuk
             // pajak — bukan tarif dasar, supaya cocok dengan bukti bayarnya.
-            'harga' => ['required', 'numeric', 'min:0'],
+            'harga' => $hargaDariKeuangan ? ['nullable'] : ['required', 'numeric', 'min:0'],
             'boarding_pass' => [
                 $tiket->boarding_pass ? 'nullable' : 'required',
                 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
@@ -81,6 +90,10 @@ class DokService
             'boarding_pass.required' => 'Unggah boarding pass untuk tiket ini.',
             'invoice.required' => 'Unggah invoice pembelian tiket ini.',
         ]);
+
+        if ($hargaDariKeuangan) {
+            $data['harga'] = null;
+        }
 
         foreach (['boarding_pass' => 'dokumen/boarding-pass', 'invoice' => 'dokumen/invoice-tiket'] as $kolom => $folder) {
             if ($request->hasFile($kolom)) {
@@ -189,9 +202,12 @@ class DokService
         // formulirnya pun tidak memuat kolom itu — dulu aturannya tertinggal
         // di sini sehingga seksi ini menolak dengan pesan tentang kolom yang
         // tidak pernah ada di layar.
+        // Nominal penginapan yang ditetapkan tim keuangan mengunci kolom ini.
+        $nominalDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan);
+
         $this->simpanBerkas($request, $usulan, ['bill_hotel', 'kwintasi'], [
             'bill_hotel_no_transaksi' => $request->input('bill_hotel_no_transaksi') ?: null,
-            'bill_hotel_nominal' => $request->filled('bill_hotel_nominal')
+            'bill_hotel_nominal' => ! $nominalDariKeuangan && $request->filled('bill_hotel_nominal')
                 ? (float) $request->input('bill_hotel_nominal')
                 : null,
         ]);
@@ -212,9 +228,13 @@ class DokService
         $dokumen = $this->dokumen($usulan);
         $ada = (string) $request->input('penyelenggaraan_ada') === '1';
 
+        // Nominal yang ditetapkan tim keuangan tidak diisi pelaksana lagi;
+        // buktinya tetap diunggah.
+        $nominalDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penyelenggaraan);
+
         $request->validate([
             'penyelenggaraan_ada' => ['required', 'in:0,1'],
-            'penyelenggaraan_nominal' => [$ada ? 'required' : 'nullable', 'numeric', 'min:1'],
+            'penyelenggaraan_nominal' => [$ada && ! $nominalDariKeuangan ? 'required' : 'nullable', 'numeric', 'min:1'],
             'penyelenggaraan_invoice' => ['nullable', 'string', 'max:100'],
             'penyelenggaraan_bukti' => [
                 $ada ? $this->aturanBerkas($dokumen, 'penyelenggaraan_bukti') : 'nullable',
@@ -250,7 +270,7 @@ class DokService
 
         return $this->simpanBerkas($request, $usulan, ['penyelenggaraan_bukti'], [
             'penyelenggaraan_ada' => true,
-            'penyelenggaraan_nominal' => (float) $request->input('penyelenggaraan_nominal'),
+            'penyelenggaraan_nominal' => $nominalDariKeuangan ? null : (float) $request->input('penyelenggaraan_nominal'),
             'penyelenggaraan_invoice' => $request->input('penyelenggaraan_invoice') ?: null,
         ]);
     }

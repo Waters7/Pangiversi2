@@ -385,7 +385,11 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Unggah berkas sesuai wilayah perjalanan">
-                <span class="block mb-3">Daftar di bawah ini yang menentukan usulan boleh ditutup atau belum.</span>
+                <span class="block mb-3">
+                    Daftar di bawah ini yang menentukan usulan boleh ditutup atau belum. Bila nominal sebuah
+                    komponen — tiket, bill hotel, atau biaya penyelenggaraan — sudah ditetapkan tim keuangan,
+                    kolom nominalnya terkunci pada angka itu; Anda cukup mengunggah buktinya.
+                </span>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="rounded-xl border border-slate-200 overflow-hidden">
@@ -588,7 +592,11 @@
             <x-panduan-langkah nomor="2" judul="Buka Keuangan → Input Rincian Biaya">
                 Pilih usulan yang berkasnya sudah lengkap. Nominal dari dokumen yang diunggah
                 pelaksana sudah diselaraskan lebih dulu, jadi Anda memeriksa dan menyesuaikan —
-                bukan mengetik dari nol.
+                bukan mengetik dari nol. Satu komponen hanya dinominalkan satu pihak: tiket, bill
+                hotel, atau biaya penyelenggaraan yang sudah diisi pelaksana beserta buktinya tidak
+                dapat ditambahkan lagi, sedangkan nominal yang Anda tetapkan lebih dulu mengunci
+                isian pelaksana untuk komponen itu. Baris transport menyebut tiket yang diwakilinya
+                — tiket pergi, pulang, keduanya (PP), atau bukan tiket pelaksana.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Validasi tiap komponen">
@@ -950,7 +958,7 @@
                     diatur di sini.
                 </x-panduan-langkah>
 
-                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur pengingat dokumen" :terakhir="! $boleh['jejakAudit']">
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur pengingat dokumen">
                     Tenggang hari, jeda antar pengingat, dan batas jumlahnya diatur pada
                     <strong>Administrasi Sistem → Pengaturan Sistem</strong>. Angka tenggang inilah yang
                     dipakai dashboard saat menghitung batas penyerahan laporan. Di halaman yang sama,
@@ -961,6 +969,17 @@
                     pemantauan setiap permintaan yang masuk beserta token yang dibawanya, dan
                     pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan — setiap
                     perubahan dikonfirmasi lewat kotak dialog dan tercatat pada jejak audit.
+                </x-panduan-langkah>
+
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pantau server dan ukuran aplikasi" :terakhir="! $boleh['jejakAudit']">
+                    Submenu <strong>Pemantauan Server</strong> (super administrator) menampilkan ukuran
+                    aplikasi di peladen — berkas unggahan per jenis, basis data, log, dan pustaka — beserta
+                    pertumbuhannya dari hari ke hari dan pemakaian kuota hosting. Ukurannya dicatat tiap malam
+                    dan dapat diukur ulang kapan saja. Di halaman yang sama diatur <strong>peringatan
+                    WhatsApp</strong>: bila situs tidak dapat diakses, basis data terputus, atau penyimpanan
+                    tidak dapat ditulisi, nomor yang diatur menerima pesan peringatan, pengingat selama belum
+                    pulih, dan kabar saat kembali normal. Peringatan memerlukan token gateway WhatsApp (Fonnte
+                    atau Wablas) dan cron pemantau yang perintahnya tertera di halaman itu.
                 </x-panduan-langkah>
             @endif
 

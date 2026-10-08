@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Enums\Kemampuan;
 use App\Enums\PeranPengguna;
 use App\Services\PenentuHakAkses;
+use App\Services\PengirimWhatsapp;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -327,17 +328,7 @@ class User extends Authenticatable
      */
     public function getNomorWhatsappAttribute(): ?string
     {
-        $angka = preg_replace('/\D/', '', (string) $this->no_hp);
-
-        if (blank($angka)) {
-            return null;
-        }
-
-        return match (true) {
-            str_starts_with($angka, '62') => $angka,
-            str_starts_with($angka, '0') => '62'.mb_substr($angka, 1),
-            default => '62'.$angka,
-        };
+        return PengirimWhatsapp::normalkan($this->no_hp);
     }
 
     public function punyaWhatsapp(): bool

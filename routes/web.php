@@ -29,6 +29,7 @@ use App\Http\Controllers\NewsFeedEksekutifController;
 use App\Http\Controllers\NomorSuratController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
+use App\Http\Controllers\PemantauanServerController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PengaturanDokumenController;
 use App\Http\Controllers\PeranController;
@@ -415,6 +416,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/integrasi', [IntegrasiDataController::class, 'index'])->name('administrasi.integrasi');
         Route::put('/integrasi/jadwal', [IntegrasiDataController::class, 'simpanJadwal'])->name('administrasi.integrasi.jadwal');
         Route::post('/integrasi/kirim', [IntegrasiDataController::class, 'kirimSekarang'])->name('administrasi.integrasi.kirim');
+
+        // Pemantauan Server (super administrator): ukuran aplikasi di
+        // peladen dan peringatan WhatsApp saat aplikasi tidak dapat diakses.
+        Route::get('/server', [PemantauanServerController::class, 'index'])->name('administrasi.server');
+        Route::post('/server/ukur', [PemantauanServerController::class, 'ukurUlang'])->name('administrasi.server.ukur');
+        Route::put('/server/kuota', [PemantauanServerController::class, 'simpanKuota'])->name('administrasi.server.kuota');
+        Route::put('/server/peringatan', [PemantauanServerController::class, 'simpanPeringatan'])->name('administrasi.server.peringatan');
+        Route::post('/server/uji-whatsapp', [PemantauanServerController::class, 'kirimUji'])->name('administrasi.server.uji');
 
         // Peran & Hak Akses (super administrator): tambah peran dan atur
         // menu yang boleh dilihat, diubah, dan dihapus tiap peran.

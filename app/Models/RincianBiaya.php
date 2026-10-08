@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IsianBiaya;
 use App\Enums\KategoriBiaya;
 use Database\Factories\RincianBiayaFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,7 @@ class RincianBiaya extends Model
         'keterangan',
         'sumber',
         'kunci_sumber',
+        'isian_pelaksana',
         'divalidasi_at',
         'id_validator',
         'id_keuangan',
@@ -41,6 +43,7 @@ class RincianBiaya extends Model
     {
         return [
             'kategori' => KategoriBiaya::class,
+            'isian_pelaksana' => IsianBiaya::class,
             'harga_satuan' => 'float',
             'jumlah' => 'float',
             'divalidasi_at' => 'datetime',
@@ -53,6 +56,19 @@ class RincianBiaya extends Model
     public function dariDokumen(): bool
     {
         return $this->sumber === self::SUMBER_DOKUMEN;
+    }
+
+    /**
+     * Isian berkas pelaksana yang nominalnya ditetapkan lewat baris ini.
+     *
+     * Hanya baris tulisan tim keuangan yang mewakili isian pelaksana; baris
+     * yang lahir dari berkas pelaksana adalah isian itu sendiri.
+     *
+     * @return list<IsianBiaya>
+     */
+    public function isianYangDiwakili(): array
+    {
+        return $this->dariDokumen() ? [] : ($this->isian_pelaksana?->mencakup() ?? []);
     }
 
     /**

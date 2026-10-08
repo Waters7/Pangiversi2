@@ -23,6 +23,9 @@
     // Integrasi Data memuat token dan alamat aplikasi lain — hanya super administrator.
     if (auth()->user()->isAdmin()) {
         $bagianAdministrasi[] = ['rute' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data'];
+
+        // Ukuran aplikasi dan peringatan WhatsApp memuat token gateway.
+        $bagianAdministrasi[] = ['rute' => 'administrasi.server', 'aktif' => 'administrasi.server', 'label' => 'Pemantauan Server'];
     }
 @endphp
 

@@ -21,6 +21,21 @@
     $canEditRincian = auth()->user()->bisaMengelolaBiaya()
         && $alasanKunci === null
         && ($keuangan->status === 'belum bayar' || $isAdmin);
+
+    // Satu komponen hanya dinominalkan satu pihak: yang sudah diisi pelaksana
+    // beserta buktinya tidak dapat ditambahkan lagi di sini, dan yang
+    // ditetapkan di sini mengunci isian pelaksana.
+    $pemegangNominal = app(\App\Services\PemegangNominal::class);
+    $isianPelaksana = $pemegangNominal->dariPelaksana($usulan);
+    $isianKeuangan = $pemegangNominal->dariKeuangan($usulan);
+    $catatanGanda = $pemegangNominal->catatanGanda($usulan);
+    $diisiPelaksana = fn (\App\Enums\IsianBiaya $isian) => collect($isian->mencakup())
+        ->contains(fn ($satu) => isset($isianPelaksana[$satu->value]));
+    $pilihanTransport = collect(\App\Enums\IsianBiaya::pilihanTransport())
+        ->mapWithKeys(fn ($isian) => [$isian->value => [
+            'label' => $isian->label().($diisiPelaksana($isian) ? ' — sudah diisi pelaksana' : ''),
+            'tertutup' => $diisiPelaksana($isian),
+        ]]);
 @endphp
 
 @if ($alasanKunci)
@@ -31,6 +46,22 @@
         <div>
             <p class="text-sm font-bold text-amber-800">Rincian biaya terkunci</p>
             <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">{{ $alasanKunci }}</p>
+        </div>
+    </div>
+@endif
+
+@if ($catatanGanda !== [])
+    <div class="mb-5 flex items-start gap-3 px-5 py-3.5 bg-red-50 border border-red-200 rounded-xl" data-catatan-ganda>
+        <svg class="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        <div>
+            <p class="text-sm font-bold text-red-800">Komponen mungkin tercatat dua kali</p>
+            <ul class="mt-1 space-y-1 text-xs text-red-700 leading-relaxed">
+                @foreach ($catatanGanda as $catatan)
+                    <li>{{ $catatan }}</li>
+                @endforeach
+            </ul>
         </div>
     </div>
 @endif
@@ -69,9 +100,11 @@
 
             {{-- Form Tambah Komponen --}}
             @if($canEditRincian)
-                <div id="tambah-rincian" class="hidden border-b border-slate-100 bg-teal-50/30 px-6 py-4">
+                {{-- Tetap terbuka bila penyimpanannya ditolak, supaya alasannya terbaca. --}}
+                <div id="tambah-rincian" class="{{ old('_bagian') === 'tambah-rincian' && $errors->any() ? '' : 'hidden' }} border-b border-slate-100 bg-teal-50/30 px-6 py-4">
                     <form action="{{ route('keuangan.rincian.store', $usulan->no_usulan) }}" method="POST"
                           x-data="{
+                            kategori: {{ Js::from(old('kategori', array_key_first($kategoriBiaya ?? []))) }},
                             standar: {{ Js::from(($komponenBiaya ?? collect())->mapWithKeys(fn ($k) => [$k->nama => ['satuan' => $k->satuan, 'harga_satuan' => (int) $k->harga_satuan]])) }},
                             terapkanStandar(nama) {
                                 const acuan = this.standar[nama];
@@ -81,13 +114,20 @@
                             }
                           }">
                         @csrf
+                        <input type="hidden" name="_bagian" value="tambah-rincian">
                         <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                             <div class="sm:col-span-3">
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori <span class="text-red-500">*</span></label>
-                                <select name="kategori" required
+                                <select name="kategori" required x-model="kategori"
                                         class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent">
                                     @foreach (($kategoriBiaya ?? []) as $nilai => $label)
-                                        <option value="{{ $nilai }}" {{ old('kategori') === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                                        @php
+                                            $isianKategori = \App\Enums\IsianBiaya::untukBarisKeuangan(\App\Enums\KategoriBiaya::from($nilai), null);
+                                            $kategoriTertutup = $isianKategori && $diisiPelaksana($isianKategori);
+                                        @endphp
+                                        <option value="{{ $nilai }}" @disabled($kategoriTertutup)>
+                                            {{ $label }}{{ $kategoriTertutup ? ' — sudah diisi pelaksana' : '' }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -131,6 +171,32 @@
                                 </button>
                             </div>
                         </div>
+
+                        {{-- Baris transport menyebut tiket pelaksana yang diwakilinya;
+                             nominalnya lalu mengunci harga tiket itu pada berkas pelaksana. --}}
+                        <div x-show="kategori === 'transport'" x-cloak class="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                            <div class="sm:col-span-6">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Mewakili tiket pelaksana <span class="text-red-500">*</span></label>
+                                <select name="isian_pelaksana" :required="kategori === 'transport'" :disabled="kategori !== 'transport'"
+                                        class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent">
+                                    <option value="" disabled @selected(blank(old('isian_pelaksana')))>— Pilih tiket —</option>
+                                    @foreach ($pilihanTransport as $nilai => $pilihan)
+                                        <option value="{{ $nilai }}" @disabled($pilihan['tertutup']) @selected(old('isian_pelaksana') === $nilai)>{{ $pilihan['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <p class="sm:col-span-6 text-[11px] text-slate-500 leading-relaxed sm:pt-5">
+                                Harga tiket yang Anda tetapkan di sini mengunci kolom harga tiket itu pada berkas pelaksana,
+                                supaya tidak tercatat dua kali. Tiket yang sudah diisi pelaksana beserta buktinya tidak dapat dipilih —
+                                periksa dan validasi baris dari pelaksana.
+                            </p>
+                        </div>
+                        <p x-show="kategori === 'penginapan' || kategori === 'penyelenggaraan'" x-cloak class="mt-3 text-[11px] text-slate-500 leading-relaxed">
+                            Nominal ini mengunci isian
+                            <span x-text="kategori === 'penginapan' ? 'nominal bill hotel' : 'nominal biaya penyelenggaraan'"></span>
+                            pada berkas pelaksana, supaya komponen yang sama tidak tercatat dua kali.
+                        </p>
+
                         @if($errors->any())
                             <div class="mt-2 text-xs text-red-500">
                                 @foreach($errors->all() as $error)
@@ -139,6 +205,25 @@
                             </div>
                         @endif
                     </form>
+                </div>
+            @endif
+
+            {{-- Siapa yang memegang nominal tiap komponen yang dapat diisi dua
+                 pihak — penjelas mengapa sebagian pilihan di atas tertutup. --}}
+            @if ($isianPelaksana !== [] || $isianKeuangan !== [])
+                <div class="px-6 py-3 border-b border-slate-100 bg-slate-50/60 flex flex-wrap items-center gap-2" data-pemegang-nominal>
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mr-1">Nominal komponen</span>
+                    @foreach (\App\Enums\IsianBiaya::isianPelaksana() as $isian)
+                        @if (isset($isianKeuangan[$isian->value]))
+                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-teal-100 text-teal-800">
+                                {{ $isian->label() }} · ditetapkan tim keuangan
+                            </span>
+                        @elseif (isset($isianPelaksana[$isian->value]))
+                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-sky-100 text-sky-800">
+                                {{ $isian->label() }} · diisi pelaksana Rp {{ number_format($isianPelaksana[$isian->value], 0, ',', '.') }}
+                            </span>
+                        @endif
+                    @endforeach
                 </div>
             @endif
 
@@ -170,6 +255,10 @@
                                     {{ $item->komponen }}
                                     @if ($item->dariDokumen())
                                         <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Nominal dari pelaksana</span>
+                                    @elseif ($item->isianYangDiwakili() !== [])
+                                        <span class="block text-[11px] font-normal text-slate-400 mt-0.5">Mengunci isian {{ $item->isian_pelaksana->label() }} pada berkas pelaksana</span>
+                                    @elseif ($item->kategori === \App\Enums\KategoriBiaya::Transport && $item->isian_pelaksana === null)
+                                        <span class="block text-[11px] font-normal text-amber-600 mt-0.5">Belum ditentukan tiket pelaksana yang diwakili — sunting baris ini</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center text-slate-600 display-cell">{{ $item->volume }}</td>
@@ -238,11 +327,12 @@
                             @if($canEditRincian)
                                 <tr id="edit-{{ $item->id }}" class="hidden bg-blue-50/40">
                                     <td colspan="10" class="px-6 py-3">
-                                        <form action="{{ route('keuangan.rincian.update', [$usulan->no_usulan, $item->id]) }}" method="POST">
+                                        <form action="{{ route('keuangan.rincian.update', [$usulan->no_usulan, $item->id]) }}" method="POST"
+                                              x-data="{ kategori: {{ Js::from($item->kategori->value) }} }">
                                             @csrf @method('PUT')
                                             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                                                 <div class="sm:col-span-3">
-                                                    <select name="kategori" required
+                                                    <select name="kategori" required x-model="kategori"
                                                             class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white">
                                                         @foreach (($kategoriBiaya ?? []) as $nilai => $label)
                                                             <option value="{{ $nilai }}" {{ $item->kategori->value === $nilai ? 'selected' : '' }}>{{ $label }}</option>
@@ -274,6 +364,24 @@
                                                     <button type="button" onclick="toggleEdit({{ $item->id }})" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-semibold rounded-lg transition">Batal</button>
                                                 </div>
                                             </div>
+
+                                            {{-- Baris tulisan tim keuangan menyebut tiket pelaksana yang
+                                                 diwakilinya; tiket yang sudah diisi pelaksana tertutup. --}}
+                                            @unless ($item->dariDokumen())
+                                                <div x-show="kategori === 'transport'" x-cloak class="mt-3 sm:w-1/2">
+                                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Mewakili tiket pelaksana <span class="text-red-500">*</span></label>
+                                                    <select name="isian_pelaksana" :required="kategori === 'transport'" :disabled="kategori !== 'transport'"
+                                                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent">
+                                                        <option value="" disabled @selected($item->isian_pelaksana === null)>— Pilih tiket —</option>
+                                                        @foreach ($pilihanTransport as $nilai => $pilihan)
+                                                            {{-- Pilihan baris ini sendiri tetap terbuka walau kini bentrok,
+                                                                 supaya menyunting angkanya tidak memaksa memilih ulang. --}}
+                                                            @php $pilihanSendiri = $item->isian_pelaksana?->value === $nilai; @endphp
+                                                            <option value="{{ $nilai }}" @disabled($pilihan['tertutup'] && ! $pilihanSendiri) @selected($pilihanSendiri)>{{ $pilihan['label'] }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endunless
                                         </form>
                                     </td>
                                 </tr>

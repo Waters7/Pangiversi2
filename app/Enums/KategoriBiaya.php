@@ -83,6 +83,21 @@ enum KategoriBiaya: string
     }
 
     /**
+     * Kategori yang boleh ditulis tim keuangan pada rincian biaya.
+     *
+     * Transport lokal tidak termasuk: ia lahir dari nota pelaksana dan
+     * dipertanggungjawabkan lewat Daftar Pengeluaran Riil. Baris transport
+     * lokal pada rincian biaya selalu menjadi catatan kedua atas nota yang
+     * sama — tersembunyi dari tabel dan cetakan, tetapi ikut menambah total.
+     *
+     * @return array<string, string>
+     */
+    public static function untukTimKeuangan(): array
+    {
+        return array_diff_key(self::options(), [self::TransportLokal->value => true]);
+    }
+
+    /**
      * @return list<self>
      */
     public static function urutanCetak(): array

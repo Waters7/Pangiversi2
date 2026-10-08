@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\IsianBiaya;
 use App\Enums\KategoriBiaya;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
@@ -22,7 +23,10 @@ use Illuminate\Support\Collection;
  */
 class SinkronBiayaDokumen
 {
-    public function __construct(private NotifikasiService $notifikasi) {}
+    public function __construct(
+        private NotifikasiService $notifikasi,
+        private PemegangNominal $pemegang,
+    ) {}
 
     /**
      * Selaraskan seluruh nominal sebuah usulan.
@@ -202,10 +206,16 @@ class SinkronBiayaDokumen
     {
         $usulan->loadMissing('tiket', 'notaTransport', 'dokumen');
 
+        // Komponen yang nominalnya ditetapkan tim keuangan sudah punya
+        // barisnya sendiri; nominal pelaksana untuk komponen itu tidak
+        // disalin agar tidak tercatat dua kali.
+        $dariKeuangan = $this->pemegang->dariKeuangan($usulan);
+        $ditetapkanKeuangan = fn (IsianBiaya $isian) => isset($dariKeuangan[$isian->value]);
+
         $baris = [];
 
         foreach ($usulan->tiket as $tiket) {
-            if (! ($tiket->harga > 0)) {
+            if (! ($tiket->harga > 0) || $ditetapkanKeuangan(IsianBiaya::dariArah($tiket->arah))) {
                 continue;
             }
 
@@ -233,7 +243,7 @@ class SinkronBiayaDokumen
 
         $dokumen = $usulan->dokumen->last();
 
-        if ($dokumen && $dokumen->bill_hotel_nominal > 0) {
+        if ($dokumen && $dokumen->bill_hotel_nominal > 0 && ! $ditetapkanKeuangan(IsianBiaya::Penginapan)) {
             // Sebutan resmi pada dokumen rincian: uang penginapan, bukan biaya hotel.
             $nama = 'Uang Penginapan';
 
@@ -258,7 +268,7 @@ class SinkronBiayaDokumen
         // Biaya penyelenggaraan hanya bila pelaksana menyatakan ada; nomor
         // invoice ikut pada nama komponen supaya cetakannya dapat ditelusuri
         // ke bukti bayarnya.
-        if ($dokumen?->adaPenyelenggaraan() && $dokumen->penyelenggaraan_nominal > 0) {
+        if ($dokumen?->adaPenyelenggaraan() && $dokumen->penyelenggaraan_nominal > 0 && ! $ditetapkanKeuangan(IsianBiaya::Penyelenggaraan)) {
             $nama = 'Biaya Penyelenggaraan';
 
             if ($dokumen->penyelenggaraan_invoice) {

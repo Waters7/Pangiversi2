@@ -723,6 +723,7 @@
             ...(auth()->user()->can('mengatur-dokumen-cetak') ? [['route' => 'administrasi.dokumen', 'aktif' => 'administrasi.dokumen', 'label' => 'Dokumen Output']] : []),
             ...(auth()->user()->can('mengatur-berkas-lpj') ? [['route' => 'administrasi.berkas-lpj', 'aktif' => 'administrasi.berkas-lpj', 'label' => 'Berkas Pertanggungjawaban']] : []),
             ...(auth()->user()->isAdmin() ? [['route' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data']] : []),
+            ...(auth()->user()->isAdmin() ? [['route' => 'administrasi.server', 'aktif' => 'administrasi.server', 'label' => 'Pemantauan Server']] : []),
           ] as $menu)
             <a href="{{ route($menu['route']) }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all

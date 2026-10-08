@@ -26,6 +26,12 @@
     $alasanKunci = app(\App\Services\PenguncianBerkas::class)->unggahanPelaksana($usulan);
     $terkunci = $alasanKunci !== null
         || ($usulan->status === 'selesai' && ! auth()->user()->isAdmin());
+
+    // Komponen yang nominalnya sudah ditetapkan tim keuangan: kolom nominal
+    // pelaksana diganti angka tim keuangan supaya tidak tercatat dua kali.
+    $nominalKeuangan = app(\App\Services\PemegangNominal::class)->dariKeuangan($usulan);
+    $penginapanKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::Penginapan->value] ?? null;
+    $penyelenggaraanKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::Penyelenggaraan->value] ?? null;
 @endphp
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -210,7 +216,10 @@
             {{-- ══════════ 2. TIKET PERGI & PULANG ══════════ --}}
             @if ($minta(\App\Enums\BerkasLpj::Tiket))
             @foreach (ArahTiket::urutan() as $arah)
-                @php $data = $tiket->get($arah->value); @endphp
+                @php
+                    $data = $tiket->get($arah->value);
+                    $hargaKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::dariArah($arah)->value] ?? null;
+                @endphp
 
                 <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                     @csrf
@@ -228,7 +237,7 @@
                                 </h3>
                                 <p class="text-xs text-slate-400">{{ $arah->keteranganRute() }}</p>
                             </div>
-                            @if ($data?->lengkap())
+                            @if ($data?->lengkap($hargaKeuangan !== null))
                                 <span class="ml-auto text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full shrink-0">Lengkap</span>
                             @endif
                         </div>
@@ -269,14 +278,19 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Harga tiket <span class="text-red-500">*</span></label>
-                                <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
-                                    <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                    <input type="number" name="harga" min="0" step="1" @disabled($terkunci)
-                                           value="{{ old('harga', $data?->harga ? (int) $data->harga : '') }}"
-                                           class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
-                                </div>
-                                <p class="text-xs text-slate-400 mt-1">Isi harga yang tertera pada tiket — sudah termasuk pajak.</p>
+                                @if ($hargaKeuangan)
+                                    <p class="block text-sm font-semibold text-slate-700 mb-1.5">Harga tiket</p>
+                                    <x-nominal-tim-keuangan :baris="$hargaKeuangan" />
+                                @else
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Harga tiket <span class="text-red-500">*</span></label>
+                                    <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
+                                        <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
+                                        <input type="number" name="harga" min="0" step="1" @disabled($terkunci)
+                                               value="{{ old('harga', $data?->harga ? (int) $data->harga : '') }}"
+                                               class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">Isi harga yang tertera pada tiket — sudah termasuk pajak.</p>
+                                @endif
                             </div>
 
                             <x-unggah-berkas
@@ -448,13 +462,18 @@
                                        class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal</label>
-                                <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
-                                    <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                    <input type="number" name="bill_hotel_nominal" min="0" step="1" @disabled($terkunci)
-                                           value="{{ old('bill_hotel_nominal', $dokumen?->bill_hotel_nominal ? (int) $dokumen->bill_hotel_nominal : '') }}"
-                                           class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
-                                </div>
+                                @if ($penginapanKeuangan)
+                                    <p class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal</p>
+                                    <x-nominal-tim-keuangan :baris="$penginapanKeuangan" />
+                                @else
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal</label>
+                                    <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
+                                        <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
+                                        <input type="number" name="bill_hotel_nominal" min="0" step="1" @disabled($terkunci)
+                                               value="{{ old('bill_hotel_nominal', $dokumen?->bill_hotel_nominal ? (int) $dokumen->bill_hotel_nominal : '') }}"
+                                               class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -521,16 +540,21 @@
                         <div x-show="ada" x-cloak class="space-y-5">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal <span class="text-red-500">*</span></label>
-                                    <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
-                                        <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                        <input type="number" name="penyelenggaraan_nominal" min="0" step="1" @disabled($terkunci)
-                                               value="{{ old('penyelenggaraan_nominal', $dokumen?->penyelenggaraan_nominal ? (int) $dokumen->penyelenggaraan_nominal : '') }}"
-                                               class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
-                                    </div>
-                                    @error('penyelenggaraan_nominal')
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
+                                    @if ($penyelenggaraanKeuangan)
+                                        <p class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal</p>
+                                        <x-nominal-tim-keuangan :baris="$penyelenggaraanKeuangan" />
+                                    @else
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal <span class="text-red-500">*</span></label>
+                                        <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
+                                            <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
+                                            <input type="number" name="penyelenggaraan_nominal" min="0" step="1" @disabled($terkunci)
+                                                   value="{{ old('penyelenggaraan_nominal', $dokumen?->penyelenggaraan_nominal ? (int) $dokumen->penyelenggaraan_nominal : '') }}"
+                                                   class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
+                                        </div>
+                                        @error('penyelenggaraan_nominal')
+                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                        @enderror
+                                    @endif
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">

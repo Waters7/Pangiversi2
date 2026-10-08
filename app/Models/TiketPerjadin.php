@@ -48,14 +48,17 @@ class TiketPerjadin extends Model
      * Tiket dianggap terisi bila rute, nomor, kode booking, harga, dan
      * boarding pass-nya sudah ada — sebagian saja belum cukup untuk
      * dipertanggungjawabkan.
+     *
+     * @param  bool  $hargaDariKeuangan  Harganya ditetapkan tim keuangan,
+     *                                   sehingga tidak diisi pelaksana.
      */
-    public function lengkap(): bool
+    public function lengkap(bool $hargaDariKeuangan = false): bool
     {
         return filled($this->kota_asal)
             && filled($this->kota_tujuan)
             && filled($this->nomor_tiket)
             && filled($this->kode_booking)
-            && $this->harga > 0
+            && ($hargaDariKeuangan || $this->harga > 0)
             && filled($this->boarding_pass)
             && filled($this->invoice);
     }

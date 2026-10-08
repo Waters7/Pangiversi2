@@ -22,6 +22,15 @@ Schedule::command('pangi:kirim-integrasi')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Ukuran aplikasi dicatat tiap malam untuk menu Pemantauan Server.
+// Pemeriksaan kesehatan (pangi:pantau-server) sengaja tidak di sini: ia
+// dipasang sebagai cron tersendiri karena penjadwal ini ikut berhenti saat
+// basis data terputus.
+Schedule::command('pangi:ukur-penyimpanan')
+    ->dailyAt('02:30')
+    ->timezone('Asia/Makassar')
+    ->withoutOverlapping();
+
 // Catatan permintaan API yang sudah lewat masa simpannya dibersihkan tiap malam.
 Schedule::call(fn () => LogApi::where('created_at', '<', now()->subDays(LogApi::SIMPAN_HARI))->delete())
     ->dailyAt('01:00')

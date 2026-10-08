@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DokumenCetak;
+use App\Enums\IsianBiaya;
 use App\Enums\KategoriBiaya;
 use App\Models\AuditLog;
 use App\Models\DaftarRiil;
@@ -16,6 +17,7 @@ use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
+use App\Services\PemegangNominal;
 use App\Services\PenagihDokumen;
 use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
@@ -28,6 +30,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class KeuanganController extends Controller
@@ -42,6 +45,7 @@ class KeuanganController extends Controller
         private SinkronBiayaDokumen $sinkron,
         private PenguncianBerkas $kunci,
         private PengirimanBerkas $pengiriman,
+        private PemegangNominal $pemegang,
     ) {}
 
     public function index(Request $request)
@@ -139,7 +143,7 @@ class KeuanganController extends Controller
 
         // Standar biaya dipakai untuk mengisi otomatis satuan dan harga di form rincian.
         $komponenBiaya = KomponenBiaya::aktif()->orderBy('nama')->get();
-        $kategoriBiaya = KategoriBiaya::options();
+        $kategoriBiaya = KategoriBiaya::untukTimKeuangan();
 
         if ($usulan->keuangan->status === 'lunas') {
             return view('keuangan.paid', compact('usulan', 'komponenBiaya', 'kategoriBiaya'));
@@ -248,14 +252,16 @@ class KeuanganController extends Controller
         // tercetak dan daftar nominatif menumpang di atasnya.
         $this->kunci->pastikanRincianTerbuka($usulan);
 
-        $request->validate([
-            'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::options()))],
-            'komponen' => ['required', 'string', 'max:255'],
-            'volume' => ['required', 'integer', 'min:1'],
-            'satuan' => ['required', 'string', 'max:50'],
-            'harga_satuan' => ['required', 'numeric', 'min:0'],
-            'keterangan' => ['nullable', 'string', 'max:255'],
-        ]);
+        $request->validate(...$this->aturanRincianKeuangan($request));
+
+        // Komponen yang sudah diisi pelaksana beserta buktinya tidak ditulis
+        // ulang di sini — baris dari berkasnya itulah yang diperiksa.
+        $isian = IsianBiaya::untukBarisKeuangan(KategoriBiaya::from($request->kategori), $request->input('isian_pelaksana'));
+        $bentrok = $this->pemegang->bentrokDenganPelaksana($usulan, $isian);
+
+        if ($bentrok !== []) {
+            throw ValidationException::withMessages(['isian_pelaksana' => $this->pemegang->pesanBentrok($usulan, $bentrok)]);
+        }
 
         $keuangan = $usulan->keuangan;
 
@@ -267,6 +273,7 @@ class KeuanganController extends Controller
             'harga_satuan' => $request->harga_satuan,
             'jumlah' => $request->volume * $request->harga_satuan,
             'keterangan' => $request->keterangan,
+            'isian_pelaksana' => $isian?->value,
         ]);
 
         $keuangan->hitungTotal();
@@ -296,14 +303,23 @@ class KeuanganController extends Controller
         // tercetak dan daftar nominatif menumpang di atasnya.
         $this->kunci->pastikanRincianTerbuka($usulan);
 
-        $request->validate([
-            'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::options()))],
-            'komponen' => ['required', 'string', 'max:255'],
-            'volume' => ['required', 'integer', 'min:1'],
-            'satuan' => ['required', 'string', 'max:50'],
-            'harga_satuan' => ['required', 'numeric', 'min:0'],
-            'keterangan' => ['nullable', 'string', 'max:255'],
-        ]);
+        // Baris dari berkas pelaksana adalah isian pelaksana itu sendiri: tim
+        // keuangan boleh mengoreksi angkanya, tetapi tidak memilihkan isiannya.
+        $dariBerkas = $rincian->dariDokumen();
+
+        $request->validate(...$this->aturanRincianKeuangan($request, $dariBerkas));
+
+        $isian = $dariBerkas
+            ? null
+            : IsianBiaya::untukBarisKeuangan(KategoriBiaya::from($request->kategori), $request->input('isian_pelaksana'));
+        $bentrok = $this->pemegang->bentrokDenganPelaksana($usulan, $isian, $rincian->isian_pelaksana);
+
+        // Baris sunting tersembunyi di dalam tabel, jadi penolakannya
+        // disampaikan lewat pesan di puncak halaman.
+        if ($bentrok !== []) {
+            return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                ->with('error', $this->pemegang->pesanBentrok($usulan, $bentrok));
+        }
 
         $rincian->update([
             'kategori' => $request->kategori,
@@ -313,7 +329,7 @@ class KeuanganController extends Controller
             'harga_satuan' => $request->harga_satuan,
             'jumlah' => $request->volume * $request->harga_satuan,
             'keterangan' => $request->keterangan,
-        ]);
+        ] + ($dariBerkas ? [] : ['isian_pelaksana' => $isian?->value]));
 
         $usulan->keuangan->hitungTotal();
 
@@ -758,6 +774,43 @@ class KeuanganController extends Controller
         );
 
         return back()->with('success', 'Validasi dicabut, nominalnya kembali menunggu pemeriksaan.');
+    }
+
+    /**
+     * Aturan isian baris rincian biaya beserta pesannya.
+     *
+     * Baris transport tulisan tim keuangan wajib menyebut tiket pelaksana
+     * yang diwakilinya — atau bukan tiket — supaya tiket yang sama tidak
+     * dinominalkan dua kali.
+     *
+     * @return array{0: array<string, list<mixed>>, 1: array<string, string>}
+     */
+    private function aturanRincianKeuangan(Request $request, bool $dariBerkas = false): array
+    {
+        $transport = $request->input('kategori') === KategoriBiaya::Transport->value;
+
+        return [
+            [
+                'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::untukTimKeuangan()))],
+                'komponen' => ['required', 'string', 'max:255'],
+                'volume' => ['required', 'integer', 'min:1'],
+                'satuan' => ['required', 'string', 'max:50'],
+                'harga_satuan' => ['required', 'numeric', 'min:0'],
+                'keterangan' => ['nullable', 'string', 'max:255'],
+                'isian_pelaksana' => [
+                    Rule::requiredIf($transport && ! $dariBerkas),
+                    'nullable',
+                    Rule::in(array_column(IsianBiaya::pilihanTransport(), 'value')),
+                ],
+            ],
+            [
+                'kategori.in' => $request->input('kategori') === KategoriBiaya::TransportLokal->value
+                    ? 'Transport lokal tidak ditulis pada rincian biaya — nominalnya berasal dari nota pelaksana pada Daftar Pengeluaran Riil.'
+                    : 'Kategori biaya tidak dikenali.',
+                'isian_pelaksana.required' => 'Pilih tiket pelaksana yang diwakili baris transport ini, atau nyatakan bukan tiket pelaksana.',
+                'isian_pelaksana.in' => 'Pilihan tiket pelaksana tidak dikenali.',
+            ],
+        ];
     }
 
     private function pastikanRincianMilikUsulan(Usulan $usulan, RincianBiaya $rincian): void

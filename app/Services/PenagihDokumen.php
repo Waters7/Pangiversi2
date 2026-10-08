@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\ArahTiket;
 use App\Enums\BerkasLpj;
+use App\Enums\IsianBiaya;
 use App\Models\Dokumen;
 use App\Models\Usulan;
 use Carbon\Carbon;
@@ -17,7 +18,10 @@ use Carbon\Carbon;
  */
 class PenagihDokumen
 {
-    public function __construct(private PengaturanBerkasLpj $berkasWajib) {}
+    public function __construct(
+        private PengaturanBerkasLpj $berkasWajib,
+        private PemegangNominal $pemegang,
+    ) {}
 
     /**
      * Label yang dipahami pengguna untuk tiap kolom berkas.
@@ -65,7 +69,7 @@ class PenagihDokumen
                 $kurang->push(self::LABEL['bill_hotel']);
             }
 
-            $kurang = $kurang->concat($this->rincianHotelKurang($dokumen));
+            $kurang = $kurang->concat($this->rincianHotelKurang($usulan, $dokumen));
         }
 
         if ($diminta(BerkasLpj::Kuitansi) && blank($dokumen?->kwintasi)) {
@@ -73,7 +77,7 @@ class PenagihDokumen
         }
 
         if ($diminta(BerkasLpj::Penyelenggaraan)) {
-            $kurang = $kurang->concat($this->penyelenggaraanKurang($dokumen));
+            $kurang = $kurang->concat($this->penyelenggaraanKurang($usulan, $dokumen));
         }
 
         if ($diminta(BerkasLpj::Laporan)) {
@@ -117,7 +121,7 @@ class PenagihDokumen
 
             foreach (ArahTiket::urutan() as $arah) {
                 $tiket = $tersimpan->get($arah->value);
-                $kurang = $this->kekuranganTiket($tiket);
+                $kurang = $this->kekuranganTiket($usulan, $arah, $tiket);
 
                 $baris[] = [
                     'label' => $arah->label(),
@@ -164,7 +168,7 @@ class PenagihDokumen
                 'label' => 'Bill Hotel',
                 'terpenuhi' => filled($dokumen?->bill_hotel)
                     && filled($dokumen?->bill_hotel_no_transaksi)
-                    && $dokumen?->bill_hotel_nominal > 0,
+                    && ($dokumen?->bill_hotel_nominal > 0 || $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan)),
                 'berkas' => filled($dokumen?->bill_hotel) ? [['label' => 'Bill hotel', 'path' => $dokumen->bill_hotel]] : [],
                 'catatan' => $dokumen?->bill_hotel_no_transaksi
                     ? 'No. transaksi '.$dokumen->bill_hotel_no_transaksi
@@ -180,14 +184,16 @@ class PenagihDokumen
         if ($diminta(BerkasLpj::Penyelenggaraan) && $dokumen?->adaPenyelenggaraan()) {
             $baris[] = [
                 'label' => 'Bukti Biaya Penyelenggaraan',
-                'terpenuhi' => $this->penyelenggaraanKurang($dokumen) === [],
+                'terpenuhi' => $this->penyelenggaraanKurang($usulan, $dokumen) === [],
                 'berkas' => filled($dokumen->penyelenggaraan_bukti)
                     ? [['label' => 'Bukti bayar', 'path' => $dokumen->penyelenggaraan_bukti]]
                     : [],
-                'catatan' => $dokumen->penyelenggaraan_nominal > 0
-                    ? 'Rp '.number_format($dokumen->penyelenggaraan_nominal, 0, ',', '.')
-                        .($dokumen->penyelenggaraan_invoice ? ' · No. invoice '.$dokumen->penyelenggaraan_invoice : '')
-                    : 'Nominal dan bukti bayarnya wajib diisi',
+                'catatan' => match (true) {
+                    $dokumen->penyelenggaraan_nominal > 0 => 'Rp '.number_format($dokumen->penyelenggaraan_nominal, 0, ',', '.')
+                        .($dokumen->penyelenggaraan_invoice ? ' · No. invoice '.$dokumen->penyelenggaraan_invoice : ''),
+                    $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penyelenggaraan) => 'Nominal ditetapkan tim keuangan',
+                    default => 'Nominal dan bukti bayarnya wajib diisi',
+                },
             ];
         }
 
@@ -226,17 +232,21 @@ class PenagihDokumen
      *
      * @return list<string>
      */
-    private function kekuranganTiket(mixed $tiket): array
+    private function kekuranganTiket(Usulan $usulan, ArahTiket $arah, mixed $tiket): array
     {
         if (! $tiket) {
             return ['data tiket'];
         }
 
+        // Harga yang ditetapkan tim keuangan tidak ditagih kepada pelaksana.
+        $hargaTerisi = $tiket->harga > 0
+            || $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::dariArah($arah));
+
         return array_values(array_filter([
             filled($tiket->kota_asal) && filled($tiket->kota_tujuan) ? null : 'rute',
             filled($tiket->nomor_tiket) ? null : 'nomor tiket',
             filled($tiket->kode_booking) ? null : 'kode booking',
-            $tiket->harga > 0 ? null : 'harga',
+            $hargaTerisi ? null : 'harga',
             filled($tiket->boarding_pass) ? null : 'boarding pass',
             filled($tiket->invoice) ? null : 'invoice',
         ]));
@@ -274,7 +284,7 @@ class PenagihDokumen
         $tersimpan = $usulan->tiket->keyBy(fn ($tiket) => $tiket->arah->value);
 
         return collect(ArahTiket::urutan())
-            ->map(fn (ArahTiket $arah) => [$arah, $this->kekuranganTiket($tersimpan->get($arah->value))])
+            ->map(fn (ArahTiket $arah) => [$arah, $this->kekuranganTiket($usulan, $arah, $tersimpan->get($arah->value))])
             ->reject(fn (array $pasangan) => $pasangan[1] === [])
             ->map(fn (array $pasangan) => $pasangan[0]->label().' ('.implode(', ', $pasangan[1]).')')
             ->values()
@@ -310,13 +320,16 @@ class PenagihDokumen
      *
      * @return list<string>
      */
-    private function penyelenggaraanKurang(?Dokumen $dokumen): array
+    private function penyelenggaraanKurang(Usulan $usulan, ?Dokumen $dokumen): array
     {
         if (! $dokumen?->adaPenyelenggaraan()) {
             return [];
         }
 
-        return $dokumen->penyelenggaraan_nominal > 0 && filled($dokumen->penyelenggaraan_bukti)
+        $nominalTerisi = $dokumen->penyelenggaraan_nominal > 0
+            || $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penyelenggaraan);
+
+        return $nominalTerisi && filled($dokumen->penyelenggaraan_bukti)
             ? []
             : ['Bukti bayar biaya penyelenggaraan'];
     }
@@ -324,7 +337,7 @@ class PenagihDokumen
     /**
      * @return list<string>
      */
-    private function rincianHotelKurang(?Dokumen $dokumen): array
+    private function rincianHotelKurang(Usulan $usulan, ?Dokumen $dokumen): array
     {
         if (! $dokumen || blank($dokumen->bill_hotel)) {
             // Berkasnya sendiri sudah ditagih lewat DOKUMEN_LPJ_WAJIB.
@@ -337,7 +350,8 @@ class PenagihDokumen
             $kurang[] = 'Nomor transaksi bill hotel';
         }
 
-        if (! ($dokumen->bill_hotel_nominal > 0)) {
+        // Nominal penginapan yang ditetapkan tim keuangan tidak ditagih lagi.
+        if (! ($dokumen->bill_hotel_nominal > 0) && ! $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan)) {
             $kurang[] = 'Nominal bill hotel';
         }
 
