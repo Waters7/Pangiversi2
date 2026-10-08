@@ -244,18 +244,6 @@ class KunciNominalKomponenTest extends TestCase
         $this->assertCount(2, $this->rincian());
     }
 
-    public function test_transport_lokal_tidak_ditulis_tim_keuangan(): void
-    {
-        $this->tulisKeuangan([
-            'kategori' => KategoriBiaya::TransportLokal->value,
-            'komponen' => 'Taksi bandara',
-            'satuan' => 'Kali',
-            'harga_satuan' => 150_000,
-        ])->assertSessionHasErrors(['kategori' => 'Transport lokal tidak ditulis pada rincian biaya — nominalnya berasal dari nota pelaksana pada Daftar Pengeluaran Riil.']);
-
-        $this->assertCount(0, $this->rincian());
-    }
-
     public function test_komponen_ganda_dari_data_lama_ditandai(): void
     {
         $this->simpanAkomodasi(1_200_000);

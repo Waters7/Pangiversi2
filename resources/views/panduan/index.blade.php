@@ -388,7 +388,10 @@
                 <span class="block mb-3">
                     Daftar di bawah ini yang menentukan usulan boleh ditutup atau belum. Bila nominal sebuah
                     komponen — tiket, bill hotel, atau biaya penyelenggaraan — sudah ditetapkan tim keuangan,
-                    kolom nominalnya terkunci pada angka itu; Anda cukup mengunggah buktinya.
+                    kolom nominalnya terkunci pada angka itu; Anda cukup mengunggah buktinya. Nota
+                    transport lokal yang diunggah wajib diisi nominalnya — tanpa nominal, nota itu tidak
+                    masuk transport lokal dan tidak diganti. Nota yang salah unggah dapat dihapus lewat
+                    centang <strong>Hapus nota ruas ini</strong>.
                 </span>
 
                 <div class="grid gap-3 sm:grid-cols-2">
@@ -607,7 +610,11 @@
 
             <x-panduan-langkah nomor="4" judul="Periksa transport lokal">
                 Submenu <strong>Periksa Transport Lokal</strong> memuat biaya transport yang
-                dinyatakan pelaksana pada daftar riilnya, beserta bukti yang dilampirkan.
+                dinyatakan pelaksana pada daftar riilnya, beserta bukti yang dilampirkan. Transport
+                lokal yang Anda catat sendiri — kategori <strong>Transport Lokal</strong> pada Tambah
+                Komponen, atau memindah baris yang terlanjur ditulis sebagai Transport — masuk ke tabel
+                Transport Lokal (Daftar Pengeluaran Riil), bukan ke rincian biaya, dan dapat dihapus
+                dari tabel itu bila keliru.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Berkas terkirim sendiri ke pelaksana">
@@ -728,7 +735,9 @@
                 <p class="text-xs text-indigo-900 leading-relaxed">
                     <strong>Bendahara tidak memvalidasi biaya.</strong> Nominalnya sudah dinyatakan
                     benar oleh tim keuangan dan disahkan PPK. Yang Anda catat adalah pembayarannya:
-                    kapan, berapa, dan buktinya mana.
+                    kapan, berapa, dan buktinya mana. Begitu berkas pertanggungjawaban lengkap dan
+                    ditandatangani PPK, Anda menerima pemberitahuan <strong>Perjadin lengkap, segera
+                    dibayarkan</strong> beserta nominal yang harus dibayar.
                 </p>
             </div>
 

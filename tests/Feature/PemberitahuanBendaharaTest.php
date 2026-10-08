@@ -8,9 +8,11 @@ use App\Enums\StatusUsulan;
 use App\Models\Dokumen;
 use App\Models\Keuangan;
 use App\Models\Notifikasi;
+use App\Models\PesertaUsulan;
 use App\Models\StatusHasil;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\SinkronBiayaDokumen;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -180,6 +182,65 @@ class PemberitahuanBendaharaTest extends TestCase
 
         $this->selesaikanLaporan();
 
+        $this->assertDatabaseMissing('notifikasi', ['judul' => 'Berkas pertanggungjawaban lengkap']);
+    }
+
+    // ── Perjadin lengkap dan ditandatangani PPK ──
+
+    /**
+     * Berkas lengkap dan rincian biaya sudah ditandatangani PPK; tinggal
+     * daftar pengeluaran riilnya yang menunggu tanda tangan.
+     */
+    private function siapkanTandaTanganTerakhir(): PesertaUsulan
+    {
+        $this->lengkapiPertanggungjawaban($this->usulan);
+        $peserta = $this->usulan->peserta()->create([
+            'id_user' => $this->pelaksana->id,
+            'nama' => $this->pelaksana->nama,
+            'nip' => $this->pelaksana->nip,
+            'peran' => 'ketua',
+        ]);
+        app(SinkronBiayaDokumen::class)->selaraskan($this->usulan->fresh());
+
+        $this->tandatanganiBerkas($this->usulan->fresh())->update(['ditandatangani_at' => null, 'id_ppk' => null]);
+
+        return $peserta;
+    }
+
+    public function test_bendahara_diberi_tahu_saat_ppk_menandatangani_berkas_lengkap(): void
+    {
+        $peserta = $this->siapkanTandaTanganTerakhir();
+
+        $this->actingAs(User::factory()->ppk()->create())
+            ->put(route('daftar-riil.tanda-tangan', [$this->usulan, $peserta]))
+            ->assertSessionHas('success');
+
+        $pesan = Notifikasi::where('id_user', $this->bendahara->id)
+            ->where('judul', 'Perjadin lengkap, segera dibayarkan')
+            ->first();
+
+        $this->assertNotNull($pesan);
+        $this->assertStringContainsString('ditandatangani PPK', $pesan->pesan);
+        $this->assertStringContainsString('transport lokal Rp 150.000', $pesan->pesan);
+        $this->assertSame(route('keuangan.detail', $this->usulan->no_usulan), $pesan->url);
+    }
+
+    public function test_berkas_yang_baru_lengkap_sesudah_tanda_tangan_ppk_langsung_siap_dibayar(): void
+    {
+        $peserta = $this->siapkanTandaTanganTerakhir();
+        $this->usulan->laporan->update(['diselesaikan_at' => null]);
+
+        $this->actingAs(User::factory()->ppk()->create())
+            ->put(route('daftar-riil.tanda-tangan', [$this->usulan, $peserta]));
+
+        $this->assertDatabaseMissing('notifikasi', ['judul' => 'Perjadin lengkap, segera dibayarkan']);
+
+        $this->selesaikanLaporan();
+
+        $this->assertDatabaseHas('notifikasi', [
+            'id_user' => $this->bendahara->id,
+            'judul' => 'Perjadin lengkap, segera dibayarkan',
+        ]);
         $this->assertDatabaseMissing('notifikasi', ['judul' => 'Berkas pertanggungjawaban lengkap']);
     }
 

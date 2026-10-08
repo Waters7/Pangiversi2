@@ -150,7 +150,7 @@
                             <td class="tengah ket">{{ $item->keterangan && $item->keterangan !== $item->komponen ? str_replace('→', '-', $item->keterangan) : '' }}</td>
                         </tr>
 
-                        @if ($item->volume > 1)
+                        @if ($item->tampilkanPerkalian())
                             <tr class="sub">
                                 <td></td>
                                 <td>{{ $item->volume }} {{ $item->satuan }} × Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}</td>

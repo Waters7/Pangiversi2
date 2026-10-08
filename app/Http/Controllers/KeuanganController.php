@@ -11,6 +11,7 @@ use App\Models\Keuangan;
 use App\Models\KomponenBiaya;
 use App\Models\Notifikasi;
 use App\Models\RincianBiaya;
+use App\Models\RincianDaftarRiil;
 use App\Models\RiwayatPembayaran;
 use App\Models\User;
 use App\Models\Usulan;
@@ -19,6 +20,7 @@ use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PemegangNominal;
 use App\Services\PenagihDokumen;
+use App\Services\PencatatTransportLokal;
 use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
@@ -46,6 +48,7 @@ class KeuanganController extends Controller
         private PenguncianBerkas $kunci,
         private PengirimanBerkas $pengiriman,
         private PemegangNominal $pemegang,
+        private PencatatTransportLokal $transportLokal,
     ) {}
 
     public function index(Request $request)
@@ -254,6 +257,21 @@ class KeuanganController extends Controller
 
         $request->validate(...$this->aturanRincianKeuangan($request));
 
+        // Transport lokal dicatat pada Daftar Pengeluaran Riil pelaksana,
+        // bukan sebagai baris rincian biaya.
+        if ($request->input('kategori') === KategoriBiaya::TransportLokal->value) {
+            $this->transportLokal->tambah($usulan, $request->komponen, (float) ($request->volume * $request->harga_satuan));
+
+            $this->audit->catat(
+                AuditLog::AKSI_BIAYA,
+                "Transport lokal \"{$request->komponen}\" dicatat tim keuangan pada daftar riil usulan {$usulan->no_usulan}.",
+                ['usulan' => $usulan],
+            );
+
+            return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                ->with('success', 'Komponen dicatat pada Transport Lokal (Daftar Pengeluaran Riil).');
+        }
+
         // Komponen yang sudah diisi pelaksana beserta buktinya tidak ditulis
         // ulang di sini — baris dari berkasnya itulah yang diperiksa.
         $isian = IsianBiaya::untukBarisKeuangan(KategoriBiaya::from($request->kategori), $request->input('isian_pelaksana'));
@@ -308,6 +326,26 @@ class KeuanganController extends Controller
         $dariBerkas = $rincian->dariDokumen();
 
         $request->validate(...$this->aturanRincianKeuangan($request, $dariBerkas));
+
+        // Dipindah ke transport lokal: barisnya pindah ke Daftar Pengeluaran
+        // Riil, tidak lagi tersembunyi di rincian biaya.
+        if ($request->input('kategori') === KategoriBiaya::TransportLokal->value) {
+            try {
+                $this->transportLokal->pindahkan($usulan, $rincian, $request->komponen, (float) ($request->volume * $request->harga_satuan));
+            } catch (ValidationException $e) {
+                return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                    ->with('error', collect($e->errors())->flatten()->first());
+            }
+
+            $this->audit->catat(
+                AuditLog::AKSI_BIAYA,
+                "Komponen biaya \"{$rincian->komponen}\" pada usulan {$usulan->no_usulan} dipindahkan ke transport lokal.",
+                ['usulan' => $usulan],
+            );
+
+            return redirect()->route('keuangan.detail', $usulan->no_usulan)
+                ->with('success', "Komponen \"{$request->komponen}\" dipindahkan ke Transport Lokal (Daftar Pengeluaran Riil).");
+        }
 
         $isian = $dariBerkas
             ? null
@@ -367,6 +405,27 @@ class KeuanganController extends Controller
 
         return redirect()->route('keuangan.detail', $usulan->no_usulan)
             ->with('success', 'Rincian biaya berhasil dihapus.');
+    }
+
+    /**
+     * Hapus transport lokal tulisan tim keuangan dari daftar riil pelaksana.
+     */
+    public function destroyTransportLokal(Request $request, Usulan $usulan, RincianDaftarRiil $baris): RedirectResponse
+    {
+        $this->pastikanBolehMengelolaBiaya($request);
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
+
+        $uraian = $baris->uraian;
+        $this->transportLokal->hapus($usulan, $baris);
+
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Transport lokal \"{$uraian}\" tulisan tim keuangan dihapus dari daftar riil usulan {$usulan->no_usulan}.",
+            ['usulan' => $usulan],
+        );
+
+        return redirect()->route('keuangan.detail', $usulan->no_usulan)
+            ->with('success', "Transport lokal \"{$uraian}\" dihapus.");
     }
 
     /**
@@ -791,7 +850,7 @@ class KeuanganController extends Controller
 
         return [
             [
-                'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::untukTimKeuangan()))],
+                'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::options()))],
                 'komponen' => ['required', 'string', 'max:255'],
                 'volume' => ['required', 'integer', 'min:1'],
                 'satuan' => ['required', 'string', 'max:50'],
@@ -804,9 +863,7 @@ class KeuanganController extends Controller
                 ],
             ],
             [
-                'kategori.in' => $request->input('kategori') === KategoriBiaya::TransportLokal->value
-                    ? 'Transport lokal tidak ditulis pada rincian biaya — nominalnya berasal dari nota pelaksana pada Daftar Pengeluaran Riil.'
-                    : 'Kategori biaya tidak dikenali.',
+                'kategori.in' => 'Kategori biaya tidak dikenali.',
                 'isian_pelaksana.required' => 'Pilih tiket pelaksana yang diwakili baris transport ini, atau nyatakan bukan tiket pelaksana.',
                 'isian_pelaksana.in' => 'Pilihan tiket pelaksana tidak dikenali.',
             ],

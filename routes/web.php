@@ -247,6 +247,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'updateRincian'])->name('keuangan.rincian.update');
         Route::delete('/{usulan:no_usulan}/rincian/{rincian}', [KeuanganController::class, 'destroyRincian'])->name('keuangan.rincian.destroy');
 
+        // Transport lokal tulisan tim keuangan pada daftar riil pelaksana.
+        Route::delete('/{usulan:no_usulan}/transport-lokal/{baris}', [KeuanganController::class, 'destroyTransportLokal'])->name('keuangan.transport-lokal.destroy');
+
         // Nominal yang datang dari berkas pelaksana diperiksa satu per satu.
         Route::put('/{usulan:no_usulan}/rincian/{rincian}/validasi', [KeuanganController::class, 'validasiRincian'])->name('keuangan.rincian.validasi');
         Route::delete('/{usulan:no_usulan}/rincian/{rincian}/validasi', [KeuanganController::class, 'batalValidasiRincian'])->name('keuangan.rincian.batal-validasi');

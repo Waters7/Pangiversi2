@@ -125,22 +125,32 @@ class DokService
 
         $aturan = [
             'ruas' => ['required', 'array'],
-            'ruas.*.nominal' => ['nullable', 'numeric', 'min:0'],
             'ruas.*.keterangan' => ['nullable', 'string', 'max:255'],
+            'ruas.*.hapus' => ['nullable', 'boolean'],
         ];
         $pesan = [];
 
         // Nota hanya wajib untuk ruas yang diisi nominalnya — ruas kosong memang
         // tidak dilalui — dan yang notanya sudah pernah diunggah tidak ditagih lagi.
+        // Sebaliknya nota yang diunggah wajib bernominal: tanpa nominal ia
+        // tidak masuk transport lokal dan tidak pernah diganti.
         foreach ($ruasBerlaku as $ruas) {
-            $bernominal = (float) $request->input("ruas.{$ruas->value}.nominal", 0) > 0;
+            $kunci = "ruas.{$ruas->value}";
+            $dihapus = $request->boolean("{$kunci}.hapus");
+            $bernominal = (float) $request->input("{$kunci}.nominal", 0) > 0;
             $sudahAda = filled($tersimpan->get($ruas->value)?->bukti);
+            $berNota = ! $dihapus && ($request->hasFile("{$kunci}.bukti") || $sudahAda);
+            $sebutan = $ruas->dalamKota() ? 'transport lokal' : "ruas {$ruas->value} ({$ruas->label()})";
 
-            $aturan["ruas.{$ruas->value}.bukti"] = [
-                $bernominal && ! $sudahAda ? 'required' : 'nullable',
+            $aturan["{$kunci}.nominal"] = [$berNota ? 'required' : 'nullable', 'numeric', $berNota ? 'min:1' : 'min:0'];
+            $pesan["{$kunci}.nominal.required"] = "Isi nominal {$sebutan} sesuai notanya — tanpa nominal, nota tidak masuk transport lokal.";
+            $pesan["{$kunci}.nominal.min"] = "Isi nominal {$sebutan} sesuai notanya — tanpa nominal, nota tidak masuk transport lokal.";
+
+            $aturan["{$kunci}.bukti"] = [
+                $bernominal && ! $sudahAda && ! $dihapus ? 'required' : 'nullable',
                 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
             ];
-            $pesan["ruas.{$ruas->value}.bukti.required"] = $ruas->dalamKota()
+            $pesan["{$kunci}.bukti.required"] = $ruas->dalamKota()
                 ? 'Unggah bukti/nota transport lokal karena nominalnya diisi.'
                 : "Unggah bukti/nota untuk ruas {$ruas->value} ({$ruas->label()}) karena nominalnya diisi.";
         }
@@ -162,7 +172,19 @@ class DokService
             $masukan = $request->input("ruas.{$ruas->value}", []);
             $nota = $tersimpan->get($ruas->value) ?? $usulan->notaTransport()->make(['urutan' => $ruas->value]);
 
-            $nota->nominal = $masukan['nominal'] !== null && $masukan['nominal'] !== ''
+            // Nota yang salah unggah dicabut bersama nominalnya — ruas itu
+            // kembali dianggap tidak dilalui.
+            if ($request->boolean("ruas.{$ruas->value}.hapus")) {
+                $this->hapusBerkasLama($nota->bukti);
+
+                if ($nota->exists) {
+                    $nota->delete();
+                }
+
+                continue;
+            }
+
+            $nota->nominal = ($masukan['nominal'] ?? null) !== null && $masukan['nominal'] !== ''
                 ? (float) $masukan['nominal']
                 : null;
             $nota->keterangan = $masukan['keterangan'] ?? null;

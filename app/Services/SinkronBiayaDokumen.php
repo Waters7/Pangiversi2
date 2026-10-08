@@ -104,20 +104,10 @@ class SinkronBiayaDokumen
      */
     public function selaraskanDaftarRiil(Usulan $usulan): void
     {
-        $peserta = $usulan->peserta()->where('id_user', $usulan->id_user)->first()
-            ?? $usulan->peserta()->orderBy('id')->first();
-
-        if (! $peserta) {
-            return;
-        }
-
-        $daftar = DaftarRiil::firstOrCreate(
-            ['id_usulan' => $usulan->id, 'id_peserta' => $peserta->id],
-            ['total_riil' => 0],
-        );
+        $daftar = $this->daftarRiilPelaksana($usulan);
 
         // Daftar yang sudah ditandatangani tidak boleh berubah diam-diam.
-        if ($daftar->sudah_ditandatangani) {
+        if (! $daftar || $daftar->sudah_ditandatangani) {
             return;
         }
 
@@ -163,6 +153,27 @@ class SinkronBiayaDokumen
         // bukan menyisakan angka lama yang tak lagi berdasar.
         $daftar->hitungTotal(paksa: true);
         $this->ajukanKeTimKeuangan($daftar->fresh(), $usulan);
+    }
+
+    /**
+     * Daftar Pengeluaran Riil milik pelaksana utama usulan — tempat transport
+     * lokal dicatat, dari nota pelaksana maupun tulisan tim keuangan.
+     *
+     * Null bila usulan belum punya peserta sama sekali.
+     */
+    public function daftarRiilPelaksana(Usulan $usulan): ?DaftarRiil
+    {
+        $peserta = $usulan->peserta()->where('id_user', $usulan->id_user)->first()
+            ?? $usulan->peserta()->orderBy('id')->first();
+
+        if (! $peserta) {
+            return null;
+        }
+
+        return DaftarRiil::firstOrCreate(
+            ['id_usulan' => $usulan->id, 'id_peserta' => $peserta->id],
+            ['total_riil' => 0],
+        );
     }
 
     /**

@@ -91,6 +91,18 @@ class RincianBiaya extends Model
     }
 
     /**
+     * Baris perkalian "volume satuan × tarif" ikut tercetak di bawah komponen.
+     *
+     * Uang harian selalu dirinci, termasuk yang hanya sehari: pemeriksa
+     * menakar tarifnya terhadap SBM, jadi "1 OH × Rp 380.000" tetap perlu
+     * terbaca. Komponen lain cukup dirinci bila volumenya lebih dari satu.
+     */
+    public function tampilkanPerkalian(): bool
+    {
+        return $this->volume > 1 || ($this->kategori === KategoriBiaya::UangHarian && $this->volume > 0);
+    }
+
+    /**
      * Uraian sebagaimana tercetak pada dokumen rincian resmi,
      * misalnya "2 Hari x Rp 370.000".
      */

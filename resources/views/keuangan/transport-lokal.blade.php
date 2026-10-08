@@ -106,7 +106,9 @@
                                             <span class="text-slate-400">· Rp {{ number_format($baris->nominal, 0, ',', '.') }}</span>
                                         </p>
 
-                                        @if ($bukti)
+                                        @if (! $baris->dariDokumen())
+                                            <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded">Ditulis tim keuangan</span>
+                                        @elseif ($bukti)
                                             <a href="{{ route('berkas.lihat', $bukti) }}" target="_blank" rel="noopener"
                                                class="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 hover:border-teal-300 text-slate-500 hover:text-teal-700 text-[10px] font-bold rounded transition"
                                                title="Buka nota {{ $baris->uraian }} di tab baru">

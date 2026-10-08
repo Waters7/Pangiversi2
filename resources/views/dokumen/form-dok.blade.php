@@ -377,7 +377,10 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nominal</label>
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                            Nominal
+                                            <span class="font-normal text-slate-400">— wajib bila notanya diunggah</span>
+                                        </label>
                                         <div class="flex items-stretch rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
                                             <span class="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
                                             <input type="number" name="ruas[{{ $ruas->value }}][nominal]" min="0" step="1" @disabled($terkunci)
@@ -401,8 +404,18 @@
                                         <span class="font-normal text-slate-400">— wajib bila nominalnya diisi</span>
                                     </label>
                                     @if ($baris?->bukti)
-                                        <a href="{{ route('berkas.lihat', $baris->bukti) }}" target="_blank"
-                                           class="inline-block mb-2 text-xs font-semibold text-teal-600 hover:underline">Lihat berkas tersimpan →</a>
+                                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
+                                            <a href="{{ route('berkas.lihat', $baris->bukti) }}" target="_blank"
+                                               class="text-xs font-semibold text-teal-600 hover:underline">Lihat berkas tersimpan →</a>
+                                            @unless ($terkunci)
+                                                {{-- Nota yang salah unggah dicabut bersama nominalnya. --}}
+                                                <label class="inline-flex items-center gap-1.5 text-xs text-red-600 cursor-pointer">
+                                                    <input type="checkbox" name="ruas[{{ $ruas->value }}][hapus]" value="1"
+                                                           class="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-400">
+                                                    Hapus nota ruas ini
+                                                </label>
+                                            @endunless
+                                        </div>
                                     @endif
                                     <input type="file" name="ruas[{{ $ruas->value }}][bukti]" accept=".pdf,.jpg,.jpeg,.png" @disabled($terkunci)
                                            class="w-full px-3 py-2 rounded-xl text-sm bg-white border border-slate-200

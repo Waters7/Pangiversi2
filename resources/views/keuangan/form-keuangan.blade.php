@@ -196,6 +196,11 @@
                             <span x-text="kategori === 'penginapan' ? 'nominal bill hotel' : 'nominal biaya penyelenggaraan'"></span>
                             pada berkas pelaksana, supaya komponen yang sama tidak tercatat dua kali.
                         </p>
+                        <p x-show="kategori === 'transport_lokal'" x-cloak class="mt-3 text-[11px] text-indigo-700 leading-relaxed">
+                            Transport lokal tidak menjadi baris rincian biaya: komponen ini dicatat pada tabel
+                            <strong>Transport Lokal</strong> (Daftar Pengeluaran Riil) di bawah, tampil pada Periksa Transport Lokal,
+                            dan dibayarkan saat pelunasan. Periksa dulu agar tidak dobel dengan nota pelaksana.
+                        </p>
 
                         @if($errors->any())
                             <div class="mt-2 text-xs text-red-500">
@@ -335,7 +340,10 @@
                                                     <select name="kategori" required x-model="kategori"
                                                             class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white">
                                                         @foreach (($kategoriBiaya ?? []) as $nilai => $label)
-                                                            <option value="{{ $nilai }}" {{ $item->kategori->value === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                                                            {{-- Baris dari berkas pelaksana tidak dipindah ke transport
+                                                                 lokal: ia lahir dari tiket atau bill hotel. --}}
+                                                            <option value="{{ $nilai }}" {{ $item->kategori->value === $nilai ? 'selected' : '' }}
+                                                                    @disabled($item->dariDokumen() && $nilai === \App\Enums\KategoriBiaya::TransportLokal->value)>{{ $label }}</option>
                                                         @endforeach
                                                     </select>
                                                 </div>
@@ -439,6 +447,11 @@
             $riilTransport = $pesertaRiil ? $usulan->daftarRiil->firstWhere('id_peserta', $pesertaRiil->id) : null;
             $barisTransport = $riilTransport?->rincian ?? collect();
             $totalTransport = (float) ($riilTransport?->total_riil ?? $barisTransport->sum('nominal'));
+
+            // Transport lokal tulisan tim keuangan yang nominalnya sama dengan
+            // nota pelaksana kemungkinan besar biaya yang sama, tercatat dua kali.
+            $nominalNota = $barisTransport->filter->dariDokumen()->pluck('nominal')->map(fn ($n) => (float) $n);
+            $bolehHapusTransport = $canEditRincian && app(\App\Services\PenguncianBerkas::class)->daftarRiil($usulan) === null;
         @endphp
 
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -452,7 +465,7 @@
                     <div>
                         <h3 class="font-bold text-slate-800 text-sm">Transport Lokal</h3>
                         <p class="text-xs text-slate-400">
-                            Dari nota pelaksana — dipertanggungjawabkan lewat Daftar Pengeluaran Riil, dibayar saat pelunasan
+                            Dari nota pelaksana atau dicatat tim keuangan — dipertanggungjawabkan lewat Daftar Pengeluaran Riil, dibayar saat pelunasan
                         </p>
                     </div>
                 </div>
@@ -482,13 +495,36 @@
                         @forelse ($barisTransport as $baris)
                             <tr>
                                 <td class="px-6 py-3 text-xs text-slate-400">{{ $loop->iteration }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $baris->uraian }}</td>
-                                <td class="px-4 py-3 text-right font-semibold text-slate-800 tabular-nums">Rp {{ number_format($baris->nominal, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3 text-slate-700">
+                                    {{ $baris->uraian }}
+                                    @if (! $baris->dariDokumen())
+                                        <span class="block text-[11px] text-slate-400 mt-0.5">Ditulis tim keuangan</span>
+                                        @if ($nominalNota->contains((float) $baris->nominal))
+                                            <span class="block text-[11px] font-semibold text-red-600 mt-0.5">Nominalnya sama dengan nota pelaksana — mungkin tercatat dua kali.</span>
+                                        @endif
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right font-semibold text-slate-800 tabular-nums">
+                                    <div class="flex items-center justify-end gap-2">
+                                        Rp {{ number_format($baris->nominal, 0, ',', '.') }}
+                                        @if ($bolehHapusTransport && ! $baris->dariDokumen())
+                                            <form method="POST" action="{{ route('keuangan.transport-lokal.destroy', [$usulan->no_usulan, $baris->id]) }}"
+                                                  onsubmit="return confirm('Hapus transport lokal ini dari daftar riil?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition" title="Hapus">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="3" class="px-6 py-6 text-center text-xs text-slate-400">
-                                    Pelaksana belum mengisi nota transportasi lokal.
+                                    Belum ada transport lokal — dari nota pelaksana, atau dicatat tim keuangan lewat kategori Transport Lokal.
                                 </td>
                             </tr>
                         @endforelse

@@ -68,7 +68,7 @@ class SelaraskanBiayaBerkasTest extends TestCase
     public function test_tanpa_nominal_tertinggal_tidak_ada_yang_diubah(): void
     {
         $this->artisan('pangi:selaraskan-biaya')
-            ->expectsOutput('Tidak ada nominal berkas yang tertinggal dari rincian biaya.')
+            ->expectsOutput('Tidak ada nominal berkas yang tertinggal dari rincian biaya maupun daftar riil.')
             ->assertSuccessful();
 
         $this->assertSame(1, RincianBiaya::count());

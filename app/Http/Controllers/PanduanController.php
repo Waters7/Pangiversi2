@@ -136,6 +136,16 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.17',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Dokumen rincian biaya kini menuliskan perkalian uang harian walau hanya sehari, misalnya 1 OH × Rp 380.000.',
+                    'Komponen yang dipindah tim keuangan ke kategori Transport Lokal tidak lagi hilang: ia masuk ke tabel Transport Lokal (Daftar Pengeluaran Riil), tampil pada Periksa Transport Lokal, dan dapat dihapus bila keliru. Kategori Transport Lokal juga dapat dipilih langsung saat menambah komponen.',
+                    'Nota transport lokal yang diunggah pelaksana wajib bernominal agar masuk ke tabel Transport Lokal dan Periksa Transport Lokal; nota yang salah unggah dapat dihapus.',
+                    'Bendahara menerima pemberitahuan Perjadin lengkap, segera dibayarkan begitu berkas pertanggungjawaban lengkap dan rincian biaya serta daftar pengeluaran riil ditandatangani PPK.',
+                ],
+            ],
+            [
                 'versi' => '2.5.16',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [

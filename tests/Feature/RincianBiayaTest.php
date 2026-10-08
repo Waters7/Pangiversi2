@@ -101,6 +101,19 @@ class RincianBiayaTest extends TestCase
         $this->assertSame('2 Hari x Rp 370.000', $rincian->uraian);
     }
 
+    /** Uang harian sehari tetap dirinci "1 OH × tarif" pada cetakan; komponen lain hanya bila lebih dari satu. */
+    public function test_uang_harian_sehari_tetap_dirinci_pada_cetakan(): void
+    {
+        $baris = fn (KategoriBiaya $kategori, int $volume) => RincianBiaya::factory()->make([
+            'kategori' => $kategori->value,
+            'volume' => $volume,
+        ]);
+
+        $this->assertTrue($baris(KategoriBiaya::UangHarian, 1)->tampilkanPerkalian());
+        $this->assertFalse($baris(KategoriBiaya::Transport, 1)->tampilkanPerkalian());
+        $this->assertTrue($baris(KategoriBiaya::Penginapan, 2)->tampilkanPerkalian());
+    }
+
     // ── Cetak rincian ──
 
     public function test_rincian_dapat_dicetak_dalam_format_pmk(): void
