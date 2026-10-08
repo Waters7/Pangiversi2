@@ -72,6 +72,23 @@
                 <p class="text-sm font-semibold text-slate-700">{{ $usulan->periode }}</p>
             </div>
 
+            {{-- Surat tugas pelaksana: dasar penugasan sekaligus acuan lama
+                 perjalanan dan pengikut saat menyusun rincian biaya. --}}
+            @php $suratTugas = $usulan->berkasSuratTugas(); @endphp
+            <div>
+                <p class="text-xs text-slate-400">Surat Tugas</p>
+                <p class="text-sm font-semibold text-slate-700 font-mono">{{ $usulan->no_tugas ?: '—' }}</p>
+                @if ($suratTugas)
+                    <a href="{{ route('berkas.lihat', $suratTugas) }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Lihat surat tugas
+                    </a>
+                @else
+                    <p class="text-xs text-amber-600">Berkasnya belum diunggah</p>
+                @endif
+            </div>
+
             {{-- Rekening tujuan transfer ditampilkan di sini supaya bendahara
                  tidak perlu membuka profil pegawai saat hendak membayar. --}}
             <div>

@@ -603,7 +603,9 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Buka Keuangan → Input Rincian Biaya">
-                Pilih usulan yang berkasnya sudah lengkap. Nominal dari dokumen yang diunggah
+                Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
+                dan pada kotak keterangan di halaman rinciannya — membuka surat tugas pelaksana sebagai acuan
+                lama perjalanan dan komponen yang dibiayai. Nominal dari dokumen yang diunggah
                 pelaksana sudah diselaraskan lebih dulu, jadi Anda memeriksa dan menyesuaikan —
                 bukan mengetik dari nol. Satu komponen hanya dinominalkan satu pihak: tiket, bill
                 hotel, atau biaya penyelenggaraan yang sudah diisi pelaksana beserta buktinya tidak

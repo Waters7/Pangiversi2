@@ -75,7 +75,7 @@ class KeuanganController extends Controller
         ];
 
         $usulan = $dasar()
-            ->with('user', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen')
+            ->with('user', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen', 'spd')
             ->when($status === 'berjalan', fn ($q) => $q->where('status', 'disetujui'))
             ->when($status === 'selesai', fn ($q) => $q->where('status', 'selesai'))
             ->latest()

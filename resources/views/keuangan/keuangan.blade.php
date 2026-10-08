@@ -94,6 +94,16 @@
                             <td class="px-6 py-4">
                                 <p class="font-bold text-slate-800 text-xs">{{ $item->no_usulan }}</p>
                                 <p class="text-xs text-slate-400">{{ $item->created_at->format('d M Y') }}</p>
+                                {{-- Surat tugas pelaksana — dasar menakar komponen biaya. --}}
+                                @php $suratTugas = $item->berkasSuratTugas(); @endphp
+                                @if ($suratTugas)
+                                    <a href="{{ route('berkas.lihat', $suratTugas) }}" target="_blank" rel="noopener"
+                                       title="Surat tugas {{ $item->no_tugas }}"
+                                       class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 hover:underline">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        Surat tugas
+                                    </a>
+                                @endif
                             </td>
 
                             <td class="px-4 py-4">

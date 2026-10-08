@@ -160,6 +160,17 @@ class Usulan extends Model
         return $this->hasMany(Dokumen::class, 'id_usulan');
     }
 
+    /**
+     * Berkas surat tugas pelaksana: yang diunggah atau disalin saat
+     * pengajuan, atau — untuk usulan lama — yang melekat pada SPD-nya.
+     */
+    public function berkasSuratTugas(): ?string
+    {
+        $dariUsulan = $this->dokumen->sortByDesc('id')->first(fn (Dokumen $dokumen) => filled($dokumen->surat_tugas))?->surat_tugas;
+
+        return $dariUsulan ?? ($this->spd?->punyaSuratTugas() ? $this->spd->surat_tugas : null);
+    }
+
     public function keuangan()
     {
         return $this->hasOne(Keuangan::class, 'id_usulan');

@@ -136,6 +136,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.20',
+                'tanggal' => '8 Oktober 2026',
+                'butir' => [
+                    'Keuangan → Input Rincian Biaya: surat tugas pelaksana dapat dibuka langsung dari daftar usulan maupun dari halaman rincian biayanya, beserta nomornya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.19',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [
