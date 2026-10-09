@@ -136,6 +136,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.23',
+                'tanggal' => '9 Oktober 2026',
+                'butir' => [
+                    'Satu SPD hanya untuk satu usulan perjadin: SPD yang sudah dipakai usulan pelaksana tidak tampil lagi pada pilihan SPD formulir usulan dan ditolak bila dikirim. SPD itu dapat dipakai kembali setelah usulannya dibatalkan atau dihapus — begitu pula nomor SPD-nya. Rekan pada SPD yang sama tetap mengajukan usulannya sendiri.',
+                    'SPD yang dibuat bersama pelaksana lain dapat dikurangi satu pelaksana saja; SPD dan pelaksana lainnya tetap. Pelaksana yang bukan pembuat SPD hanya menghapus dirinya sendiri, bukan SPD rekannya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.22',
                 'tanggal' => '8 Oktober 2026',
                 'butir' => [

@@ -14,6 +14,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * usulan ganda atau salah salin. Dibandingkan tanpa peduli huruf besar-kecil
  * dan spasi tepi supaya "ar.05.02/f.xxx/12/2026" tidak lolos sebagai nomor
  * baru.
+ *
+ * Usulan yang dibatalkan pemiliknya melepaskan nomornya, supaya SPD yang
+ * sama dapat diajukan lagi; usulan yang dihapus memang sudah tiada.
  */
 class NomorSpdUnik implements ValidationRule
 {
@@ -35,7 +38,7 @@ class NomorSpdUnik implements ValidationRule
             return;
         }
 
-        $pemakai = Usulan::query()
+        $pemakai = Usulan::memegangSpd()
             ->whereRaw('LOWER(TRIM(no_spd)) = ?', [$nomor])
             ->when($this->kecuali, fn ($q) => $q->whereKeyNot($this->kecuali->id))
             ->with('user')

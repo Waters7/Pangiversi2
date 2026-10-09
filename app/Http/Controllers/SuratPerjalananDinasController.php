@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Enums\DokumenCetak;
 use App\Enums\Golongan;
 use App\Enums\Kemampuan;
+use App\Models\AuditLog;
 use App\Models\LokasiTujuan;
 use App\Models\Notifikasi;
 use App\Models\SpdPelaksana;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
+use App\Models\Usulan;
+use App\Services\AuditService;
 use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PengaturanDokumen;
@@ -32,6 +35,7 @@ class SuratPerjalananDinasController extends Controller
         private PenomoranPerjadin $penomoran,
         private PengaturanDokumen $pengaturanDokumen,
         private RekamPenghapusan $penghapusan,
+        private AuditService $audit,
     ) {}
 
     public function index(Request $request): View
@@ -218,6 +222,14 @@ class SuratPerjalananDinasController extends Controller
     {
         $this->pastikanBolehMengubah($request, $spd);
 
+        // SPD bersama tidak dihapus utuh oleh salah satu pelaksananya: surat
+        // rekannya ikut hilang. Ia menghapus dirinya sendiri dari pelaksana.
+        abort_unless(
+            $spd->bolehDihapusUtuhOleh($request->user()),
+            403,
+            'SPD ini juga milik pelaksana lain. Hapus diri Anda dari daftar pelaksananya — SPD rekan Anda tetap ada.',
+        );
+
         // Dicatat sebelum penghapusan, beserta cuplikan isinya: setelah ini
         // SPD, pelaksana, dan pengikutnya hilang dan yang tersisa hanya jejaknya.
         $this->penghapusan->spd($spd);
@@ -225,6 +237,68 @@ class SuratPerjalananDinasController extends Controller
         $spd->delete();
 
         return redirect()->route('spd.index')->with('success', 'Surat Perjalanan Dinas dihapus.');
+    }
+
+    /**
+     * Hapus satu pelaksana dari SPD bersama; SPD dan pelaksana lainnya tetap.
+     *
+     * Pelaksana yang sudah mengajukan usulan dari SPD ini tidak dihapus
+     * selama usulannya masih berjalan — usulan itu berdasar pada SPD-nya.
+     */
+    public function hapusPelaksana(Request $request, SuratPerjalananDinas $spd, SpdPelaksana $pelaksana): RedirectResponse
+    {
+        $this->pastikanBolehMengubah($request, $spd);
+        abort_unless($pelaksana->id_spd === $spd->id, 404);
+
+        $spd->load('pelaksana');
+
+        if ($spd->pelaksana->count() <= 1) {
+            return back()->with('error', 'SPD ini hanya memuat satu pelaksana — hapus SPD-nya bila memang tidak dipakai.');
+        }
+
+        abort_unless(
+            $spd->bolehMenghapusPelaksana($request->user(), $pelaksana),
+            403,
+            'Anda hanya dapat menghapus diri Anda sendiri dari SPD ini.',
+        );
+
+        $usulan = $pelaksana->id_user
+            ? Usulan::memegangSpd()->where('id_spd', $spd->id)->where('id_user', $pelaksana->id_user)->value('no_usulan')
+            : null;
+
+        if ($usulan !== null) {
+            return back()->with('error', "{$pelaksana->nama} sudah mengajukan usulan {$usulan} dari SPD ini. "
+                .'Batalkan atau hapus usulan itu lebih dulu.');
+        }
+
+        DB::transaction(function () use ($spd, $pelaksana): void {
+            $pelaksana->delete();
+
+            // Urutan dirapatkan supaya pelaksana pertama tetap berurutan 1.
+            $spd->pelaksana()->get()->values()
+                ->each(fn (SpdPelaksana $orang, int $i) => $orang->update(['urutan' => $i + 1]));
+        });
+
+        $this->audit->catat(
+            AuditLog::AKSI_DIPERBARUI,
+            "{$pelaksana->nama} (".($pelaksana->nomor_surat ?: 'tanpa nomor').') dihapus dari pelaksana SPD ke '
+                ."{$spd->tempat_tujuan}; pelaksana lainnya tetap.",
+        );
+
+        if ($pelaksana->user && $pelaksana->id_user !== $request->user()->id) {
+            $this->notifikasi->kirim(
+                $pelaksana->user,
+                'Anda dihapus dari SPD',
+                "Nama Anda dihapus dari pelaksana SPD perjalanan dinas ke {$spd->tempat_tujuan} oleh {$request->user()->nama}.",
+                ['tipe' => Notifikasi::TIPE_PERINGATAN],
+            );
+        }
+
+        // Pelaksana yang menghapus dirinya sendiri tidak lagi memegang SPD ini.
+        $spd->refresh()->load('pelaksana');
+        $tujuan = $spd->bolehDiubahOleh($request->user()) ? route('spd.show', $spd) : route('spd.index');
+
+        return redirect($tujuan)->with('success', "{$pelaksana->nama} dihapus dari SPD ini; pelaksana lainnya tetap.");
     }
 
     /**

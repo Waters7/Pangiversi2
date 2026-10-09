@@ -161,9 +161,11 @@
                                 @if (count($spdTerkait) > 0)
                                     Memilih SPD akan mengisi sendiri tujuan, tanggal, dan uraian di bawah. Usulan tetap
                                     dapat diajukan tanpa memilihnya — yang wajib adalah SPD bertanda tangan pada bagian
-                                    Data Dasar Perjalanan.
+                                    Data Dasar Perjalanan. SPD yang sudah dipakai usulan Anda tidak ditampilkan; ia muncul
+                                    lagi setelah usulan itu dibatalkan atau dihapus.
                                 @else
-                                    Belum ada SPD yang dibuat lewat aplikasi atas nama Anda. Tidak masalah — isi data
+                                    Belum ada SPD yang dibuat lewat aplikasi atas nama Anda, atau seluruhnya sudah dipakai
+                                    usulan Anda. Tidak masalah — isi data
                                     perjalanan di bawah dan unggah SPD bertanda tangan pada bagian Data Dasar Perjalanan.
                                 @endif
                             </p>

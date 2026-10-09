@@ -106,6 +106,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/spd/{spd}/cetak', [SuratPerjalananDinasController::class, 'cetak'])->name('spd.cetak');
     Route::delete('/spd/{spd}', [SuratPerjalananDinasController::class, 'destroy'])->name('spd.destroy');
 
+    // SPD bersama: satu pelaksana dihapus, pelaksana lainnya tetap.
+    Route::delete('/spd/{spd}/pelaksana/{pelaksana}', [SuratPerjalananDinasController::class, 'hapusPelaksana'])->name('spd.pelaksana.destroy');
+
     // Usulan — seluruh peran berhak mengajukan perjalanan dinas
     Route::get('/usulan', [UsulanController::class, 'create'])->name('usulan.create');
     Route::post('/usulan', [UsulanController::class, 'store'])->name('usulan.store');

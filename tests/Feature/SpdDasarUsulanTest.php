@@ -197,6 +197,83 @@ class SpdDasarUsulanTest extends TestCase
         $this->assertSame(0, Usulan::count());
     }
 
+    // ── Satu SPD untuk satu usulan ──
+
+    /** @return list<int> */
+    private function spdDitawarkan(User $pengguna): array
+    {
+        return array_column(
+            $this->actingAs($pengguna)
+                ->get(route('usulan.create', ['jenis' => 'luar-kota']))
+                ->assertOk()
+                ->viewData('spdTerkait'),
+            'id',
+        );
+    }
+
+    public function test_spd_yang_sudah_dipakai_tidak_ditawarkan_dan_ditolak(): void
+    {
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan())->assertSessionHasNoErrors();
+        $pertama = Usulan::sole();
+
+        $this->assertSame([], $this->spdDitawarkan($this->pengusul));
+
+        $this->actingAs($this->pengusul)
+            ->post(route('usulan.store'), $this->dataUsulan(['no_spd' => 'KU.02.04/F.XXX.8/9999/2026']))
+            ->assertSessionHasErrors(['id_spd' => "SPD ini sudah dipakai usulan {$pertama->no_usulan}. Satu SPD hanya untuk satu usulan — batalkan atau hapus usulan itu lebih dulu bila ingin memakai SPD ini lagi."]);
+
+        $this->assertSame(1, Usulan::count());
+    }
+
+    /** Rekan pada SPD yang sama mengajukan usulannya sendiri dari SPD itu. */
+    public function test_spd_yang_dipakai_pelaksana_tetap_terbuka_bagi_rekannya(): void
+    {
+        $rekan = User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK]);
+        $this->spd->pelaksana()->create([
+            'urutan' => 2,
+            'id_user' => $rekan->id,
+            'nomor_surat' => 'KU.02.04/F.XXX.8/2/2026',
+            'nama' => $rekan->nama,
+            'nip' => $rekan->nip,
+        ]);
+
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan());
+
+        $this->assertSame([$this->spd->id], $this->spdDitawarkan($rekan));
+    }
+
+    public function test_spd_dapat_dipakai_lagi_setelah_usulannya_dihapus(): void
+    {
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan(['action' => 'draft']));
+        $this->actingAs($this->pengusul)->delete(route('usulan.destroy', Usulan::sole()))->assertSessionHas('success');
+
+        $this->assertSame([$this->spd->id], $this->spdDitawarkan($this->pengusul));
+
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan())->assertSessionHasNoErrors();
+        $this->assertSame($this->spd->id, Usulan::sole()->id_spd);
+    }
+
+    /** Usulan yang dibatalkan melepas SPD beserta nomornya, jadi nomor yang sama dapat diajukan lagi. */
+    public function test_spd_dapat_dipakai_lagi_setelah_usulannya_dibatalkan(): void
+    {
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan());
+        Usulan::sole()->batalkanKeikutsertaan('Batal berangkat.');
+
+        $this->assertSame([$this->spd->id], $this->spdDitawarkan($this->pengusul));
+
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan())->assertSessionHasNoErrors();
+        $this->assertSame(2, Usulan::where('id_spd', $this->spd->id)->count());
+    }
+
+    /** Usulan yang ditolak masih dapat direvisi, jadi tetap memegang SPD-nya. */
+    public function test_usulan_ditolak_tetap_memegang_spd(): void
+    {
+        $this->actingAs($this->pengusul)->post(route('usulan.store'), $this->dataUsulan());
+        Usulan::sole()->update(['status' => 'ditolak']);
+
+        $this->assertSame([], $this->spdDitawarkan($this->pengusul));
+    }
+
     public function test_jenis_kegiatan_tersimpan_pada_usulan(): void
     {
         $kegiatan = Kegiatan::create(['nama' => 'Monitoring dan Evaluasi']);

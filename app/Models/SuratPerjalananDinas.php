@@ -180,6 +180,36 @@ class SuratPerjalananDinas extends Model
     }
 
     /**
+     * Boleh dihapus utuh oleh pengguna ini.
+     *
+     * SPD bersama milik semua pelaksananya: pelaksana yang bukan pembuatnya
+     * hanya menghapus dirinya sendiri dari daftar pelaksana, supaya surat
+     * rekannya tidak ikut hilang. Pembuat dan super administrator tetap
+     * dapat menghapus seluruhnya.
+     */
+    public function bolehDihapusUtuhOleh(User $pengguna): bool
+    {
+        return $pengguna->isAdmin()
+            || $this->id_pembuat === $pengguna->id
+            || ($this->milik($pengguna) && $this->pelaksana->count() <= 1);
+    }
+
+    /**
+     * Pelaksana itu boleh dihapus dari SPD ini oleh pengguna tersebut,
+     * sementara pelaksana lainnya tetap.
+     *
+     * Hanya bila masih ada pelaksana lain — SPD tanpa pelaksana dihapus
+     * utuh saja. Pembuat dan super administrator menghapus siapa pun;
+     * pelaksana lain hanya dirinya sendiri.
+     */
+    public function bolehMenghapusPelaksana(User $pengguna, SpdPelaksana $orang): bool
+    {
+        return $orang->id_spd === $this->id
+            && $this->pelaksana->count() > 1
+            && ($pengguna->isAdmin() || $this->id_pembuat === $pengguna->id || $orang->id_user === $pengguna->id);
+    }
+
+    /**
      * Rangkuman singkat untuk daftar dan judul berkas.
      */
     public function getRingkasanAttribute(): string

@@ -238,7 +238,10 @@ class UsulanController extends Controller
      */
     private function bekalSpd(User $pengguna): array
     {
+        // SPD yang sudah mendasari usulan pengguna ini tidak ditawarkan lagi;
+        // ia muncul kembali setelah usulan itu dibatalkan atau dihapus.
         return $this->spdMilik($pengguna)
+            ->whereNotIn('id', array_keys(Usulan::pemakaiSpd($pengguna)))
             ->with('pelaksana')
             ->latest()
             ->get()
@@ -269,6 +272,23 @@ class UsulanController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * SPD yang sudah mendasari usulan lain milik pelaksana yang sama ditolak:
+     * satu SPD untuk satu usulan, supaya perjalanan yang sama tidak diajukan
+     * dua kali. Usulan yang dibatalkan atau dihapus melepaskannya.
+     */
+    private function aturanSpdBelumDipakai(User $pelaksana): Closure
+    {
+        return function (string $atribut, mixed $nilai, Closure $gagal) use ($pelaksana): void {
+            $pemakai = Usulan::pemakaiSpd($pelaksana)[(int) $nilai] ?? null;
+
+            if ($pemakai !== null) {
+                $gagal("SPD ini sudah dipakai usulan {$pemakai}. Satu SPD hanya untuk satu usulan — batalkan atau hapus "
+                    .'usulan itu lebih dulu bila ingin memakai SPD ini lagi.');
+            }
+        };
     }
 
     /**
@@ -465,7 +485,7 @@ class UsulanController extends Controller
             'jenis' => ['nullable', Rule::enum(JenisPerjadin::class)],
             // SPD dari aplikasi tidak wajib: memilihnya hanya menyalin isian.
             // Dasar penugasannya adalah SPD bertanda tangan yang diunggah.
-            'id_spd' => ['nullable', Rule::in($this->spdMilik($request->user())->pluck('id'))],
+            'id_spd' => ['nullable', Rule::in($this->spdMilik($request->user())->pluck('id')), $this->aturanSpdBelumDipakai($request->user())],
             // SPD yang sudah ditandatangani lewat SRIKANDI beserta nomor
             // resminya — dasar persetujuan PPK yang tercatat pada jejak audit.
             // Nomornya unik: nomor yang sudah dipakai usulan lain ditolak.

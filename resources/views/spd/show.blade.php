@@ -11,6 +11,17 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @php
+        $pengguna = auth()->user();
+        $barisSaya = $spd->pelaksana->firstWhere('id_user', $pengguna->id);
+    @endphp
+
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
             <a href="{{ route('spd.index') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-600">← Daftar SPD</a>
@@ -26,14 +37,26 @@
                class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
                 Ubah
             </a>
-            <form method="POST" action="{{ route('spd.destroy', $spd) }}"
-                  onsubmit="return confirm('Hapus SPD ini? Tindakan ini tidak dapat dibatalkan.')">
-                @csrf @method('DELETE')
-                <button type="submit"
-                        class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition">
-                    Hapus
-                </button>
-            </form>
+            @if ($spd->bolehDihapusUtuhOleh($pengguna))
+                <form method="POST" action="{{ route('spd.destroy', $spd) }}"
+                      onsubmit="return confirm('{{ $spd->pelaksana->count() > 1 ? 'Hapus SPD ini beserta seluruh pelaksananya? Untuk menghapus satu pelaksana saja, pakai tombol Hapus pada daftar Pelaksana.' : 'Hapus SPD ini? Tindakan ini tidak dapat dibatalkan.' }}')">
+                    @csrf @method('DELETE')
+                    <button type="submit"
+                            class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition">
+                        Hapus
+                    </button>
+                </form>
+            @elseif ($barisSaya && $spd->bolehMenghapusPelaksana($pengguna, $barisSaya))
+                {{-- SPD bersama: pelaksana menghapus dirinya sendiri, SPD rekannya tetap. --}}
+                <form method="POST" action="{{ route('spd.pelaksana.destroy', [$spd, $barisSaya]) }}"
+                      onsubmit="return confirm('Hapus nama Anda dari SPD ini? Pelaksana lainnya tetap.')">
+                    @csrf @method('DELETE')
+                    <button type="submit"
+                            class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition">
+                        Hapus Saya dari SPD
+                    </button>
+                </form>
+            @endif
         </div>
     </div>
 
@@ -83,7 +106,17 @@
                 <div class="px-6 py-4">
                     <div class="flex items-start justify-between gap-3 mb-1">
                         <p class="font-semibold text-slate-800 text-sm">{{ $orang->nama }}</p>
-                        <span class="font-mono text-xs text-teal-700 shrink-0">{{ $orang->nomor_surat }}</span>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="font-mono text-xs text-teal-700">{{ $orang->nomor_surat }}</span>
+                            {{-- Satu pelaksana dihapus, pelaksana lainnya tetap. --}}
+                            @if ($spd->bolehMenghapusPelaksana($pengguna, $orang))
+                                <form method="POST" action="{{ route('spd.pelaksana.destroy', [$spd, $orang]) }}"
+                                      onsubmit="return confirm({{ Js::from('Hapus '.($orang->id_user === $pengguna->id ? 'nama Anda' : $orang->nama).' dari SPD ini? Pelaksana lainnya tetap.') }})">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-xs font-bold text-slate-400 hover:text-red-600 transition">Hapus</button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                     <p class="text-xs text-slate-500">NIP {{ $orang->nip ?: '—' }}</p>
                     <p class="text-xs text-slate-500 mt-0.5">

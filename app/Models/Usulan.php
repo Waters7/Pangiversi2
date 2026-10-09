@@ -404,6 +404,37 @@ class Usulan extends Model
         $query->whereIn('status', StatusUsulan::nilaiMenunggu());
     }
 
+    /**
+     * Usulan yang masih memegang SPD dan nomor SPD-nya.
+     *
+     * Satu SPD hanya mendasari satu usulan tiap pelaksana. Usulan yang
+     * dibatalkan pemiliknya melepasnya, begitu pula usulan yang dihapus —
+     * sesudah itu SPD-nya dapat dipakai lagi untuk pengajuan baru. Usulan
+     * yang ditolak tetap memegangnya karena masih dapat direvisi.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeMemegangSpd(Builder $query): void
+    {
+        $query->where('konfirmasi', '!=', self::KONFIRMASI_DIBATALKAN);
+    }
+
+    /**
+     * Nomor usulan yang memegang tiap SPD milik seorang pelaksana.
+     *
+     * @return array<int, string> Id SPD => nomor usulan.
+     */
+    public static function pemakaiSpd(User $pelaksana): array
+    {
+        return self::memegangSpd()
+            ->where('id_user', $pelaksana->id)
+            ->whereNotNull('id_spd')
+            // Yang terlama menang bila data lama masih memuat usulan ganda.
+            ->orderByDesc('id')
+            ->pluck('no_usulan', 'id_spd')
+            ->all();
+    }
+
     public function isKelompok(): bool
     {
         return $this->jenis_pengajuan === self::PENGAJUAN_KELOMPOK;

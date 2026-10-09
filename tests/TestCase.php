@@ -51,15 +51,18 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * SPD milik seorang pegawai, diterbitkan bila ia memang belum punya.
+     * SPD milik seorang pegawai yang belum dipakai usulannya, diterbitkan
+     * bila ia memang belum punya.
      *
      * Formulir usulan mewajibkan pengusul menunjuk SPD yang mendasari
-     * perjalanannya, jadi pengujian yang menyoroti hal lain memakai pembantu
-     * ini untuk melengkapi isian tanpa menyalin penyiapan yang sama.
+     * perjalanannya — dan satu SPD hanya untuk satu usulan — jadi pengujian
+     * yang menyoroti hal lain memakai pembantu ini untuk melengkapi isian
+     * tanpa menyalin penyiapan yang sama.
      */
     protected function spdMilik(User $pengguna): SuratPerjalananDinas
     {
         return SuratPerjalananDinas::whereHas('pelaksana', fn ($q) => $q->where('id_user', $pengguna->id))
+            ->whereNotIn('id', array_keys(Usulan::pemakaiSpd($pengguna)))
             ->first() ?? $this->terbitkanSpd($pengguna);
     }
 

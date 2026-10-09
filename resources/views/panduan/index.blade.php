@@ -234,6 +234,13 @@
                         <button type="button" @click="bagian = 'pengajuan'" class="font-semibold text-teal-700 hover:text-teal-800 underline underline-offset-2">mengajukan perjalanan dinas</button>
                         memakai SPD bertanda tangan dan nomor naskah tadi.</li>
                 </ol>
+                <p class="mt-3">
+                    SPD yang dibuat bersama pelaksana lain dapat dikurangi satu pelaksana saja lewat tombol
+                    <strong>Hapus</strong> pada daftar Pelaksana — SPD dan pelaksana lainnya tetap. Pembuat SPD
+                    dapat menghapus pelaksana mana pun atau SPD seluruhnya; pelaksana lain hanya menghapus dirinya
+                    sendiri lewat <strong>Hapus Saya dari SPD</strong>. Pelaksana yang sudah mengajukan usulan dari
+                    SPD itu baru dapat dihapus setelah usulannya dibatalkan atau dihapus.
+                </p>
 
                 <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
                     <p class="text-xs font-bold text-slate-700 mb-2">Contoh pengisian Registrasi Naskah Keluar di SRIKANDI</p>
@@ -282,7 +289,9 @@
                 SPD sengaja tidak ikut terisi, karena yang diisi nomor naskah dari SRIKANDI. Bila SPD itu sudah melampirkan surat tugas, berkas dan nomor
                 surat tugasnya ikut diambil — <strong>tidak perlu diunggah maupun disalin
                 lagi</strong>. Bila tidak ada SPD dari aplikasi, lewati dan isi data perjalanan
-                secara manual, termasuk mengunggah surat tugas beserta nomornya.
+                secara manual, termasuk mengunggah surat tugas beserta nomornya. Satu SPD hanya untuk
+                satu usulan: SPD yang sudah dipakai usulan Anda tidak tampil lagi pada daftarnya, dan
+                muncul kembali setelah usulan itu dibatalkan atau dihapus.
                 <x-panduan-gambar berkas="usulan-02-dasar"
                     judul="SPD dari aplikasi (1) mengisi formulir secara otomatis; jalur yang dipilih tampil di kanan atas dan dapat diganti (2)." />
             </x-panduan-langkah>
