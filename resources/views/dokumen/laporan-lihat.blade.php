@@ -6,8 +6,14 @@
 
 <div class="flex-1 px-4 md:px-8 py-7">
 
+    @php
+        // Pembaca dari menu Keuangan kembali ke detail keuangannya, bukan ke
+        // daftar laporan miliknya sendiri; menyunting tetap milik pelaksana.
+        $pemilik = $usulan->id_user === auth()->id() || auth()->user()->isAdmin();
+    @endphp
+
     <div class="mb-6 flex items-center gap-3">
-        <a href="{{ route('dokumen.laporan.index') }}"
+        <a href="{{ $pemilik || ! auth()->user()->bisaAksesKeuangan() ? route('dokumen.laporan.index') : route('keuangan.detail', $usulan->no_usulan) }}"
            class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition shadow-sm">
             <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6"/>
@@ -24,7 +30,7 @@
                     Unduh Dokumen
                 </a>
             @endif
-            @if ($laporan->bolehDisunting())
+            @if ($laporan->bolehDisunting() && $pemilik)
                 <a href="{{ route('dokumen.laporan.edit', $usulan->no_usulan) }}"
                    class="px-4 py-2 border border-slate-200 bg-white text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition">
                     Edit Laporan

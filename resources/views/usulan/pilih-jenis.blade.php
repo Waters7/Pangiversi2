@@ -6,7 +6,7 @@
 
 <div class="flex-1 px-4 md:px-8 py-7">
 
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
 
         <div class="mb-6">
             <a href="{{ route('usulan.list') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-600">← Daftar Usulan Perjadin</a>
@@ -17,7 +17,7 @@
             </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             @foreach ($pilihan as $jenis)
                 <a href="{{ route('usulan.create', ['jenis' => $jenis->value]) }}"
                    class="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-teal-200 hover:shadow-md transition overflow-hidden flex flex-col">
@@ -28,6 +28,10 @@
                             @if ($jenis === \App\Enums\JenisPerjadin::DalamKota)
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>
+                                </svg>
+                            @elseif ($jenis === \App\Enums\JenisPerjadin::LuarKotaDalamProvinsi)
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13v6h-2a2 2 0 01-4 0H9a2 2 0 01-4 0H3v-6z"/><path d="M3 13h18"/>
                                 </svg>
                             @elseif ($jenis === \App\Enums\JenisPerjadin::LuarKota)
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

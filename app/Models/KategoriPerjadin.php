@@ -25,10 +25,13 @@ class KategoriPerjadin extends Model
 
     protected $fillable = ['grup', 'nama', 'kode', 'dalam_kota', 'urutan', 'is_aktif'];
 
+    /** Kode kategori perjalanan ke luar negeri pada master data. */
+    public const KODE_LUAR_NEGERI = 'LN';
+
     /**
      * Perjalanan dalam kota: tidak ada tiket, penginapan, maupun kuitansi
-     * yang perlu dipertanggungjawabkan — hanya surat tugas, SPD, dan
-     * transport lokalnya.
+     * yang perlu dipertanggungjawabkan — hanya surat tugas dan transport
+     * lokalnya, tanpa SPD.
      */
     public function dalamKota(): bool
     {

@@ -426,13 +426,7 @@
                         <div x-show="spdUdaraLaut" x-cloak class="-mt-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
                             SPD terpilih memakai <strong x-text="spd?.alat_angkut"></strong> — perjalanan dengan angkutan udara atau
                             laut adalah perjalanan <strong>luar kota</strong>, jadi kategori dalam kota tidak dapat dipilih.
-                            @if ($jenis === \App\Enums\JenisPerjadin::DalamKota)
-                                Bila SPD-nya benar, ajukan lewat
-                                <a href="{{ route('usulan.create', ['jenis' => \App\Enums\JenisPerjadin::LuarKota->value]) }}" class="font-semibold underline">Perjalanan Luar Kota</a>;
-                                bila keliru, pilih SPD perjalanan dalam kota yang sesuai.
-                            @else
-                                Bila SPD yang dipilih keliru, pilih SPD yang sesuai dengan perjalanan ini.
-                            @endif
+                            Bila SPD yang dipilih keliru, pilih SPD yang sesuai dengan perjalanan ini.
                         </div>
 
                         {{-- Lokasi Tujuan + Instansi --}}
@@ -607,6 +601,9 @@
                                     Pengajuan langsung berlaku — dasar penugasannya surat tugas yang Anda unggah,
                                     dan prosesnya tercatat pada jejak audit.
                                 </span>
+                            @elseif (! $spdMungkin)
+                                Pengajuan langsung berlaku — dasar penugasannya surat tugas yang Anda unggah,
+                                dan prosesnya tercatat pada jejak audit.
                             @else
                                 Pengajuan langsung berlaku — penugasannya sudah disahkan lewat SPD bertanda tangan,
                                 dan persetujuan PPK tercatat pada jejak audit.
@@ -631,6 +628,8 @@
                                     @if ($spdBersyarat)
                                         <li>Nomor surat tugas: <strong class="text-slate-700" x-text="ringkasan.noTugas || '—'"></strong></li>
                                         <li x-show="butuhSpd" x-cloak>Nomor SPD: <strong class="text-slate-700" x-text="ringkasan.noSpd || '—'"></strong></li>
+                                    @elseif (! $spdMungkin)
+                                        <li>Nomor surat tugas: <strong class="text-slate-700" x-text="ringkasan.noTugas || '—'"></strong></li>
                                     @else
                                         <li>Nomor SPD: <strong class="text-slate-700" x-text="ringkasan.noSpd || '—'"></strong></li>
                                     @endif

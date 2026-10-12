@@ -6,17 +6,25 @@ use App\Models\KategoriPerjadin;
 use Illuminate\Support\Collection;
 
 /**
- * Tiga jalur pengajuan perjalanan dinas, ditanyakan sebelum formulir dibuka.
+ * Jalur pengajuan perjalanan dinas, ditanyakan sebelum formulir dibuka.
  *
  * Pilihan ini memilah kategori perjadin dari master data dan menentukan
- * berkas apa yang diminta: perjalanan biasa berdasar SPD bertanda tangan,
- * sedangkan supervisi kerja praktek mengikuti kategorinya — yang ke luar
- * kota tetap memakai SPD, yang di dalam kota cukup surat tugas.
+ * berkas apa yang diminta: perjalanan dalam kota cukup surat tugas tanpa
+ * SPD, perjalanan luar kota — dalam satu provinsi maupun lintas pulau —
+ * berdasar SPD bertanda tangan, sedangkan supervisi kerja praktek mengikuti
+ * kategorinya.
  */
 enum JenisPerjadin: string
 {
     case DalamKota = 'dalam-kota';
 
+    /**
+     * Luar kota yang masih dalam satu provinsi — umumnya lewat jalan darat,
+     * jadi tiket tidak ditagih secara bawaan.
+     */
+    case LuarKotaDalamProvinsi = 'luar-kota-provinsi';
+
+    /** Nilainya tetap "luar-kota" supaya usulan dan pengaturan lama terbaca. */
     case LuarKota = 'luar-kota';
 
     case Supervisi = 'supervisi';
@@ -30,8 +38,9 @@ enum JenisPerjadin: string
     public function label(): string
     {
         return match ($this) {
-            self::DalamKota => 'Perjalanan Dalam Kota',
-            self::LuarKota => 'Perjalanan Luar Kota',
+            self::DalamKota => 'Perjalanan Dalam Kota Tidak Menggunakan SPD',
+            self::LuarKotaDalamProvinsi => 'Perjalanan Luar Kota Dalam Satu Provinsi',
+            self::LuarKota => 'Perjalanan Luar Kota Lintas Pulau',
             self::Supervisi => 'Supervisi Kerja Praktek / Magang',
         };
     }
@@ -40,7 +49,8 @@ enum JenisPerjadin: string
     {
         return match ($this) {
             self::DalamKota => 'Tujuan di dalam kota: fullboard, fullday, halfday, atau sekadar transport lokal.',
-            self::LuarKota => 'Tujuan ke luar kota atau luar negeri, dengan tiket dan penginapan.',
+            self::LuarKotaDalamProvinsi => 'Tujuan ke luar kota yang masih dalam satu provinsi, umumnya lewat jalan darat.',
+            self::LuarKota => 'Tujuan ke luar kota lintas pulau atau luar negeri, dengan tiket dan penginapan.',
             self::Supervisi => 'Mendampingi mahasiswa di lokasi praktek atau magang, di dalam maupun luar kota.',
         };
     }
@@ -49,6 +59,7 @@ enum JenisPerjadin: string
     public function berkasDasar(): string
     {
         return match ($this) {
+            self::DalamKota => 'Cukup surat tugas beserta nomornya — tidak memakai SPD.',
             self::Supervisi => 'Surat tugas jurusan — SPD hanya bila tujuannya luar kota.',
             default => 'Perlu SPD bertanda tangan beserta nomornya.',
         };
@@ -57,18 +68,19 @@ enum JenisPerjadin: string
     /**
      * Apakah perjalanan ini berdasar SPD bertanda tangan.
      *
-     * Perjalanan biasa selalu menerbitkannya. Supervisi menentukannya dari
-     * kategori yang dipilih: supervisi ke luar kota tetap memakai SPD,
+     * Perjalanan dalam kota tidak memakai SPD — dasarnya surat tugas.
+     * Perjalanan luar kota selalu menerbitkannya. Supervisi menentukannya
+     * dari kategori yang dipilih: supervisi ke luar kota tetap memakai SPD,
      * sedangkan yang di dalam kota cukup surat tugas jurusan. Selama
      * kategorinya belum dipilih, supervisi dianggap belum memerlukannya.
      */
     public function butuhSpd(?KategoriPerjadin $kategori = null): bool
     {
-        if (! $this->spdIkutKategori()) {
-            return true;
-        }
-
-        return $kategori !== null && ! $kategori->dalamKota();
+        return match ($this) {
+            self::DalamKota => false,
+            self::Supervisi => $kategori !== null && ! $kategori->dalamKota(),
+            default => true,
+        };
     }
 
     /** Jalur yang kebutuhan SPD-nya ditentukan kategori, bukan jalurnya. */
@@ -97,6 +109,10 @@ enum JenisPerjadin: string
             self::Supervisi => $kategori->where('grup', self::GRUP_SUPERVISI),
             self::DalamKota => $kategori->where('grup', '!=', self::GRUP_SUPERVISI)->where('dalam_kota', true),
             self::LuarKota => $kategori->where('grup', '!=', self::GRUP_SUPERVISI)->where('dalam_kota', false),
+            // Kategori luar kota yang sama, kecuali luar negeri — yang jelas
+            // tidak berada dalam satu provinsi.
+            self::LuarKotaDalamProvinsi => $kategori->where('grup', '!=', self::GRUP_SUPERVISI)->where('dalam_kota', false)
+                ->where('kode', '!=', KategoriPerjadin::KODE_LUAR_NEGERI),
         };
 
         return $terpilih

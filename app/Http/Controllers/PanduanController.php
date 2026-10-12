@@ -136,6 +136,16 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.24',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Jalur pengajuan perjadin kini empat: Perjalanan Dalam Kota Tidak Menggunakan SPD, Perjalanan Luar Kota Dalam Satu Provinsi (baru), Perjalanan Luar Kota Lintas Pulau (sebelumnya Perjalanan Luar Kota), dan Supervisi Kerja Praktek / Magang.',
+                    'Perjalanan dalam kota tidak lagi meminta SPD bertanda tangan maupun SPPD — cukup surat tugas beserta nomornya.',
+                    'Luar kota dalam satu provinsi memakai kategori luar kota yang sama kecuali Luar Negeri, dan secara bawaan tidak menagih tiket.',
+                    'Detail keuangan memuat kartu Laporan Perjalanan Dinas: tahap laporan pelaksana sampai konfirmasi pimpinan, catatan pimpinan, serta tombol lihat dan unduh laporannya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.23',
                 'tanggal' => '9 Oktober 2026',
                 'butir' => [

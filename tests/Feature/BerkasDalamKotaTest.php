@@ -134,12 +134,13 @@ class BerkasDalamKotaTest extends TestCase
         }
     }
 
-    public function test_dalam_kota_tetap_menagih_sppd_dan_laporan(): void
+    /** Perjalanan dalam kota tidak memakai SPD, jadi SPPD tidak ditagih. */
+    public function test_dalam_kota_menagih_laporan_tanpa_sppd(): void
     {
         $usulan = $this->usulan(dalamKota: true);
         $kurang = $this->penagih()->berkasKurang($usulan);
 
-        $this->assertContains('SPPD bertanda tangan', $kurang);
+        $this->assertNotContains('SPPD bertanda tangan', $kurang);
         $this->assertContains('Laporan perjalanan dinas', $kurang);
     }
 
@@ -183,7 +184,7 @@ class BerkasDalamKotaTest extends TestCase
         $label = collect($this->penagih()->checklist($usulan))->pluck('label');
 
         $this->assertEqualsCanonicalizing(
-            ['SPPD Bertanda Tangan', 'Nota Transportasi Lokal', 'Laporan Perjalanan Dinas'],
+            ['Nota Transportasi Lokal', 'Laporan Perjalanan Dinas'],
             $label->all()
         );
     }

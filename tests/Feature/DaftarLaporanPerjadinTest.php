@@ -305,4 +305,81 @@ class DaftarLaporanPerjadinTest extends TestCase
 
         $this->assertFalse(StatusHasil::pilihan()->contains('nama', 'Tidak selesai'));
     }
+
+    // ── Dibaca dari detail keuangan ──
+
+    private function laporanTerkirim(): LaporanPerjadin
+    {
+        $this->isiLaporan();
+        $this->actingAs($this->pelaksana)->put(route('dokumen.laporan.selesaikan', $this->usulan));
+
+        $laporan = LaporanPerjadin::firstWhere('id_usulan', $this->usulan->id);
+        $laporan->kirim();
+
+        return $laporan;
+    }
+
+    /** Tim keuangan membaca dan mengunduh laporannya, tetapi tidak menyuntingnya. */
+    public function test_tim_keuangan_membaca_laporan_tanpa_menyuntingnya(): void
+    {
+        $this->laporanTerkirim();
+        $timKeuangan = User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]);
+
+        $this->actingAs($timKeuangan)
+            ->get(route('dokumen.laporan.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('Rapat pembukaan.')
+            ->assertSee(route('keuangan.detail', $this->usulan->no_usulan))
+            ->assertDontSee('Edit Laporan');
+
+        $this->assertSame('application/pdf', $this->actingAs($timKeuangan)
+            ->get(route('dokumen.laporan.cetak', $this->usulan))
+            ->assertOk()
+            ->headers->get('content-type'));
+
+        $this->actingAs($timKeuangan)
+            ->put(route('dokumen.laporan.update', $this->usulan), ['kegiatan' => [$this->hari(0) => 'Diubah.']])
+            ->assertForbidden();
+    }
+
+    public function test_detail_keuangan_menampilkan_proses_konfirmasi_pimpinan(): void
+    {
+        $laporan = $this->laporanTerkirim();
+        $timKeuangan = User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]);
+
+        $this->actingAs($timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertOk()
+            ->assertSeeInOrder(['Laporan Perjalanan Dinas', 'Menunggu Konfirmasi Pimpinan', 'Dikirim ke pimpinan', 'Menunggu keputusan pimpinan'])
+            ->assertSee(route('dokumen.laporan.show', $this->usulan->no_usulan));
+
+        $pimpinan = User::factory()->create(['role' => User::ROLE_PIMPINAN, 'nama' => 'Direktur Contoh']);
+        $laporan->konfirmasi($pimpinan);
+
+        $this->actingAs($timKeuangan)
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertSee('Dikonfirmasi Pimpinan')
+            ->assertSee('Dikonfirmasi Direktur Contoh')
+            ->assertSee('kode '.$laporan->fresh()->kode_pimpinan);
+    }
+
+    public function test_detail_keuangan_menampilkan_catatan_laporan_yang_dikembalikan(): void
+    {
+        $laporan = $this->laporanTerkirim();
+        $laporan->kembalikan(User::factory()->create(['role' => User::ROLE_PIMPINAN]), 'Lengkapi foto kegiatan.');
+
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertSee('Perlu Revisi')
+            ->assertSee('Catatan: Lengkapi foto kegiatan.');
+    }
+
+    public function test_detail_keuangan_tanpa_laporan_tidak_membuatkannya(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
+            ->get(route('keuangan.detail', $this->usulan))
+            ->assertSee('Pelaksana belum mulai menyusun laporannya.');
+
+        $this->assertSame(0, LaporanPerjadin::where('id_usulan', $this->usulan->id)->count());
+    }
 }

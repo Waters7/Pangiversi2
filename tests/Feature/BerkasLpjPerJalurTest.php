@@ -69,8 +69,15 @@ class BerkasLpjPerJalurTest extends TestCase
     {
         $this->assertSame(BerkasLpj::cases(), $this->atur()->untuk(JenisPerjadin::LuarKota));
 
+        // Luar kota dalam satu provinsi umumnya lewat darat: tanpa tiket.
         $this->assertSame(
-            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::BillHotel, BerkasLpj::Kuitansi, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            $this->atur()->untuk(JenisPerjadin::LuarKotaDalamProvinsi),
+        );
+
+        // Dalam kota tidak memakai SPD, jadi SPPD tidak ditagih.
+        $this->assertSame(
+            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
 
@@ -93,7 +100,7 @@ class BerkasLpjPerJalurTest extends TestCase
         $this->assertContains('Kuitansi penyelenggara / hotel', $luar);
 
         $dalam = $this->labelChecklist($this->usulan('DK-FD', 'dalam-kota'));
-        $this->assertContains('SPPD Bertanda Tangan', $dalam);
+        $this->assertNotContains('SPPD Bertanda Tangan', $dalam);
         $this->assertNotContains('Tiket Pergi', $dalam);
         $this->assertNotContains('Bill Hotel', $dalam);
 
@@ -180,12 +187,12 @@ class BerkasLpjPerJalurTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', [
             'aksi' => 'pengguna',
-            'deskripsi' => 'Berkas pertanggungjawaban jalur "Perjalanan Luar Kota" disimpan — tidak lagi ditagih: Tiket pergi dan pulang, Bill hotel, Kuitansi penyelenggara / hotel, Bukti biaya penyelenggaraan.',
+            'deskripsi' => 'Berkas pertanggungjawaban jalur "Perjalanan Luar Kota Lintas Pulau" disimpan — tidak lagi ditagih: Tiket pergi dan pulang, Bill hotel, Kuitansi penyelenggara / hotel, Bukti biaya penyelenggaraan.',
         ]);
 
         // Jalur lain tidak ikut berubah.
         $this->assertSame(
-            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
     }
@@ -220,7 +227,7 @@ class BerkasLpjPerJalurTest extends TestCase
 
         app(PengaturanBerkasLpj::class)->lupakan();
         $this->assertSame(
-            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
         $this->assertFalse($this->atur()->sudahDiatur(JenisPerjadin::DalamKota));

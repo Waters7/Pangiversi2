@@ -465,11 +465,13 @@ class LaporanPerjadinController extends Controller
 
     /**
      * Pimpinan yang mengonfirmasi laporan perlu membaca dan mencetaknya,
-     * tetapi tidak menyunting isinya — itu tetap milik pelaksana.
+     * begitu pula tim keuangan dan bendahara — konfirmasinya syarat
+     * pelunasan. Keduanya tidak menyunting isinya; itu tetap milik pelaksana.
      */
     private function pastikanBolehMelihat(Request $request, Usulan $usulan): void
     {
-        if ($request->user()->punyaKemampuan(Kemampuan::MengonfirmasiLaporanPerjadin)) {
+        if ($request->user()->punyaKemampuan(Kemampuan::MengonfirmasiLaporanPerjadin)
+            || $request->user()->bisaAksesKeuangan()) {
             return;
         }
 

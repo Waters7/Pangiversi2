@@ -270,17 +270,21 @@
             <x-panduan-langkah nomor="1" judul="Buka menu Usulan Perjadin → Buat Usulan Perjadin">
                 Dari sidebar kiri, pilih <strong>Usulan Perjadin</strong> lalu
                 <strong>Buat Usulan Perjadin</strong>. Pertanyaan pertama adalah jalurnya:
-                <strong>Perjalanan Dalam Kota</strong>, <strong>Perjalanan Luar Kota</strong>, atau
+                <strong>Perjalanan Dalam Kota Tidak Menggunakan SPD</strong>, <strong>Perjalanan Luar Kota
+                Dalam Satu Provinsi</strong>, <strong>Perjalanan Luar Kota Lintas Pulau</strong>, atau
                 <strong>Supervisi Kerja Praktek / Magang</strong>. Pilihan itu menyaring kategori
                 perjalanan dinas pada formulir — hanya kategori yang berlaku bagi jalur tersebut yang
-                ditampilkan — dan menentukan berkas yang diminta. Pada jalur supervisi,
+                ditampilkan — dan menentukan berkas yang diminta. Perjalanan dalam kota cukup surat
+                tugas beserta nomornya, tanpa SPD. Kedua jalur luar kota memakai SPD bertanda tangan
+                dan kategori luar kota yang sama — kecuali Luar Negeri, yang hanya ada pada jalur lintas
+                pulau. Pada jalur supervisi,
                 kebutuhan SPD mengikuti kategorinya: <strong>Supervisi Luar Kota</strong> tetap
                 memakai SPD bertanda tangan beserta nomornya, sedangkan <strong>Supervisi Dalam
                 Kota</strong> cukup surat tugas. Isian SPD muncul sendiri begitu kategorinya dipilih,
                 dan jenis kegiatannya terisi otomatis. Salah pilih jalur? Tekan
                 <strong>Ganti</strong> di kanan atas formulir.
                 <x-panduan-gambar berkas="usulan-01-jalur"
-                    judul="Menu Buat Usulan Perjadin (1) membuka pilihan jalur; pilih yang sesuai, misalnya Perjalanan Luar Kota (2)." />
+                    judul="Menu Buat Usulan Perjadin (1) membuka pilihan jalur; pilih yang sesuai, misalnya Perjalanan Luar Kota Lintas Pulau (2)." />
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pilih SPD dari aplikasi (opsional)">
@@ -309,7 +313,8 @@
                 <p class="mt-3">
                     Pada jalur <strong>Supervisi Kerja Praktek / Magang</strong>, isian SPD baru muncul setelah
                     kategori <strong>Supervisi Luar Kota</strong> dipilih; supervisi di dalam kota cukup dengan
-                    surat tugas.
+                    surat tugas. Jalur <strong>Perjalanan Dalam Kota Tidak Menggunakan SPD</strong> tidak memuat
+                    isian SPD sama sekali — unggah surat tugas beserta nomornya.
                 </p>
                 <x-panduan-gambar berkas="usulan-08-supervisi" ukuran="sedang"
                     judul="Jalur supervisi: kategori luar kota (3) memunculkan catatan (1) dan isian SPD bertanda tangan (2)." />
@@ -419,7 +424,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Dalam kota</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Nota transport lokal — bila ada biaya', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['Nota transport lokal — bila ada biaya', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -430,7 +435,21 @@
 
                     <div class="rounded-xl border border-slate-200 overflow-hidden">
                         <div class="px-3 py-2 bg-slate-50 border-b border-slate-200">
-                            <p class="text-[11px] font-bold text-slate-600">Luar kota</p>
+                            <p class="text-[11px] font-bold text-slate-600">Luar kota dalam satu provinsi</p>
+                        </div>
+                        <ul class="p-3 space-y-1.5">
+                            @foreach (['SPPD bertanda tangan', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                                <li class="flex items-start gap-2 text-xs text-slate-600">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
+                                    {{ $berkas }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <p class="text-[11px] font-bold text-slate-600">Luar kota lintas pulau</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
                             @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
@@ -795,7 +814,10 @@
                 Satu-satunya syaratnya: <strong>laporan perjalanan dinas sudah dikonfirmasi
                 Direktur</strong> lewat QR — tanda tangan pelaksana, PPK, maupun daftar nominatif
                 tidak menahannya, dan halaman keuangan menampilkan syarat ini sebelum bukti
-                transfer diunggah. Selisih antara uang muka dan nominal akhir terhitung sendiri.
+                transfer diunggah. Kartu <strong>Laporan Perjalanan Dinas</strong> pada detail keuangan
+                memperlihatkan tahapnya — disusun pelaksana, dikirim, lalu dikonfirmasi atau dikembalikan
+                pimpinan beserta catatannya — dengan tombol <strong>Lihat Laporan</strong> dan
+                <strong>Unduh PDF</strong>. Selisih antara uang muka dan nominal akhir terhitung sendiri.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Bayar transport lokal">
@@ -977,14 +999,16 @@
             @if ($boleh['dokumen'])
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pilih berkas pertanggungjawaban tiap jalur">
                     Submenu <strong>Administrasi Sistem → Berkas Pertanggungjawaban</strong> menentukan
-                    berkas apa saja yang ditagih sesudah perjalanan, terpisah untuk ketiga jalur
-                    pengajuan: <strong>dalam kota</strong>, <strong>luar kota</strong>, dan
-                    <strong>supervisi kerja praktek / magang</strong>. Centangan di sana berlaku serentak
+                    berkas apa saja yang ditagih sesudah perjalanan, terpisah untuk keempat jalur
+                    pengajuan: <strong>dalam kota</strong>, <strong>luar kota dalam satu provinsi</strong>,
+                    <strong>luar kota lintas pulau</strong>, dan <strong>supervisi kerja praktek / magang</strong>.
+                    Bawaan luar kota dalam satu provinsi tidak menagih tiket karena umumnya lewat darat;
+                    centang bila perlu. Centangan di sana berlaku serentak
                     pada formulir Dokumen Perdin, checklist kelengkapan, dan penagihan ke pelaksana —
                     berkas yang dicabut tidak lagi ditampilkan maupun menahan penyelesaian. Tiap jalur
                     dapat dikembalikan ke bawaan dengan satu tombol. <strong>SPPD bertanda tangan</strong>
-                    gugur sendiri pada perjalanan yang memang tidak menerbitkan SPD — supervisi di dalam
-                    kota, misalnya — sekalipun jalurnya tetap mencentangnya.
+                    gugur sendiri pada perjalanan yang memang tidak menerbitkan SPD — perjalanan dalam kota
+                    dan supervisi di dalam kota — sekalipun jalurnya tetap mencentangnya.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur tampilan dokumen output"

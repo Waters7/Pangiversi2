@@ -67,7 +67,11 @@ enum BerkasLpj: string
     {
         return match ($jenis) {
             JenisPerjadin::LuarKota => self::cases(),
-            JenisPerjadin::DalamKota => [self::Sppd, self::NotaTransport, self::Penyelenggaraan, self::Laporan],
+            // Dalam satu provinsi umumnya lewat jalan darat, jadi tiket tidak
+            // ditagih; administrator dapat menambahkannya bila perlu.
+            JenisPerjadin::LuarKotaDalamProvinsi => array_values(array_filter(self::cases(), fn (self $berkas) => $berkas !== self::Tiket)),
+            // Perjalanan dalam kota tidak memakai SPD, jadi SPPD pun tidak ditagih.
+            JenisPerjadin::DalamKota => [self::NotaTransport, self::Penyelenggaraan, self::Laporan],
             // Supervisi di dalam kota berdasar surat tugas saja — SPPD-nya
             // gugur sendiri lewat untukUsulan(), jadi yang tersisa di sini
             // berlaku untuk supervisi ke luar kota.

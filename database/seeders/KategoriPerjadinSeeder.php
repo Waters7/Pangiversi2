@@ -17,13 +17,13 @@ class KategoriPerjadinSeeder extends Seeder
     public function run(): void
     {
         // Penanda ketiga menyatakan perjalanannya dalam kota, yang menentukan
-        // berkas apa yang ditagih sistem: dalam kota cukup SPPD dan nota
-        // transportasi lokal, tanpa tiket, penginapan, maupun kuitansi.
+        // berkas apa yang ditagih sistem: dalam kota cukup surat tugas dan
+        // nota transportasi lokal, tanpa SPD, tiket, penginapan, maupun kuitansi.
         $kategori = [
             'Perjadin Luar Kota' => [
                 ['LK-NFB', 'Luar Kota NonFullBoard', false],
                 ['LK-FB', 'Luar Kota FullBoard', false],
-                ['LN', 'Luar Negeri', false],
+                [KategoriPerjadin::KODE_LUAR_NEGERI, 'Luar Negeri', false],
             ],
             'Perjadin Dalam Kota' => [
                 ['DK-FB', 'Dalam Kota FullBoard', true],

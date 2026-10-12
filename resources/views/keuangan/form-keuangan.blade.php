@@ -1015,6 +1015,99 @@
             </div>
         </div>
 
+        {{-- Laporan perjalanan dinas pelaksana beserta proses konfirmasi
+             pimpinannya — syarat pelunasan, jadi tim keuangan dan bendahara
+             membacanya dari sini tanpa berpindah menu. --}}
+        @php
+            $laporanPerjadin = $usulan->laporan;
+            $statusLaporan = $laporanPerjadin?->status();
+            $waktu = fn ($cap) => $cap?->translatedFormat('d M Y, H:i');
+            $tahapLaporan = [
+                [
+                    'judul' => 'Disusun dan dinyatakan selesai pelaksana',
+                    'selesai' => (bool) $laporanPerjadin?->sudahSelesai() || (bool) $laporanPerjadin?->sudahDikonfirmasi(),
+                    'keterangan' => $waktu($laporanPerjadin?->diselesaikan_at),
+                ],
+                [
+                    'judul' => 'Dikirim ke pimpinan',
+                    'selesai' => (bool) $laporanPerjadin?->sudahDikirim() || (bool) $laporanPerjadin?->sudahDikonfirmasi(),
+                    'keterangan' => $waktu($laporanPerjadin?->dikirim_at),
+                ],
+                [
+                    'judul' => $laporanPerjadin?->sudahDikonfirmasi()
+                        ? 'Dikonfirmasi '.($laporanPerjadin->pimpinan?->nama ?? 'pimpinan')
+                        : 'Konfirmasi dan tanda tangan pimpinan',
+                    'selesai' => (bool) $laporanPerjadin?->sudahDikonfirmasi(),
+                    'keterangan' => $laporanPerjadin?->sudahDikonfirmasi()
+                        ? trim($waktu($laporanPerjadin->dikonfirmasi_at).' · kode '.$laporanPerjadin->kode_pimpinan)
+                        : ($laporanPerjadin?->sudahDikirim() ? 'Menunggu keputusan pimpinan' : null),
+                ],
+            ];
+        @endphp
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6" data-laporan-perjadin>
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-sm">Laporan Perjalanan Dinas</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Disusun pelaksana, dikonfirmasi pimpinan</p>
+                </div>
+                <span class="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 {{ $statusLaporan?->badge() ?? 'bg-slate-100 text-slate-600' }}">
+                    {{ $statusLaporan?->label() ?? 'Belum Disusun' }}
+                </span>
+            </div>
+
+            <ol class="space-y-3">
+                @foreach ($tahapLaporan as $tahap)
+                    <li class="flex items-start gap-3">
+                        <span class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 {{ $tahap['selesai'] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400' }}">
+                            @if ($tahap['selesai'])
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                            @else
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                            @endif
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold {{ $tahap['selesai'] ? 'text-slate-700' : 'text-slate-400' }}">{{ $tahap['judul'] }}</p>
+                            @if ($tahap['keterangan'])
+                                <p class="text-[11px] text-slate-400 mt-0.5">{{ $tahap['keterangan'] }}</p>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ol>
+
+            {{-- Laporan yang dikembalikan membawa arahan perbaikan pimpinan. --}}
+            @if ($laporanPerjadin?->perluRevisi())
+                <div class="mt-4 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100 text-xs text-red-700 leading-relaxed">
+                    Dikembalikan {{ $laporanPerjadin->pimpinan?->nama ?? 'pimpinan' }} untuk direvisi
+                    pada {{ $waktu($laporanPerjadin->dikembalikan_at) }}.
+                    @if ($laporanPerjadin->catatan_pimpinan)
+                        <span class="block mt-1 text-red-800">Catatan: {{ $laporanPerjadin->catatan_pimpinan }}</span>
+                    @endif
+                </div>
+            @elseif ($laporanPerjadin?->sudahDikonfirmasi() && $laporanPerjadin->catatan_pimpinan)
+                <p class="mt-4 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
+                    Catatan pimpinan: {{ $laporanPerjadin->catatan_pimpinan }}
+                </p>
+            @endif
+
+            @if ($laporanPerjadin)
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a href="{{ route('dokumen.laporan.show', $usulan->no_usulan) }}"
+                       class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                        Lihat Laporan
+                    </a>
+                    @if ($laporanPerjadin->sudahSelesai())
+                        <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
+                           class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">
+                            Unduh PDF
+                        </a>
+                    @endif
+                </div>
+            @else
+                <p class="mt-4 text-xs text-slate-400">Pelaksana belum mulai menyusun laporannya.</p>
+            @endif
+        </div>
+
         {{-- Ringkasan Keuangan --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
             <h3 class="font-bold text-slate-800 text-sm mb-4">Ringkasan</h3>

@@ -394,7 +394,10 @@ class UsulanController extends Controller
 
         $usulan->update([
             'no_tugas' => $request->no_tugas,
-            'no_spd' => filled($request->no_spd) ? trim($request->no_spd) : null,
+            // Jalur tanpa SPD tidak memuat kolomnya; nomor lama dibiarkan.
+            'no_spd' => $request->has('no_spd')
+                ? (filled($request->no_spd) ? trim($request->no_spd) : null)
+                : $usulan->no_spd,
             'status' => StatusUsulan::Draft->value,
             'lokasi' => $request->lokasi,
             'id_lokasi' => $this->resolveLokasi($request->lokasi),

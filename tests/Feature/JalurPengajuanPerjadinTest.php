@@ -68,9 +68,13 @@ class JalurPengajuanPerjadinTest extends TestCase
             ->get(route('usulan.create'))
             ->assertOk()
             ->assertSee('Perjalanan dinas seperti apa yang akan diajukan?')
-            ->assertSee('Perjalanan Dalam Kota')
-            ->assertSee('Perjalanan Luar Kota')
-            ->assertSee('Supervisi Kerja Praktek / Magang')
+            ->assertSeeInOrder([
+                'Perjalanan Dalam Kota Tidak Menggunakan SPD',
+                'Perjalanan Luar Kota Dalam Satu Provinsi',
+                'Perjalanan Luar Kota Lintas Pulau',
+                'Supervisi Kerja Praktek / Magang',
+            ])
+            ->assertSee(route('usulan.create', ['jenis' => 'luar-kota-provinsi']))
             ->assertSee(route('usulan.create', ['jenis' => 'supervisi']))
             // Formulirnya sendiri belum muncul sebelum jalurnya dipilih.
             ->assertDontSee('Kategori Perjalanan Dinas');
@@ -99,6 +103,14 @@ class JalurPengajuanPerjadinTest extends TestCase
             ->assertSee('Luar Negeri')
             ->assertDontSee('Dalam Kota FullBoard')
             ->assertDontSee('Supervisi Luar Kota');
+
+        // Dalam satu provinsi: kategori luar kota yang sama, tanpa luar negeri.
+        $provinsi = $this->actingAs($this->pengguna)->get(route('usulan.create', ['jenis' => 'luar-kota-provinsi']))->assertOk();
+        $provinsi->assertSee('Perjalanan Luar Kota Dalam Satu Provinsi')
+            ->assertSee('Luar Kota NonFullBoard')
+            ->assertSee('Narasumber Luar Kota FullBoard')
+            ->assertDontSee('Luar Negeri')
+            ->assertDontSee('Dalam Kota FullBoard');
 
         $supervisi = $this->actingAs($this->pengguna)->get(route('usulan.create', ['jenis' => 'supervisi']))->assertOk();
         $supervisi->assertSee('Supervisi Dalam Kota')
@@ -149,8 +161,10 @@ class JalurPengajuanPerjadinTest extends TestCase
         $this->assertTrue(JenisPerjadin::Supervisi->butuhSpd($this->kategori('SV-LK')));
         $this->assertFalse(JenisPerjadin::Supervisi->butuhSpd($this->kategori('SV-DK')));
 
-        // Jalur lain tidak bergantung kategorinya sama sekali.
-        $this->assertTrue(JenisPerjadin::DalamKota->butuhSpd());
+        // Jalur lain tidak bergantung kategorinya sama sekali: dalam kota
+        // tanpa SPD, luar kota selalu dengan SPD.
+        $this->assertFalse(JenisPerjadin::DalamKota->butuhSpd());
+        $this->assertTrue(JenisPerjadin::LuarKotaDalamProvinsi->butuhSpd());
         $this->assertTrue(JenisPerjadin::LuarKota->butuhSpd());
     }
 
@@ -262,12 +276,111 @@ class JalurPengajuanPerjadinTest extends TestCase
 
     public function test_jalur_berdasar_spd_tetap_menuntut_spd(): void
     {
-        $this->actingAs($this->pengguna)
-            ->from(route('usulan.create', ['jenis' => 'luar-kota']))
-            ->post(route('usulan.store'), $this->isian(['no_spd' => null, 'spd_ditandatangani' => null]))
-            ->assertSessionHasErrors(['no_spd', 'spd_ditandatangani']);
+        foreach ([JenisPerjadin::LuarKota, JenisPerjadin::LuarKotaDalamProvinsi] as $jalur) {
+            $this->actingAs($this->pengguna)
+                ->from(route('usulan.create', ['jenis' => $jalur->value]))
+                ->post(route('usulan.store'), $this->isian(['jenis' => $jalur->value, 'no_spd' => null, 'spd_ditandatangani' => null]))
+                ->assertSessionHasErrors(['no_spd', 'spd_ditandatangani']);
+        }
 
         $this->assertDatabaseCount('usulan', 0);
+    }
+
+    public function test_usulan_luar_kota_dalam_provinsi_tersimpan_dengan_jalurnya(): void
+    {
+        $this->actingAs($this->pengguna)
+            ->post(route('usulan.store'), $this->isian(['jenis' => JenisPerjadin::LuarKotaDalamProvinsi->value]))
+            ->assertSessionHasNoErrors();
+
+        $usulan = Usulan::sole();
+        $this->assertSame(JenisPerjadin::LuarKotaDalamProvinsi, $usulan->jalur());
+        $this->assertTrue($usulan->butuhSpd());
+
+        $this->actingAs($this->pengguna)
+            ->from(route('usulan.create', ['jenis' => 'luar-kota-provinsi']))
+            ->post(route('usulan.store'), $this->isian([
+                'jenis' => JenisPerjadin::LuarKotaDalamProvinsi->value,
+                'id_kategori_perjadin' => $this->kategori('LN')->id,
+                'no_spd' => 'AR.05.02/F.XXX/78/2026',
+            ]))
+            ->assertSessionHasErrors('id_kategori_perjadin');
+    }
+
+    // ── Jalur dalam kota: surat tugas saja, tanpa SPD ──
+
+    public function test_formulir_dalam_kota_tidak_meminta_spd(): void
+    {
+        $this->actingAs($this->pengguna)
+            ->get(route('usulan.create', ['jenis' => 'dalam-kota']))
+            ->assertOk()
+            ->assertSee('Perjalanan Dalam Kota Tidak Menggunakan SPD')
+            ->assertDontSee('name="no_spd"', false)
+            ->assertDontSee('name="spd_ditandatangani"', false)
+            ->assertDontSee('name="id_spd"', false)
+            ->assertSee('name="surat_tugas"', false);
+    }
+
+    public function test_usulan_dalam_kota_tersimpan_tanpa_spd(): void
+    {
+        $this->actingAs($this->pengguna)
+            ->post(route('usulan.store'), $this->isian([
+                'jenis' => JenisPerjadin::DalamKota->value,
+                'id_kategori_perjadin' => $this->kategori('DK-FD')->id,
+                'no_spd' => null,
+                'spd_ditandatangani' => null,
+            ]))
+            ->assertRedirect(route('usulan.list'))
+            ->assertSessionHasNoErrors();
+
+        $usulan = Usulan::sole();
+        $this->assertFalse($usulan->butuhSpd());
+        $this->assertNull($usulan->no_spd);
+        $this->assertNotNull($usulan->dokumen()->first()->surat_tugas);
+    }
+
+    public function test_surat_tugas_tetap_wajib_pada_jalur_dalam_kota(): void
+    {
+        $this->actingAs($this->pengguna)
+            ->from(route('usulan.create', ['jenis' => 'dalam-kota']))
+            ->post(route('usulan.store'), $this->isian([
+                'jenis' => JenisPerjadin::DalamKota->value,
+                'id_kategori_perjadin' => $this->kategori('DK-FD')->id,
+                'no_spd' => null,
+                'spd_ditandatangani' => null,
+                'surat_tugas' => null,
+            ]))
+            ->assertSessionHasErrors('surat_tugas');
+
+        $this->assertDatabaseCount('usulan', 0);
+    }
+
+    /** Usulan dalam kota lama yang sudah bernomor SPD tidak kehilangan nomornya saat disunting. */
+    public function test_menyunting_usulan_dalam_kota_lama_mempertahankan_nomor_spd(): void
+    {
+        $usulan = Usulan::factory()->create([
+            'id_user' => $this->pengguna->id,
+            'status' => 'draft',
+            'jenis_perjadin' => JenisPerjadin::DalamKota->value,
+            'id_kategori_perjadin' => $this->kategori('DK-FD')->id,
+            'id_kegiatan' => Kegiatan::first()->id,
+            'no_spd' => 'AR.05.02/F.XXX/12/2026',
+        ]);
+        $usulan->dokumen()->create(['surat_tugas' => 'dokumen/surat-tugas/lama.pdf']);
+
+        $this->actingAs($this->pengguna)
+            ->put(route('usulan.update', $usulan), [
+                'action' => 'draft',
+                'id_kegiatan' => Kegiatan::first()->id,
+                'id_kategori_perjadin' => $this->kategori('DK-FD')->id,
+                'no_tugas' => 'KP.01.02/F.XXX/80/2026',
+                'lokasi' => 'Manado',
+                'instansi' => 'Dinas Kesehatan',
+                'tanggal_mulai' => today()->addDays(3)->toDateString(),
+                'tanggal_selesai' => today()->addDays(3)->toDateString(),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('AR.05.02/F.XXX/12/2026', $usulan->fresh()->no_spd);
     }
 
     // ── Jalur tersimpan dan terbaca kembali ──
