@@ -102,4 +102,39 @@ class LihatSemuaUsulanTest extends TestCase
             Notifikasi::where('judul', 'Hak akses Anda diperbarui')->latest('id')->first()->pesan,
         );
     }
+
+    // ── Usulan Perjadin Saya ──
+
+    /** Peran yang melihat usulan semua pegawai punya daftar usulannya sendiri. */
+    public function test_usulan_perjadin_saya_hanya_memuat_usulan_milik_sendiri(): void
+    {
+        $milikSendiri = Usulan::factory()->create(['id_user' => $this->admin->id, 'status' => StatusUsulan::Draft->value]);
+
+        $this->actingAs($this->admin)
+            ->get(route('usulan.list'))
+            ->assertOk()
+            ->assertSee(route('usulan.saya'))
+            ->assertSee($this->usulanOrangLain->no_usulan)
+            ->assertSee($milikSendiri->no_usulan);
+
+        $saya = $this->actingAs($this->admin)
+            ->get(route('usulan.saya'))
+            ->assertOk()
+            ->assertSee('Usulan Perjadin Saya')
+            ->assertSee('Usulan perjalanan dinas yang Anda ajukan untuk diri sendiri')
+            ->assertSee($milikSendiri->no_usulan)
+            ->assertDontSee($this->usulanOrangLain->no_usulan)
+            // Saringan dan tab tetap di halaman yang sama.
+            ->assertSee('action="'.route('usulan.saya').'"', false);
+
+        $this->assertSame(1, $saya->viewData('totalUsulan'));
+    }
+
+    public function test_submenu_usulan_perjadin_saya_khusus_peran_yang_melihat_seluruh_usulan(): void
+    {
+        $this->actingAs($this->timKeuangan)
+            ->get(route('usulan.list'))
+            ->assertOk()
+            ->assertDontSee(route('usulan.saya'));
+    }
 }

@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.28',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Submenu Usulan Perjadin → Usulan Perjadin Saya bagi peran yang berhak melihat seluruh usulan: hanya memuat usulan yang diajukan untuk diri sendiri, dan menjadi tujuan setelah peran itu mengirim usulan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.27',
                 'tanggal' => '12 Oktober 2026',
                 'butir' => [

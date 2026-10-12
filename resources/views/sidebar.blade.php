@@ -155,6 +155,19 @@
               Daftar Usulan Perjadin
             </a>
 
+            {{-- Peran yang melihat usulan semua pegawai punya daftar sendiri
+                 untuk usulan yang diajukannya bagi dirinya. --}}
+            @can('melihat-semua-usulan')
+            <a href="{{ route('usulan.saya') }}"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
+                      {{ request()->routeIs('usulan.saya') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/>
+              </svg>
+              Usulan Perjadin Saya
+            </a>
+            @endcan
+
             <a href="{{ route('usulan.create') }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
                       {{ request()->routeIs('usulan.create') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">

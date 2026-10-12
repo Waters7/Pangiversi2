@@ -23,9 +23,11 @@
     {{-- Page Header --}}
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-slate-800">Usulan Perjalanan Dinas</h1>
+            <h1 class="text-xl font-bold text-slate-800">{{ $hanyaSaya ? 'Usulan Perjadin Saya' : 'Usulan Perjalanan Dinas' }}</h1>
             <p class="text-xs text-slate-400 mt-0.5">
-                @if($lihatSemua)
+                @if($hanyaSaya)
+                    Usulan perjalanan dinas yang Anda ajukan untuk diri sendiri
+                @elseif($lihatSemua)
                     Kelola seluruh usulan perjalanan dinas semua pegawai
                 @else
                     Kelola dan pantau seluruh usulan perjalanan dinas Anda
@@ -42,7 +44,7 @@
     </div>
 
     {{-- Filter & Search Bar --}}
-    <form method="GET" action="{{ route('usulan.list') }}">
+    <form method="GET" action="{{ route($ruteDaftar) }}">
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
         <div class="flex flex-col sm:flex-row gap-3">
 
@@ -67,7 +69,7 @@
             </button>
 
             @if(request('search') || request('status'))
-                <a href="{{ route('usulan.list') }}"
+                <a href="{{ route($ruteDaftar) }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
                     Reset
                 </a>
@@ -98,12 +100,12 @@
     @endphp
 
     <x-tab-status
-        :aksi="route('usulan.list')"
+        :aksi="route($ruteDaftar)"
         :terpilih="request('status')"
         :tab="$tabStatus" />
 
     <x-saring-periode
-        :aksi="route('usulan.list')"
+        :aksi="route($ruteDaftar)"
         :tahun="$tahun"
         :bulan="$bulan"
         :tahun-tersedia="$tahunTersedia"

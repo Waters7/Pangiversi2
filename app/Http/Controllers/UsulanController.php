@@ -46,6 +46,20 @@ class UsulanController extends Controller
 
     public function index(Request $request)
     {
+        return $this->daftar($request, hanyaSaya: false);
+    }
+
+    /**
+     * Usulan Perjadin Saya — bagi peran yang melihat usulan semua pegawai,
+     * daftar usulan yang diajukan untuk dirinya sendiri saja.
+     */
+    public function saya(Request $request)
+    {
+        return $this->daftar($request, hanyaSaya: true);
+    }
+
+    private function daftar(Request $request, bool $hanyaSaya)
+    {
         $search = $request->input('search');
         $status = $request->input('status');
         $tahun = $request->input('tahun');
@@ -54,7 +68,8 @@ class UsulanController extends Controller
         // Hak akses "Melihat seluruh usulan" (menu Usulan Perjadin → Lihat)
         // yang menentukan, bukan peran super administrator semata: peran yang
         // diberi hak itu lewat Peran & Hak Akses ikut melihat usulan semua pegawai.
-        $lihatSemua = $request->user()->bisaMelihatSemuaUsulan();
+        // Usulan Perjadin Saya selalu menyaring ke usulan milik sendiri.
+        $lihatSemua = ! $hanyaSaya && $request->user()->bisaMelihatSemuaUsulan();
 
         // Usulan milik sendiri maupun usulan kelompok yang mendaftarkan pengguna
         // ini sebagai peserta — keduanya masuk ke akun yang bersangkutan.
@@ -150,7 +165,11 @@ class UsulanController extends Controller
             'tahunTersedia',
             'jumlahBulan',
             'lihatSemua',
-        ));
+            'hanyaSaya',
+        ) + [
+            // Formulir saring, tab, dan tautan atur ulang tetap di halaman yang sama.
+            'ruteDaftar' => $hanyaSaya ? 'usulan.saya' : 'usulan.list',
+        ]);
     }
 
     /**
@@ -542,7 +561,8 @@ class UsulanController extends Controller
             $this->workflow->ajukan($usulan);
         }
 
-        return redirect()->route('usulan.list')->with(
+        // Peran yang melihat usulan semua pegawai kembali ke usulannya sendiri.
+        return redirect()->route($pengusul->bisaMelihatSemuaUsulan() ? 'usulan.saya' : 'usulan.list')->with(
             'success',
             $isDraft ? 'Draft usulan berhasil disimpan.' : 'Pengajuan perjadin berhasil dikirim.',
         );

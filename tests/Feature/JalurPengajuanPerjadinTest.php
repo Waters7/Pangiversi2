@@ -338,6 +338,21 @@ class JalurPengajuanPerjadinTest extends TestCase
         $this->assertNotNull($usulan->dokumen()->first()->surat_tugas);
     }
 
+    /** Peran yang melihat usulan semua pegawai kembali ke Usulan Perjadin Saya. */
+    public function test_pengusul_yang_melihat_seluruh_usulan_kembali_ke_usulan_saya(): void
+    {
+        $pimpinan = User::factory()->create(['role' => User::ROLE_PIMPINAN]);
+
+        $this->actingAs($pimpinan)
+            ->post(route('usulan.store'), $this->isian([
+                'jenis' => JenisPerjadin::DalamKota->value,
+                'id_kategori_perjadin' => $this->kategori('DK-FD')->id,
+                'no_spd' => null,
+                'spd_ditandatangani' => null,
+            ]))
+            ->assertRedirect(route('usulan.saya'));
+    }
+
     public function test_surat_tugas_tetap_wajib_pada_jalur_dalam_kota(): void
     {
         $this->actingAs($this->pengguna)

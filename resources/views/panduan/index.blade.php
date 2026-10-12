@@ -361,7 +361,9 @@
                 </span>
                 Usulan yang terkirim langsung tampil berstatus <strong>Konfirmasi</strong>, beserta tahap
                 berikutnya yang sedang ditunggu &mdash; biasanya pembayaran uang muka. Tombol mata di kolom Aksi
-                membuka detail dan pelacakan berkasnya.
+                membuka detail dan pelacakan berkasnya. Peran yang melihat usulan semua pegawai &mdash; misalnya
+                pimpinan dan PPK &mdash; menemukan usulan yang diajukannya untuk diri sendiri pada submenu
+                <strong>Usulan Perjadin → Usulan Perjadin Saya</strong>, dan kembali ke sana setelah mengirim usulan.
                 <x-panduan-gambar berkas="usulan-07-daftar"
                     judul="Pesan berhasil (1), nomor usulan (2), dan statusnya (3) pada Daftar Usulan Perjadin." />
             </x-panduan-langkah>

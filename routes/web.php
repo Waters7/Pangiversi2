@@ -115,6 +115,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/usulan', [UsulanController::class, 'store'])->name('usulan.store');
 
     Route::get('/list-usulan', [UsulanController::class, 'index'])->name('usulan.list');
+    Route::get('/list-usulan/saya', [UsulanController::class, 'saya'])->name('usulan.saya');
     Route::get('/usulan/{usulan:no_usulan}', [UsulanController::class, 'show'])->name('usulan.show');
     Route::get('/usulan/{usulan:no_usulan}/edit', [UsulanController::class, 'edit'])->name('usulan.edit');
     Route::put('/usulan/{usulan:no_usulan}', [UsulanController::class, 'update'])->name('usulan.update');

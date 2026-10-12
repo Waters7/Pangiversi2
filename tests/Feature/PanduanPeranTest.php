@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.28')
+            ->assertSee('Submenu Usulan Perjadin → Usulan Perjadin Saya')
             ->assertSee('Versi 2.5.27')
             ->assertSee('Administrasi Sistem → Format WhatsApp')
             ->assertSee('Versi 2.5.26')
