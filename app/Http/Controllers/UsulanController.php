@@ -12,6 +12,7 @@ use App\Models\LokasiTujuan;
 use App\Models\Notifikasi;
 use App\Models\SuratPerjalananDinas;
 use App\Models\TahunAnggaran;
+use App\Models\UnitKerja;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Rules\NomorSpdUnik;
@@ -26,6 +27,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -44,14 +46,43 @@ class UsulanController extends Controller
         private RekamPenghapusan $penghapusan,
     ) {}
 
+    /**
+     * Pilihan urutan daftar usulan. Urutan menurut pelaksana hanya pada
+     * daftar seluruh usulan — Usulan Perjadin Saya berisi satu pelaksana.
+     *
+     * @var array<string, string>
+     */
+    private const URUTAN = [
+        'berangkat-terbaru' => 'Tanggal berangkat terbaru',
+        'berangkat-terlama' => 'Tanggal berangkat terlama',
+        'dibuat-terbaru' => 'Usulan terbaru dibuat',
+        'dibuat-terlama' => 'Usulan terlama dibuat',
+        'nomor' => 'Nomor usulan (A–Z)',
+        'tujuan' => 'Tujuan (A–Z)',
+        'pelaksana' => 'Nama pelaksana (A–Z)',
+    ];
+
+    /** Banyaknya baris per halaman yang dapat dipilih. */
+    private const PER_HALAMAN = [10, 25, 50];
+
+    /**
+     * Daftar Usulan Perjadin — usulan semua pegawai, khusus peran yang
+     * berhak melihat seluruh usulan.
+     */
     public function index(Request $request)
     {
+        // Pengguna lain diarahkan ke usulannya sendiri beserta saringannya,
+        // supaya tautan dan markah lama tetap sampai.
+        if (! $request->user()->bisaMelihatSemuaUsulan()) {
+            return redirect()->route('usulan.saya', $request->query());
+        }
+
         return $this->daftar($request, hanyaSaya: false);
     }
 
     /**
-     * Usulan Perjadin Saya — bagi peran yang melihat usulan semua pegawai,
-     * daftar usulan yang diajukan untuk dirinya sendiri saja.
+     * Usulan Perjadin Saya — usulan yang diajukan untuk diri sendiri; satu-
+     * satunya daftar usulan bagi pelaksana biasa.
      */
     public function saya(Request $request)
     {
@@ -71,6 +102,15 @@ class UsulanController extends Controller
         // Usulan Perjadin Saya selalu menyaring ke usulan milik sendiri.
         $lihatSemua = ! $hanyaSaya && $request->user()->bisaMelihatSemuaUsulan();
 
+        $jalur = JenisPerjadin::dari($request->input('jalur'));
+        $pilihanUrut = $lihatSemua ? self::URUTAN : Arr::except(self::URUTAN, 'pelaksana');
+        $urut = array_key_exists((string) $request->input('urut'), $pilihanUrut) ? $request->input('urut') : 'berangkat-terbaru';
+        $perHalaman = in_array($request->integer('per'), self::PER_HALAMAN, true) ? $request->integer('per') : self::PER_HALAMAN[0];
+
+        // Saringan unit kerja hanya berarti pada daftar semua pegawai.
+        $daftarUnit = $lihatSemua ? UnitKerja::orderBy('nama')->get(['id', 'nama']) : collect();
+        $unit = $daftarUnit->firstWhere('id', $request->integer('unit'))?->id;
+
         // Usulan milik sendiri maupun usulan kelompok yang mendaftarkan pengguna
         // ini sebagai peserta — keduanya masuk ke akun yang bersangkutan.
         // Dikurung sendiri: tanpa kurung, OR di dalamnya membatalkan filter
@@ -82,26 +122,35 @@ class UsulanController extends Controller
             });
         };
 
-        $myUsulan = Usulan::when(! $lihatSemua, $terkaitSaya);
+        // Pencarian, jalur, dan unit menyaring daftar sekaligus angka pada tab
+        // status dan periode, supaya angkanya cocok dengan isi daftarnya.
+        $saring = function ($query) use ($lihatSemua, $terkaitSaya, $search, $jalur, $unit) {
+            $query->when(! $lihatSemua, $terkaitSaya)
+                ->when($search, function ($query) use ($search) {
+                    $query->where(function ($query) use ($search) {
+                        $query->where('no_usulan', 'like', "%{$search}%")
+                            ->orWhere('no_tugas', 'like', "%{$search}%")
+                            ->orWhere('lokasi', 'like', "%{$search}%")
+                            ->orWhere('instansi', 'like', "%{$search}%")
+                            ->orWhereHas('kategoriPerjadin', fn ($q) => $q->where('nama', 'like', "%{$search}%"))
+                            ->orWhereHas('kegiatan', fn ($q) => $q->where('nama', 'like', "%{$search}%"))
+                            ->orWhereHas('user', fn ($q) => $q->where('nama', 'like', "%{$search}%")->orWhere('nip', 'like', "%{$search}%"))
+                            ->orWhereHas('peserta', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
+                    });
+                })
+                ->when($jalur, fn ($query) => $query->padaJalur($jalur))
+                ->when($unit, fn ($query) => $query->whereHas('user', fn ($q) => $q->where('id_unit', $unit)));
+        };
+
+        $myUsulan = Usulan::query()->tap($saring);
 
         $usulan = Usulan::with('user', 'kegiatan', 'kategoriPerjadin', 'peserta', 'pembuat')
-            ->when(! $lihatSemua, $terkaitSaya)
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('no_usulan', 'like', "%{$search}%")
-                        ->orWhere('no_tugas', 'like', "%{$search}%")
-                        ->orWhere('lokasi', 'like', "%{$search}%")
-                        ->orWhere('instansi', 'like', "%{$search}%")
-                        ->orWhereHas('kategoriPerjadin', fn ($q) => $q->where('nama', 'like', "%{$search}%"))
-                        ->orWhereHas('kegiatan', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
-                });
-            })
+            ->tap($saring)
             ->when($status, fn ($query) => $query->where('status', $status))
             ->when($tahun, fn ($query) => $query->whereYear('tanggal_mulai', $tahun))
             ->when($bulan, fn ($query) => $query->whereMonth('tanggal_mulai', $bulan))
-            ->orderByDesc('tanggal_mulai')
-            ->latest()
-            ->paginate(10)
+            ->tap(fn ($query) => $this->urutkan($query, $urut))
+            ->paginate($perHalaman)
             ->withQueryString();
 
         // Langkah berikutnya dilekatkan di sini, bukan dihitung Blade per baris:
@@ -166,10 +215,36 @@ class UsulanController extends Controller
             'jumlahBulan',
             'lihatSemua',
             'hanyaSaya',
+            'jalur',
+            'urut',
+            'pilihanUrut',
+            'perHalaman',
+            'daftarUnit',
+            'unit',
         ) + [
             // Formulir saring, tab, dan tautan atur ulang tetap di halaman yang sama.
             'ruteDaftar' => $hanyaSaya ? 'usulan.saya' : 'usulan.list',
+            'pilihanJalur' => JenisPerjadin::cases(),
+            'pilihanPerHalaman' => self::PER_HALAMAN,
         ]);
+    }
+
+    /**
+     * Terapkan urutan daftar usulan yang dipilih.
+     *
+     * @param  Builder<Usulan>  $query
+     */
+    private function urutkan(Builder $query, string $urut): void
+    {
+        match ($urut) {
+            'berangkat-terlama' => $query->orderBy('tanggal_mulai')->oldest(),
+            'dibuat-terbaru' => $query->latest()->orderByDesc('id'),
+            'dibuat-terlama' => $query->oldest()->orderBy('id'),
+            'nomor' => $query->orderBy('no_usulan'),
+            'tujuan' => $query->orderBy('lokasi')->orderByDesc('tanggal_mulai'),
+            'pelaksana' => $query->orderBy(User::select('nama')->whereColumn('users.id', 'usulan.id_user'))->orderByDesc('tanggal_mulai'),
+            default => $query->orderByDesc('tanggal_mulai')->latest(),
+        };
     }
 
     /**
@@ -561,8 +636,8 @@ class UsulanController extends Controller
             $this->workflow->ajukan($usulan);
         }
 
-        // Peran yang melihat usulan semua pegawai kembali ke usulannya sendiri.
-        return redirect()->route($pengusul->bisaMelihatSemuaUsulan() ? 'usulan.saya' : 'usulan.list')->with(
+        // Usulan yang baru dikirim selalu milik pengirimnya sendiri.
+        return redirect()->route('usulan.saya')->with(
             'success',
             $isDraft ? 'Draft usulan berhasil disimpan.' : 'Pengajuan perjadin berhasil dikirim.',
         );
@@ -807,7 +882,7 @@ class UsulanController extends Controller
 
         $usulan->delete();
 
-        return redirect()->route('usulan.list')->with('success', $duplikat
+        return redirect()->route(request()->user()->ruteDaftarUsulan())->with('success', $duplikat
             ? "Usulan {$noUsulan} dihapus sebagai duplikat — usulan {$kembaran->no_usulan} tetap berjalan."
             : "Usulan {$noUsulan} berhasil dihapus.");
     }

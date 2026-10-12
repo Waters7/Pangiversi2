@@ -225,7 +225,7 @@
               <span class="w-2 h-2 rounded-full bg-teal-400 inline-block shrink-0"></span>
               Usulan Terbaru Saya
             </h3>
-            <a href="{{ route('usulan.list') }}" class="text-xs font-semibold text-teal-600 hover:text-teal-700">Lihat Semua →</a>
+            <a href="{{ route('usulan.saya') }}" class="text-xs font-semibold text-teal-600 hover:text-teal-700">Lihat Semua →</a>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-xs md:text-sm">
@@ -416,7 +416,7 @@
                 </div>
               </a>
 
-              <a href="{{ route('usulan.list') }}" class="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition group">
+              <a href="{{ route('usulan.saya') }}" class="flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition group">
                 <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
                 </div>

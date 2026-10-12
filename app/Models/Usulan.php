@@ -405,6 +405,42 @@ class Usulan extends Model
     }
 
     /**
+     * Usulan pada satu jalur pengajuan.
+     *
+     * Usulan lama yang belum menyimpan jalurnya disimpulkan dari kategorinya,
+     * sama seperti jalur(): supervisi menurut grupnya, selebihnya dalam atau
+     * luar kota menurut kategorinya, dan tanpa kategori dianggap luar kota.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopePadaJalur(Builder $query, JenisPerjadin $jalur): void
+    {
+        $bukanSupervisi = fn (Builder $kategori) => $kategori->where(
+            fn (Builder $kategori) => $kategori->whereNull('grup')->orWhere('grup', '!=', JenisPerjadin::GRUP_SUPERVISI)
+        );
+
+        $query->where(function (Builder $query) use ($jalur, $bukanSupervisi) {
+            $query->where('jenis_perjadin', $jalur->value);
+
+            $simpulan = match ($jalur) {
+                JenisPerjadin::Supervisi => fn (Builder $kategori) => $kategori->where('grup', JenisPerjadin::GRUP_SUPERVISI),
+                JenisPerjadin::DalamKota => fn (Builder $kategori) => $bukanSupervisi($kategori)->where('dalam_kota', true),
+                JenisPerjadin::LuarKota => fn (Builder $kategori) => $bukanSupervisi($kategori)
+                    ->where(fn (Builder $kategori) => $kategori->where('dalam_kota', false)->orWhereNull('dalam_kota')),
+                JenisPerjadin::LuarKotaDalamProvinsi => null,
+            };
+
+            if ($simpulan) {
+                $query->orWhere(fn (Builder $lama) => $lama->whereNull('jenis_perjadin')->whereHas('kategoriPerjadin', $simpulan));
+            }
+
+            if ($jalur === JenisPerjadin::LuarKota) {
+                $query->orWhere(fn (Builder $lama) => $lama->whereNull('jenis_perjadin')->whereDoesntHave('kategoriPerjadin'));
+            }
+        });
+    }
+
+    /**
      * Usulan yang masih memegang SPD dan nomor SPD-nya.
      *
      * Satu SPD hanya mendasari satu usulan tiap pelaksana. Usulan yang

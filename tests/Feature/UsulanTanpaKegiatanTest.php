@@ -44,7 +44,7 @@ class UsulanTanpaKegiatanTest extends TestCase
     public function test_daftar_usulan_menampilkan_kategori_sebagai_pengganti_jenis_kegiatan(): void
     {
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertOk()
             ->assertSee('Luar Kota FullBoard');
     }
@@ -111,7 +111,7 @@ class UsulanTanpaKegiatanTest extends TestCase
         ]);
 
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.list', ['search' => 'Transport Lokal']))
+            ->get(route('usulan.saya', ['search' => 'Transport Lokal']))
             ->assertOk()
             ->assertSee('Transport Lokal')
             ->assertDontSee('Luar Kota FullBoard');
@@ -131,7 +131,7 @@ class UsulanTanpaKegiatanTest extends TestCase
         ]);
 
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.list', ['status' => StatusUsulan::Draft->value]))
+            ->get(route('usulan.saya', ['status' => StatusUsulan::Draft->value]))
             ->assertOk()
             ->assertSee('Transport Lokal')
             ->assertDontSee('Luar Kota FullBoard');

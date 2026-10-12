@@ -353,19 +353,23 @@
                     judul="Kotak konfirmasi memuat ringkasan isian (1); tekan Ya, Kirim (2) untuk mengajukan." />
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="7" judul="Pantau di Daftar Usulan Perjadin" :terakhir="true">
+            <x-panduan-langkah nomor="7" judul="Pantau di Usulan Perjadin Saya" :terakhir="true">
                 <span class="block mb-1.5">
                     Usulan yang terkirim dua kali — pelaksana, tanggal, dan surat tugas atau SPD-nya sama —
                     ditandai <strong>Duplikat</strong>. Hapus salah satunya sendiri, walau sudah diajukan,
                     selama belum ada pembayaran dan berkasnya belum ditandatangani PPK.
                 </span>
-                Usulan yang terkirim langsung tampil berstatus <strong>Konfirmasi</strong>, beserta tahap
-                berikutnya yang sedang ditunggu &mdash; biasanya pembayaran uang muka. Tombol mata di kolom Aksi
-                membuka detail dan pelacakan berkasnya. Peran yang melihat usulan semua pegawai &mdash; misalnya
-                pimpinan dan PPK &mdash; menemukan usulan yang diajukannya untuk diri sendiri pada submenu
-                <strong>Usulan Perjadin → Usulan Perjadin Saya</strong>, dan kembali ke sana setelah mengirim usulan.
+                Usulan yang terkirim langsung tampil pada submenu <strong>Usulan Perjadin → Usulan Perjadin
+                Saya</strong> berstatus <strong>Konfirmasi</strong>, beserta tahap berikutnya yang sedang ditunggu
+                &mdash; biasanya pembayaran uang muka. Tombol mata di kolom Aksi membuka detail dan pelacakan
+                berkasnya. Saring daftarnya menurut jalur, urutkan menurut tanggal berangkat, tanggal dibuat, nomor,
+                atau tujuan, dan pilih 10, 25, atau 50 baris per halaman. Judul kolom berpanah juga mengurutkan daftar
+                bila diklik; klik kedua membalik arahnya. Submenu <strong>Daftar Usulan Perjadin</strong> memuat
+                usulan semua pegawai dan hanya tampil bagi peran yang berhak melihat seluruh usulan &mdash; misalnya
+                pimpinan dan PPK &mdash; dengan tambahan saringan unit kerja, pencarian nama atau NIP pelaksana, dan
+                urutan menurut nama pelaksana.
                 <x-panduan-gambar berkas="usulan-07-daftar"
-                    judul="Pesan berhasil (1), nomor usulan (2), dan statusnya (3) pada Daftar Usulan Perjadin." />
+                    judul="Submenu Usulan Perjadin Saya (1), saringan jalur, urutan, dan banyak baris (2), judul kolom berpanah untuk mengurutkan (3), serta nomor usulan (4) dan statusnya (5)." />
             </x-panduan-langkah>
 
             <div class="mt-6 grid gap-3">
@@ -996,7 +1000,8 @@
                     semua pengguna berperan itu, tercatat pada jejak audit, dan dikabarkan kepada
                     mereka lewat notifikasi yang menyebut hak akses apa saja yang ditambahkan dan
                     dicabut beserta menunya. Hak <strong>Melihat seluruh usulan</strong> (Usulan
-                    Perjadin → Lihat) membuka daftar usulan semua pegawai; menyunting dan menghapus
+                    Perjadin → Lihat) membuka submenu Daftar Usulan Perjadin berisi usulan semua pegawai; tanpa
+                    hak itu pengguna hanya mendapati Usulan Perjadin Saya. Menyunting dan menghapus
                     tetap hanya bagi pelaksana, pembuat, atau peserta usulannya. Hak <strong>Menghapus
                     komponen rincian biaya</strong> (Keuangan → Hapus) mengatur tombol hapus pada detail
                     keuangan, dan hak <strong>Melihat persetujuan</strong> (Persetujuan → Lihat) membuka

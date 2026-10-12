@@ -301,6 +301,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Daftar usulan tempat pengguna ini kembali: Daftar Usulan Perjadin bagi
+     * peran yang melihat seluruh usulan, Usulan Perjadin Saya bagi yang lain.
+     */
+    public function ruteDaftarUsulan(): string
+    {
+        return $this->bisaMelihatSemuaUsulan() ? 'usulan.list' : 'usulan.saya';
+    }
+
+    /**
      * @return array<string, string>
      */
     public static function roleOptions(): array

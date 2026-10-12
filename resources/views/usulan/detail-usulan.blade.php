@@ -8,7 +8,7 @@
 
     {{-- Page Header --}}
     <div class="mb-6 flex items-center gap-3">
-        <a href="{{ route('usulan.list') }}"
+        <a href="{{ route(auth()->user()->ruteDaftarUsulan()) }}"
            class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition shadow-sm">
             <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6"/>
@@ -646,7 +646,7 @@
                     </a>
                 @endif
 
-                <a href="{{ route('usulan.list') }}"
+                <a href="{{ route(auth()->user()->ruteDaftarUsulan()) }}"
                    class="w-full flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path d="M15 18l-6-6 6-6"/>

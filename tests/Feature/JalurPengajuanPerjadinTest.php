@@ -177,7 +177,7 @@ class JalurPengajuanPerjadinTest extends TestCase
                 'no_spd' => null,
                 'spd_ditandatangani' => null,
             ]))
-            ->assertRedirect(route('usulan.list'))
+            ->assertRedirect(route('usulan.saya'))
             ->assertSessionHasNoErrors();
 
         $usulan = Usulan::sole();
@@ -233,7 +233,7 @@ class JalurPengajuanPerjadinTest extends TestCase
                 'jenis' => JenisPerjadin::Supervisi->value,
                 'id_kategori_perjadin' => $this->kategori('SV-LK')->id,
             ]))
-            ->assertRedirect(route('usulan.list'))
+            ->assertRedirect(route('usulan.saya'))
             ->assertSessionHasNoErrors();
 
         $usulan = Usulan::sole();
@@ -329,7 +329,7 @@ class JalurPengajuanPerjadinTest extends TestCase
                 'no_spd' => null,
                 'spd_ditandatangani' => null,
             ]))
-            ->assertRedirect(route('usulan.list'))
+            ->assertRedirect(route('usulan.saya'))
             ->assertSessionHasNoErrors();
 
         $usulan = Usulan::sole();
@@ -338,7 +338,7 @@ class JalurPengajuanPerjadinTest extends TestCase
         $this->assertNotNull($usulan->dokumen()->first()->surat_tugas);
     }
 
-    /** Peran yang melihat usulan semua pegawai kembali ke Usulan Perjadin Saya. */
+    /** Peran yang melihat usulan semua pegawai pun kembali ke Usulan Perjadin Saya, bukan daftar seluruh usulan. */
     public function test_pengusul_yang_melihat_seluruh_usulan_kembali_ke_usulan_saya(): void
     {
         $pimpinan = User::factory()->create(['role' => User::ROLE_PIMPINAN]);

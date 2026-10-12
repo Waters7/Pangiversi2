@@ -105,7 +105,7 @@ class NavigasiGelombangDuaTest extends TestCase
         $usulan->forceFill(['created_at' => '2026-03-15 08:30:00'])->save();
 
         $this->actingAs($this->pelaksana)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertOk()
             ->assertSee('15 Mar 2026')
             ->assertDontSee('12 Jan 2025');
@@ -135,7 +135,7 @@ class NavigasiGelombangDuaTest extends TestCase
         $this->usulan();
 
         $this->actingAs($this->pelaksana)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertOk()
             ->assertSee('Menunggu:')
             ->assertSee('Uang muka dibayarkan');
@@ -151,7 +151,7 @@ class NavigasiGelombangDuaTest extends TestCase
             DB::flushQueryLog();
             DB::enableQueryLog();
 
-            $this->actingAs($this->pelaksana)->get(route('usulan.list'))->assertOk();
+            $this->actingAs($this->pelaksana)->get(route('usulan.saya'))->assertOk();
 
             $jumlah = count(DB::getQueryLog());
             DB::disableQueryLog();

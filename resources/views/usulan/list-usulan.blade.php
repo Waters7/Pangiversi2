@@ -1,6 +1,6 @@
 @extends('app')
 
-@section('title', 'Daftar Usulan')
+@section('title', $hanyaSaya ? 'Usulan Perjadin Saya' : 'Daftar Usulan Perjadin')
 
 @section('content')
 
@@ -23,14 +23,12 @@
     {{-- Page Header --}}
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-slate-800">{{ $hanyaSaya ? 'Usulan Perjadin Saya' : 'Usulan Perjalanan Dinas' }}</h1>
+            <h1 class="text-xl font-bold text-slate-800">{{ $hanyaSaya ? 'Usulan Perjadin Saya' : 'Daftar Usulan Perjadin' }}</h1>
             <p class="text-xs text-slate-400 mt-0.5">
                 @if($hanyaSaya)
                     Usulan perjalanan dinas yang Anda ajukan untuk diri sendiri
-                @elseif($lihatSemua)
-                    Kelola seluruh usulan perjalanan dinas semua pegawai
                 @else
-                    Kelola dan pantau seluruh usulan perjalanan dinas Anda
+                    Kelola seluruh usulan perjalanan dinas semua pegawai
                 @endif
             </p>
         </div>
@@ -43,9 +41,14 @@
         </a>
     </div>
 
+    @php
+        $adaSaringan = collect(request()->only(['search', 'status', 'tahun', 'bulan', 'jalur', 'unit', 'urut', 'per']))
+            ->contains(fn ($nilai) => filled($nilai));
+    @endphp
+
     {{-- Filter & Search Bar --}}
     <form method="GET" action="{{ route($ruteDaftar) }}">
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 space-y-3">
         <div class="flex flex-col sm:flex-row gap-3">
 
             <div class="relative flex-1">
@@ -53,7 +56,7 @@
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
                 <input type="text" name="search" value="{{ request('search') }}"
-                       placeholder="Cari no. usulan, kegiatan, lokasi, instansi..."
+                       placeholder="{{ $lihatSemua ? 'Cari no. usulan, nama atau NIP pelaksana, kegiatan, lokasi...' : 'Cari no. usulan, kegiatan, lokasi, instansi...' }}"
                        class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
             </div>
 
@@ -68,13 +71,57 @@
                 Filter
             </button>
 
-            @if(request('search') || request('status'))
+            @if($adaSaringan)
                 <a href="{{ route($ruteDaftar) }}"
-                   class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
+                   class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl text-center transition">
                     Reset
                 </a>
             @endif
 
+        </div>
+
+        {{-- Jalur, unit kerja, urutan, dan banyak baris langsung berlaku
+             begitu dipilih; saringan lain di formulir ini ikut terbawa. --}}
+        <div class="grid grid-cols-2 {{ $lihatSemua ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }} gap-3">
+            <label class="block min-w-0">
+                <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Jalur</span>
+                <select name="jalur" onchange="this.form.submit()" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    <option value="">Semua jalur</option>
+                    @foreach ($pilihanJalur as $pilihan)
+                        <option value="{{ $pilihan->value }}" @selected($jalur === $pilihan)>{{ $pilihan->label() }}</option>
+                    @endforeach
+                </select>
+            </label>
+
+            @if ($lihatSemua)
+                <label class="block min-w-0">
+                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Unit kerja pelaksana</span>
+                    <select name="unit" onchange="this.form.submit()" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">Semua unit kerja</option>
+                        @foreach ($daftarUnit as $pilihan)
+                            <option value="{{ $pilihan->id }}" @selected($unit === $pilihan->id)>{{ $pilihan->nama }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endif
+
+            <label class="block min-w-0">
+                <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Urutkan</span>
+                <select name="urut" onchange="this.form.submit()" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @foreach ($pilihanUrut as $nilai => $label)
+                        <option value="{{ $nilai }}" @selected($urut === $nilai)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+
+            <label class="block min-w-0">
+                <span class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Tampilkan</span>
+                <select name="per" onchange="this.form.submit()" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @foreach ($pilihanPerHalaman as $pilihan)
+                        <option value="{{ $pilihan }}" @selected($perHalaman === $pilihan)>{{ $pilihan }} baris per halaman</option>
+                    @endforeach
+                </select>
+            </label>
         </div>
     </div>
     </form>
@@ -110,7 +157,7 @@
         :bulan="$bulan"
         :tahun-tersedia="$tahunTersedia"
         :jumlah-bulan="$jumlahBulan"
-        :ekstra="['status' => request('status'), 'search' => request('search')]" />
+        :ekstra="collect(request()->query())->except(['tahun', 'bulan', 'page'])->all()" />
 
     {{-- Table --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -120,11 +167,11 @@
                 Daftar Usulan
                 <span class="ml-2 text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{{ $usulan->total() }} data</span>
             </p>
-            <div class="flex items-center gap-2 text-xs text-slate-400">
+            <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"/>
                 </svg>
-                Terbaru di atas
+                {{ $pilihanUrut[$urut] }}
             </div>
         </div>
 
@@ -134,26 +181,39 @@
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-100">
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No</th>
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">No. / Tanggal</th>
+                        {{-- Judul kolom yang berpanah dapat diklik untuk mengurutkan. --}}
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                            <x-kepala-urut :aksi="route($ruteDaftar)" :pilihan="['dibuat-terbaru', 'dibuat-terlama']" :terpilih="$urut">No. / Tanggal</x-kepala-urut>
+                        </th>
                         @if($lihatSemua)
-                            <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Pelaksana</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                                <x-kepala-urut :aksi="route($ruteDaftar)" pilihan="pelaksana" :terpilih="$urut">Pelaksana</x-kepala-urut>
+                            </th>
                         @endif
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Kegiatan & Tujuan</th>
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5 hidden sm:table-cell">Periode</th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                            <x-kepala-urut :aksi="route($ruteDaftar)" pilihan="tujuan" :terpilih="$urut">Kegiatan & Tujuan</x-kepala-urut>
+                        </th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5 hidden sm:table-cell">
+                            <x-kepala-urut :aksi="route($ruteDaftar)" :pilihan="['berangkat-terbaru', 'berangkat-terlama']" :terpilih="$urut">Periode</x-kepala-urut>
+                        </th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
 
-                    @php $bulanBerjalan = null; @endphp
+                    @php
+                        $bulanBerjalan = null;
+                        // Pemisah bulan hanya bermakna bila daftar urut tanggal berangkat.
+                        $kelompokBulan = str_starts_with($urut, 'berangkat-');
+                    @endphp
 
-                    @foreach ($usulan as $item)
+                    @forelse ($usulan as $item)
                         @php
                             $bulanBaris = \Carbon\Carbon::parse($item->tanggal_mulai)->format('Y-m');
                         @endphp
 
-                        @if ($bulanBaris !== $bulanBerjalan)
+                        @if ($kelompokBulan && $bulanBaris !== $bulanBerjalan)
                             @php $bulanBerjalan = $bulanBaris; @endphp
                             <tr class="bg-slate-100/70">
                                 <td colspan="{{ $lihatSemua ? 7 : 6 }}" class="px-4 py-2">
@@ -165,7 +225,8 @@
                         @endif
 
                         <tr class="hover:bg-slate-50/60 transition">
-                            <td class="px-4 py-4 text-center text-xs font-semibold text-slate-400">{{ $loop->iteration }}</td>
+                            {{-- Nomor berlanjut antarhalaman. --}}
+                            <td class="px-4 py-4 text-center text-xs font-semibold text-slate-400">{{ $usulan->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-4">
                                 <p class="font-bold text-slate-800 text-xs whitespace-nowrap">{{ $item->no_usulan }}</p>
                                 {{-- Tanggal nomor perjadin ini dibuat. --}}
@@ -300,18 +361,35 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="{{ $lihatSemua ? 7 : 6 }}" class="px-4 py-12 text-center">
+                                <p class="text-sm font-semibold text-slate-500">
+                                    {{ $adaSaringan ? 'Tidak ada usulan yang cocok dengan saringan ini.' : 'Belum ada usulan perjalanan dinas.' }}
+                                </p>
+                                @if ($adaSaringan)
+                                    <a href="{{ route($ruteDaftar) }}" class="inline-block mt-2 text-xs font-semibold text-teal-600 hover:text-teal-700">Tampilkan semua usulan</a>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforelse
 
                 </tbody>
             </table>
         </div>
 
         {{-- Pagination --}}
-        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-4">
+        @php
+            // Halaman pertama dan terakhir selalu terjangkau sekali klik.
+            $halamanAwal = max(1, $usulan->currentPage() - 2);
+            $halamanAkhir = min($usulan->lastPage(), $usulan->currentPage() + 2);
+        @endphp
+        <div class="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p class="text-xs text-slate-400">
                 Menampilkan {{ $usulan->firstItem() ?? 0 }}–{{ $usulan->lastItem() ?? 0 }} dari {{ $usulan->total() }} data
+                · Halaman {{ $usulan->currentPage() }} dari {{ $usulan->lastPage() }}
             </p>
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
                 {{-- Prev --}}
                 @if ($usulan->onFirstPage())
                     <span class="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-300 flex items-center justify-center cursor-not-allowed">
@@ -324,13 +402,27 @@
                 @endif
 
                 {{-- Page numbers --}}
-                @foreach ($usulan->getUrlRange(max(1, $usulan->currentPage() - 2), min($usulan->lastPage(), $usulan->currentPage() + 2)) as $page => $url)
+                @if ($halamanAwal > 1)
+                    <a href="{{ $usulan->url(1) }}" class="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 flex items-center justify-center transition">1</a>
+                    @if ($halamanAwal > 2)
+                        <span class="w-6 text-center text-xs text-slate-400">…</span>
+                    @endif
+                @endif
+
+                @foreach ($usulan->getUrlRange($halamanAwal, $halamanAkhir) as $page => $url)
                     @if ($page === $usulan->currentPage())
                         <span class="w-8 h-8 rounded-lg bg-teal-500 text-white text-xs font-bold flex items-center justify-center">{{ $page }}</span>
                     @else
                         <a href="{{ $url }}" class="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 flex items-center justify-center transition">{{ $page }}</a>
                     @endif
                 @endforeach
+
+                @if ($halamanAkhir < $usulan->lastPage())
+                    @if ($halamanAkhir < $usulan->lastPage() - 1)
+                        <span class="w-6 text-center text-xs text-slate-400">…</span>
+                    @endif
+                    <a href="{{ $usulan->url($usulan->lastPage()) }}" class="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 flex items-center justify-center transition">{{ $usulan->lastPage() }}</a>
+                @endif
 
                 {{-- Next --}}
                 @if ($usulan->hasMorePages())

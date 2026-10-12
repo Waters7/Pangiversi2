@@ -115,11 +115,12 @@ class UsulanAngkutanDanDuplikatTest extends TestCase
         $kembar = $this->usulan();
 
         $this->actingAs($this->pelaksana)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertSee('Duplikat dari '.$asli->no_usulan);
 
         $this->actingAs($this->pelaksana)
             ->delete(route('usulan.destroy', $kembar))
+            ->assertRedirect(route('usulan.saya'))
             ->assertSessionHas('success', "Usulan {$kembar->no_usulan} dihapus sebagai duplikat — usulan {$asli->no_usulan} tetap berjalan.");
 
         $this->assertModelMissing($kembar);

@@ -146,6 +146,10 @@
             x-transition
             class="mt-0.5 ml-3 pl-4 border-l border-white/10 space-y-0.5 overflow-hidden">
 
+            {{-- Daftar usulan semua pegawai khusus peran yang berhak melihat
+                 seluruh usulan; pelaksana biasa cukup memantau usulannya
+                 sendiri lewat Usulan Perjadin Saya. --}}
+            @can('melihat-semua-usulan')
             <a href="{{ route('usulan.list') }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
                       {{ request()->routeIs('usulan.list') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
@@ -154,10 +158,8 @@
               </svg>
               Daftar Usulan Perjadin
             </a>
+            @endcan
 
-            {{-- Peran yang melihat usulan semua pegawai punya daftar sendiri
-                 untuk usulan yang diajukannya bagi dirinya. --}}
-            @can('melihat-semua-usulan')
             <a href="{{ route('usulan.saya') }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all
                       {{ request()->routeIs('usulan.saya') ? 'text-teal-400 bg-white/5' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' }}">
@@ -166,7 +168,6 @@
               </svg>
               Usulan Perjadin Saya
             </a>
-            @endcan
 
             <a href="{{ route('usulan.create') }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all

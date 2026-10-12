@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.29',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Submenu Daftar Usulan Perjadin kini khusus peran yang berhak melihat seluruh usulan; pelaksana lain memantau usulannya lewat Usulan Perjadin Saya, dan tautan lama ke daftar diarahkan ke sana.',
+                    'Daftar usulan dapat diurutkan menurut tanggal berangkat, tanggal dibuat, nomor, tujuan, atau nama pelaksana — lewat pilihan Urutkan maupun judul kolom — disaring menurut jalur dan unit kerja, dicari menurut nama atau NIP pelaksana, dan memuat 10, 25, atau 50 baris per halaman.',
+                ],
+            ],
+            [
                 'versi' => '2.5.28',
                 'tanggal' => '12 Oktober 2026',
                 'butir' => [

@@ -32,7 +32,7 @@ class TampilanProfilTest extends TestCase
     {
         $pengguna = $this->pengguna();
 
-        foreach ([route('profil.index'), route('dashboard'), route('usulan.list')] as $halaman) {
+        foreach ([route('profil.index'), route('dashboard'), route('usulan.saya')] as $halaman) {
             $this->actingAs($pengguna)
                 ->get($halaman)
                 ->assertOk()

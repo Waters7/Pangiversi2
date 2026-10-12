@@ -248,7 +248,7 @@ class PengajuanPeroranganTest extends TestCase
         $usulanOrangLain = Usulan::factory()->create(['id_user' => $orangLain->id]);
 
         $this->actingAs($this->pengusul)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertOk()
             ->assertViewHas('usulan', fn ($daftar) => $daftar->getCollection()
                 ->pluck('id')

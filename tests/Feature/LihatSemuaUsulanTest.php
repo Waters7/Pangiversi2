@@ -63,8 +63,14 @@ class LihatSemuaUsulanTest extends TestCase
 
     public function test_hak_melihat_seluruh_usulan_membuka_daftar_semua_pegawai(): void
     {
+        // Tanpa hak itu daftar seluruh usulan tertutup: pengguna diarahkan ke
+        // usulannya sendiri.
         $this->actingAs($this->timKeuangan)
             ->get(route('usulan.list'))
+            ->assertRedirect(route('usulan.saya'));
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('usulan.saya'))
             ->assertOk()
             ->assertDontSee($this->usulanOrangLain->no_usulan);
 
@@ -113,7 +119,8 @@ class LihatSemuaUsulanTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('usulan.list'))
             ->assertOk()
-            ->assertSee(route('usulan.saya'))
+            ->assertSee('href="'.route('usulan.list').'"', false)
+            ->assertSee('href="'.route('usulan.saya').'"', false)
             ->assertSee($this->usulanOrangLain->no_usulan)
             ->assertSee($milikSendiri->no_usulan);
 
@@ -130,11 +137,18 @@ class LihatSemuaUsulanTest extends TestCase
         $this->assertSame(1, $saya->viewData('totalUsulan'));
     }
 
-    public function test_submenu_usulan_perjadin_saya_khusus_peran_yang_melihat_seluruh_usulan(): void
+    /** Pelaksana biasa hanya punya Usulan Perjadin Saya; saringan di tautan lama ikut terbawa. */
+    public function test_daftar_usulan_perjadin_khusus_peran_yang_melihat_seluruh_usulan(): void
     {
         $this->actingAs($this->timKeuangan)
-            ->get(route('usulan.list'))
+            ->get(route('usulan.saya'))
             ->assertOk()
-            ->assertDontSee(route('usulan.saya'));
+            ->assertSee('href="'.route('usulan.saya').'"', false)
+            ->assertDontSee('href="'.route('usulan.list').'"', false)
+            ->assertDontSee('Daftar Usulan Perjadin');
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('usulan.list', ['status' => StatusUsulan::Draft->value, 'search' => 'Bitung']))
+            ->assertRedirect(route('usulan.saya', ['status' => StatusUsulan::Draft->value, 'search' => 'Bitung']));
     }
 }

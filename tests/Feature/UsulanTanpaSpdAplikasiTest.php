@@ -127,7 +127,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
 
         $this->actingAs($this->pengguna)
             ->post(route('usulan.store'), $this->isianUsulan())
-            ->assertRedirect(route('usulan.list'))
+            ->assertRedirect(route('usulan.saya'))
             ->assertSessionHas('success');
 
         $usulan = Usulan::sole();
@@ -264,7 +264,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
 
         // Kemunculan pertama tiap label ada pada panel samping.
         $posisiSpd = strpos($isi, 'Pembuatan SPD');
-        $posisiUsulan = strpos($isi, 'Daftar Usulan Perjadin');
+        $posisiUsulan = strpos($isi, 'Usulan Perjadin Saya');
 
         $this->assertNotFalse($posisiSpd);
         $this->assertNotFalse($posisiUsulan);
@@ -276,7 +276,7 @@ class UsulanTanpaSpdAplikasiTest extends TestCase
         $isi = $this->actingAs($this->pengguna)->get(route('dashboard'))->assertOk()->getContent();
 
         $this->assertStringContainsString('Usulan Perjadin', $isi);
-        $this->assertStringContainsString('Daftar Usulan Perjadin', $isi);
+        $this->assertStringContainsString('Usulan Perjadin Saya', $isi);
         $this->assertStringContainsString('Buat Usulan Perjadin', $isi);
     }
 }

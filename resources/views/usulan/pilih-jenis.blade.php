@@ -9,7 +9,9 @@
     <div class="max-w-6xl mx-auto">
 
         <div class="mb-6">
-            <a href="{{ route('usulan.list') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-600">← Daftar Usulan Perjadin</a>
+            <a href="{{ route(auth()->user()->ruteDaftarUsulan()) }}" class="text-xs font-semibold text-slate-400 hover:text-slate-600">
+                ← {{ auth()->user()->bisaMelihatSemuaUsulan() ? 'Daftar Usulan Perjadin' : 'Usulan Perjadin Saya' }}
+            </a>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-800 mt-1">Perjalanan dinas seperti apa yang akan diajukan?</h1>
             <p class="text-sm text-slate-500 mt-1">
                 Pilih dahulu jalurnya. Formulir berikutnya hanya menampilkan kategori dan berkas
