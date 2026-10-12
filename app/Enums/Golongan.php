@@ -6,8 +6,10 @@ namespace App\Enums;
  * Golongan dan ruang kepegawaian beserta nama pangkatnya.
  *
  * Susunannya mengikuti daftar jenis pangkat yang berlaku: Golongan IV
- * (Pembina), III (Penata), II (Pengatur), dan I (Juru). Dipakai untuk
- * menyusun kolom "Pangkat dan Golongan" pada Surat Perjalanan Dinas.
+ * (Pembina), III (Penata), II (Pengatur), dan I (Juru), ditambah golongan
+ * Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) I sampai XVII — yang
+ * tidak berpangkat dan tidak beruang. Dipakai untuk menyusun kolom
+ * "Pangkat dan Golongan" pada Surat Perjalanan Dinas.
  */
 enum Golongan: string
 {
@@ -32,9 +34,38 @@ enum Golongan: string
     case Ib = 'I/b';
     case Ia = 'I/a';
 
-    /** Nama pangkat untuk golongan ini. */
+    // Golongan PPPK: angka romawi saja, tanpa ruang.
+    case PppkXVII = 'XVII';
+    case PppkXVI = 'XVI';
+    case PppkXV = 'XV';
+    case PppkXIV = 'XIV';
+    case PppkXIII = 'XIII';
+    case PppkXII = 'XII';
+    case PppkXI = 'XI';
+    case PppkX = 'X';
+    case PppkIX = 'IX';
+    case PppkVIII = 'VIII';
+    case PppkVII = 'VII';
+    case PppkVI = 'VI';
+    case PppkV = 'V';
+    case PppkIV = 'IV';
+    case PppkIII = 'III';
+    case PppkII = 'II';
+    case PppkI = 'I';
+
+    /** Golongan Pegawai Pemerintah dengan Perjanjian Kerja. */
+    public function pppk(): bool
+    {
+        return ! str_contains($this->value, '/');
+    }
+
+    /** Nama pangkat untuk golongan ini; PPPK tidak berpangkat. */
     public function pangkat(): string
     {
+        if ($this->pppk()) {
+            return 'PPPK';
+        }
+
         return match ($this) {
             self::IVe => 'Pembina Utama',
             self::IVd => 'Pembina Utama Madya',
@@ -56,12 +87,17 @@ enum Golongan: string
             self::Ic => 'Juru',
             self::Ib => 'Juru Muda Tingkat I',
             self::Ia => 'Juru Muda',
+            default => 'PPPK',
         };
     }
 
     /** Kelompok golongannya, misalnya "Golongan III (Penata)". */
     public function kelompok(): string
     {
+        if ($this->pppk()) {
+            return 'PPPK (Golongan I–XVII)';
+        }
+
         return match ($this->angka()) {
             'IV' => 'Golongan IV (Pembina)',
             'III' => 'Golongan III (Penata)',
@@ -84,16 +120,18 @@ enum Golongan: string
 
     /**
      * Tulisan lengkap seperti yang tercetak pada SPD:
-     * "Penata Muda (III/a)".
+     * "Penata Muda (III/a)", atau "Golongan IX (PPPK)" bagi PPPK.
      */
     public function lengkap(): string
     {
-        return $this->pangkat().' ('.$this->value.')';
+        return $this->pppk()
+            ? 'Golongan '.$this->value.' (PPPK)'
+            : $this->pangkat().' ('.$this->value.')';
     }
 
     /**
      * Baca golongan dari tulisan bebas, misalnya "III/a", "iii/a",
-     * atau "Penata Muda (III/a)".
+     * "Penata Muda (III/a)", atau — bagi PPPK — "IX", "Golongan IX (PPPK)".
      */
     public static function dari(?string $teks): ?self
     {
@@ -102,7 +140,13 @@ enum Golongan: string
         }
 
         if (preg_match('#\b(IV|III|II|I)\s*/\s*([a-e])\b#i', $teks, $cocok)) {
-            $teks = mb_strtoupper($cocok[1]).'/'.mb_strtolower($cocok[2]);
+            return self::tryFrom(mb_strtoupper($cocok[1]).'/'.mb_strtolower($cocok[2]));
+        }
+
+        // Tanpa ruang berarti golongan PPPK; angka romawi terpanjang dicoba
+        // lebih dulu. Tulisan yang memuat garis miring tetap golongan PNS.
+        if (! str_contains($teks, '/') && preg_match('#\b(XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b#i', $teks, $cocok)) {
+            return self::tryFrom(mb_strtoupper($cocok[1]));
         }
 
         return self::tryFrom(trim($teks));

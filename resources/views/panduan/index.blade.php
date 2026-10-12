@@ -168,7 +168,8 @@
                 cetaknya, baris Nomor diisi penanda <span class="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">${nomor_naskah}</span> yang diganti
                 SRIKANDI saat surat diregistrasi. Bila berangkat bersama rekan, tekan
                 <strong>Tambah Pelaksana</strong> lalu pilih namanya dari daftar pegawai &mdash; nama, NIP, pangkat,
-                dan jabatannya terisi sendiri. Satu SPD memuat paling banyak lima pelaksana.
+                dan jabatannya terisi sendiri. Pegawai PPPK tercantum dengan golongannya, misalnya
+                <strong>Golongan IX (PPPK)</strong>. Satu SPD memuat paling banyak lima pelaksana.
                 <x-panduan-gambar berkas="spd-02-identitas" ukuran="sedang"
                     judul="Identitas surat (1), pelaksana pertama dari akun yang sedang masuk (2), dan tombol Tambah Pelaksana (3)." />
                 <x-panduan-gambar berkas="spd-03-pelaksana-tambahan" ukuran="sedang"
@@ -968,7 +969,9 @@
                 Menu <strong>Administrasi Sistem → Pengguna</strong> memuat seluruh pengguna beserta
                 peran, unit kerja, dan atasannya. Saat menambah atau menyunting pengguna, nomor
                 handphone (WhatsApp) dapat diisi langsung — nomor itulah yang dipakai tim keuangan
-                menagih berkas. Kolom login terakhir memperlihatkan siapa yang belum
+                menagih berkas. <strong>Pangkat dan Golongan</strong> dipilih dari golongan PNS (I/a sampai
+                IV/e) atau golongan PPPK (I sampai XVII), dan mengisi sendiri kolom pangkat pada SPD.
+                Kolom login terakhir memperlihatkan siapa yang belum
                 pernah masuk sama sekali. Submenu <strong>Impor &amp; Ekspor</strong> memuat data
                 pengguna massal lewat CSV.
             </x-panduan-langkah>

@@ -136,6 +136,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.26',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Golongan PPPK I sampai XVII dikenali: dapat dipilih pada formulir pengguna di Administrasi Sistem dan pada kolom Pangkat dan Golongan SPD, tercetak misalnya "Golongan IX (PPPK)", dan terbaca saat impor data pegawai.',
+                ],
+            ],
+            [
                 'versi' => '2.5.25',
                 'tanggal' => '12 Oktober 2026',
                 'butir' => [

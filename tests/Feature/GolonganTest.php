@@ -40,7 +40,7 @@ class GolonganTest extends TestCase
             'I/a' => 'Juru Muda',
         ];
 
-        $this->assertCount(count($daftar), Golongan::cases());
+        $this->assertCount(count($daftar), array_filter(Golongan::cases(), fn (Golongan $g) => ! $g->pppk()));
 
         foreach ($daftar as $golongan => $pangkat) {
             $this->assertSame($pangkat, Golongan::from($golongan)->pangkat());
@@ -51,6 +51,24 @@ class GolonganTest extends TestCase
     {
         $this->assertSame('Penata Muda (III/a)', Golongan::IIIa->lengkap());
         $this->assertSame('Pembina Utama Muda (IV/c)', Golongan::IVc->lengkap());
+        $this->assertSame('Golongan IX (PPPK)', Golongan::PppkIX->lengkap());
+    }
+
+    /** PPPK bergolongan I sampai XVII, tanpa pangkat dan tanpa ruang. */
+    public function test_golongan_pppk_satu_sampai_tujuh_belas(): void
+    {
+        $pppk = array_values(array_filter(Golongan::cases(), fn (Golongan $g) => $g->pppk()));
+
+        $this->assertCount(17, $pppk);
+        $this->assertSame('XVII', $pppk[0]->value);
+        $this->assertSame('I', $pppk[16]->value);
+        $this->assertSame('PPPK', Golongan::PppkIX->pangkat());
+
+        $this->assertSame(Golongan::PppkIX, Golongan::dari('IX'));
+        $this->assertSame(Golongan::PppkIX, Golongan::dari('ix'));
+        $this->assertSame(Golongan::PppkIX, Golongan::dari('Golongan IX (PPPK)'));
+        $this->assertSame(Golongan::PppkXVII, Golongan::dari('XVII'));
+        $this->assertSame(Golongan::PppkIV, Golongan::dari('IV'));
     }
 
     public function test_golongan_terbaca_dari_tulisan_bebas(): void
@@ -78,10 +96,57 @@ class GolonganTest extends TestCase
             'Golongan III (Penata)',
             'Golongan II (Pengatur)',
             'Golongan I (Juru)',
+            'PPPK (Golongan I–XVII)',
         ], array_keys($terkelompok));
 
         $this->assertCount(5, $terkelompok['Golongan IV (Pembina)']);
         $this->assertCount(4, $terkelompok['Golongan III (Penata)']);
+        $this->assertCount(17, $terkelompok['PPPK (Golongan I–XVII)']);
+    }
+
+    // ── Diisi dari Administrasi Sistem ──
+
+    public function test_administrator_mengisi_golongan_pppk_pegawai(): void
+    {
+        $admin = User::factory()->administrator()->create();
+        $pegawai = User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK, 'golongan' => null]);
+
+        $this->actingAs($admin)
+            ->get(route('administrasi'))
+            ->assertOk()
+            ->assertSee('Golongan IX (PPPK)');
+
+        $this->actingAs($admin)
+            ->put(route('administrasi.update', $pegawai), [
+                'nama' => $pegawai->nama,
+                'nip' => $pegawai->nip,
+                'email' => $pegawai->email,
+                'role' => $pegawai->role,
+                'golongan' => 'IX',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame('IX', $pegawai->fresh()->golongan);
+
+        $this->actingAs($admin)
+            ->put(route('administrasi.update', $pegawai), [
+                'nama' => $pegawai->nama,
+                'nip' => $pegawai->nip,
+                'role' => $pegawai->role,
+                'golongan' => 'XX',
+            ])
+            ->assertSessionHasErrors('golongan');
+    }
+
+    /** Golongan PPPK pegawai mengisi sendiri kolom Pangkat dan Golongan pada SPD. */
+    public function test_golongan_pppk_mengisi_kolom_pangkat_spd(): void
+    {
+        $pegawai = User::factory()->create(['role' => User::ROLE_DOSEN_TENDIK, 'golongan' => 'IX']);
+
+        $this->actingAs($pegawai)
+            ->get(route('spd.create'))
+            ->assertOk()
+            ->assertSee('Golongan IX (PPPK)');
     }
 
     // ── Data pegawai ──
