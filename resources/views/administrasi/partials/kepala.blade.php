@@ -20,6 +20,10 @@
         $bagianAdministrasi[] = ['rute' => 'administrasi.berkas-lpj', 'aktif' => 'administrasi.berkas-lpj', 'label' => 'Berkas Pertanggungjawaban'];
     }
 
+    if (auth()->user()->can('mengatur-format-whatsapp')) {
+        $bagianAdministrasi[] = ['rute' => 'administrasi.format-whatsapp', 'aktif' => 'administrasi.format-whatsapp', 'label' => 'Format WhatsApp'];
+    }
+
     // Integrasi Data memuat token dan alamat aplikasi lain — hanya super administrator.
     if (auth()->user()->isAdmin()) {
         $bagianAdministrasi[] = ['rute' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data'];

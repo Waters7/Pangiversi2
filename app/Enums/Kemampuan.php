@@ -127,6 +127,12 @@ enum Kemampuan: string
      */
     case MengaturBerkasLpj = 'mengatur-berkas-lpj';
 
+    /**
+     * Mengubah format pesan WhatsApp yang disusun aplikasi: penagihan berkas
+     * kepada pelaksana dan peringatan pemantau server.
+     */
+    case MengaturFormatWhatsapp = 'mengatur-format-whatsapp';
+
     public function label(): string
     {
         return match ($this) {
@@ -157,6 +163,7 @@ enum Kemampuan: string
             self::MengelolaPeran => 'Mengelola peran dan hak akses',
             self::MengaturDokumenCetak => 'Mengatur tampilan dokumen cetak',
             self::MengaturBerkasLpj => 'Mengatur berkas pertanggungjawaban',
+            self::MengaturFormatWhatsapp => 'Mengatur format pesan WhatsApp',
         };
     }
 

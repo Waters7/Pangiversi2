@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PesanWhatsapp;
 use App\Models\Pengaturan;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -46,7 +47,7 @@ class PemantauServer
 
     private const BERKAS_CERMIN = 'pengaturan-peringatan.json';
 
-    public function __construct(private PengirimWhatsapp $wa) {}
+    public function __construct(private PengirimWhatsapp $wa, private FormatWhatsapp $format) {}
 
     // ── Pengaturan ──
 
@@ -299,10 +300,10 @@ class PemantauServer
     public function kirimUji(): array
     {
         $pengaturan = $this->pengaturan();
-        $isi = "*Uji peringatan PANGI*\n"
-            ."Pesan ini menandakan peringatan WhatsApp pemantau server sudah tersambung.\n\n"
-            .'Alamat: '.config('app.url')."\n"
-            .'Waktu: '.$this->waktu(now());
+        $isi = $this->format->susun(PesanWhatsapp::UjiServer, [
+            'alamat' => (string) config('app.url'),
+            'waktu' => $this->waktu(now()),
+        ]);
 
         $hasil = $this->wa->kirim($pengaturan, $pengaturan['nomor'], $isi);
         $this->tulisStatus($this->catatRiwayat($this->status(), self::JENIS_UJI, $hasil));
@@ -366,16 +367,13 @@ class PemantauServer
     {
         $sejak = Carbon::parse($status['gagal_sejak']);
 
-        $judul = $pengingat
-            ? '*PANGI masih belum dapat diakses* — sudah '.$this->lama($sejak, now())
-            : '*PERINGATAN — PANGI tidak dapat diakses*';
-
-        return $judul."\n"
-            .'Sejak: '.$this->waktu($sejak)."\n"
-            .'Alamat: '.config('app.url')."\n\n"
-            ."Hasil pemeriksaan:\n"
-            .collect($pemeriksaan)->map(fn (array $satu) => '- '.$satu['label'].': '.$satu['pesan'])->implode("\n")
-            ."\n\nPesan otomatis dari pemantau server PANGI.";
+        // Kalimatnya diatur dari Administrasi Sistem → Format WhatsApp.
+        return $this->format->susun($pengingat ? PesanWhatsapp::PengingatServer : PesanWhatsapp::GangguanServer, [
+            'lama' => $this->lama($sejak, now()),
+            'sejak' => $this->waktu($sejak),
+            'alamat' => (string) config('app.url'),
+            'hasil_pemeriksaan' => collect($pemeriksaan)->map(fn (array $satu) => '- '.$satu['label'].': '.$satu['pesan'])->implode("\n"),
+        ]);
     }
 
     /**
@@ -385,10 +383,11 @@ class PemantauServer
     {
         $sejak = Carbon::parse($status['gagal_sejak'] ?? $sekarang);
 
-        return "*PANGI kembali normal*\n"
-            .'Pulih: '.$this->waktu($sekarang).', setelah gangguan sekitar '.$this->lama($sejak, $sekarang).".\n"
-            .'Alamat: '.config('app.url')."\n\n"
-            .'Pesan otomatis dari pemantau server PANGI.';
+        return $this->format->susun(PesanWhatsapp::PulihServer, [
+            'pulih' => $this->waktu($sekarang),
+            'lama' => $this->lama($sejak, $sekarang),
+            'alamat' => (string) config('app.url'),
+        ]);
     }
 
     private function waktu(CarbonInterface $waktu): string

@@ -12,6 +12,7 @@ use App\Http\Controllers\DaftarRiilController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardEksekutifController;
 use App\Http\Controllers\DokumenController;
+use App\Http\Controllers\FormatWhatsappController;
 use App\Http\Controllers\IntegrasiDataController;
 use App\Http\Controllers\JadwalPerjalananController;
 use App\Http\Controllers\KategoriPembiayaanController;
@@ -459,6 +460,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/berkas-lpj', [BerkasLpjController::class, 'index'])->name('administrasi.berkas-lpj');
             Route::put('/berkas-lpj/{jalur}', [BerkasLpjController::class, 'simpan'])->name('administrasi.berkas-lpj.simpan');
             Route::delete('/berkas-lpj/{jalur}', [BerkasLpjController::class, 'bawaan'])->name('administrasi.berkas-lpj.bawaan');
+        });
+
+        // Format pesan WhatsApp: penagihan berkas dan peringatan pemantau server.
+        Route::middleware('can:mengatur-format-whatsapp')->group(function () {
+            Route::get('/format-whatsapp', [FormatWhatsappController::class, 'index'])->name('administrasi.format-whatsapp');
+            Route::put('/format-whatsapp/{pesan}', [FormatWhatsappController::class, 'simpan'])->name('administrasi.format-whatsapp.simpan');
+            Route::delete('/format-whatsapp/{pesan}', [FormatWhatsappController::class, 'bawaan'])->name('administrasi.format-whatsapp.bawaan');
         });
 
         // Pengaturan Dokumen Output: tampilan dan elemen tiap dokumen cetak.

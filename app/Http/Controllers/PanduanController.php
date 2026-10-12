@@ -57,6 +57,7 @@ class PanduanController extends Controller
                 'masterData' => $pengguna->punyaKemampuan(Kemampuan::MengelolaMasterData),
                 'peran' => $pengguna->punyaKemampuan(Kemampuan::MengelolaPeran),
                 'dokumen' => $pengguna->punyaKemampuan(Kemampuan::MengaturDokumenCetak),
+                'formatWhatsapp' => $pengguna->punyaKemampuan(Kemampuan::MengaturFormatWhatsapp),
                 'jejakAudit' => $pengguna->punyaKemampuan(Kemampuan::MelihatJejakAudit),
             ],
             'hariSanggah' => DaftarRiil::HARI_MASA_SANGGAH,
@@ -135,6 +136,13 @@ class PanduanController extends Controller
     private function riwayatPerubahan(): array
     {
         return [
+            [
+                'versi' => '2.5.27',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Submenu Administrasi Sistem → Format WhatsApp: kalimat pesan penagihan berkas dan pesan pemantau server dapat diubah dengan penanda isian, dilengkapi pratinjau dan tombol kembali ke bawaan. Hak aksesnya, Mengatur format pesan WhatsApp, diatur pada Peran & Hak Akses.',
+                ],
+            ],
             [
                 'versi' => '2.5.26',
                 'tanggal' => '12 Oktober 2026',

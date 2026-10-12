@@ -977,7 +977,7 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Pantau siapa yang sedang aktif"
-                               :terakhir="! $boleh['peran'] && ! $boleh['dokumen'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                               :terakhir="! $boleh['peran'] && ! $boleh['dokumen'] && ! $boleh['formatWhatsapp'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                 Jumlah pengguna yang sedang masuk ditampilkan di halaman yang sama, dan daftarnya
                 dapat disaring menjadi hanya yang aktif atau hanya yang belum pernah masuk.
             </x-panduan-langkah>
@@ -986,7 +986,7 @@
 
             @if ($boleh['peran'])
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur peran dan hak akses"
-                                   :terakhir="! $boleh['dokumen'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                                   :terakhir="! $boleh['dokumen'] && ! $boleh['formatWhatsapp'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                     Submenu <strong>Administrasi Sistem → Peran &amp; Hak Akses</strong> memuat seluruh
                     peran — bawaan maupun buatan — beserta matriks menu: tiap kemampuan berada pada
                     kolom <strong>Lihat</strong>, <strong>Ubah</strong>, atau <strong>Hapus</strong>
@@ -1022,7 +1022,7 @@
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur tampilan dokumen output"
-                                   :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                                   :terakhir="! $boleh['formatWhatsapp'] && ! $boleh['masterData'] && ! $boleh['jejakAudit']">
                     Submenu <strong>Administrasi Sistem → Dokumen Output</strong> mengatur rupa empat
                     dokumen cetak: <strong>Perjadin (SPD)</strong>, <strong>Rincian Biaya</strong>,
                     <strong>Daftar Pengeluaran Riil</strong>, dan <strong>Daftar Nominatif</strong>.
@@ -1036,6 +1036,21 @@
                     seusai mengubah centangan untuk melihat elemen mana yang hilang atau muncul,
                     sebelum pengaturannya disimpan. Penanda tanda tangan elektronik SRIKANDI
                     beserta nomor naskah selalu tercetak dan tidak dapat dimatikan.
+                </x-panduan-langkah>
+            @endif
+
+            @if ($boleh['formatWhatsapp'])
+                <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur format pesan WhatsApp"
+                                   :terakhir="! $boleh['masterData'] && ! $boleh['jejakAudit']">
+                    Submenu <strong>Administrasi Sistem → Format WhatsApp</strong> memuat kalimat pesan
+                    WhatsApp yang disusun aplikasi: penagihan berkas kepada pelaksana, serta peringatan
+                    pemantau server saat aplikasi tidak dapat diakses, pengingatnya, kabar pulih, dan pesan
+                    uji. Tulis kalimatnya bebas lalu sisipkan <strong>penanda</strong> berkurung kurawal —
+                    misalnya <code>{nama}</code> atau <code>{daftar_berkas}</code> — yang diganti isinya saat
+                    pesan disusun; pratinjau di bawah tiap kolom memakai data contoh. Penanda yang salah ketik
+                    ditolak, dan penanda wajib seperti <code>{daftar_berkas}</code> tidak boleh dihapus. Tiap
+                    format dapat dikembalikan ke bawaan dengan satu tombol, dan format pesan server tetap
+                    terpakai meski basis data sedang tidak dapat dihubungi.
                 </x-panduan-langkah>
             @endif
 

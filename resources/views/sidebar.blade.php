@@ -722,6 +722,7 @@
             ...(auth()->user()->can('mengelola-peran') ? [['route' => 'administrasi.peran', 'aktif' => 'administrasi.peran', 'label' => 'Peran & Hak Akses']] : []),
             ...(auth()->user()->can('mengatur-dokumen-cetak') ? [['route' => 'administrasi.dokumen', 'aktif' => 'administrasi.dokumen', 'label' => 'Dokumen Output']] : []),
             ...(auth()->user()->can('mengatur-berkas-lpj') ? [['route' => 'administrasi.berkas-lpj', 'aktif' => 'administrasi.berkas-lpj', 'label' => 'Berkas Pertanggungjawaban']] : []),
+            ...(auth()->user()->can('mengatur-format-whatsapp') ? [['route' => 'administrasi.format-whatsapp', 'aktif' => 'administrasi.format-whatsapp', 'label' => 'Format WhatsApp']] : []),
             ...(auth()->user()->isAdmin() ? [['route' => 'administrasi.integrasi', 'aktif' => 'administrasi.integrasi', 'label' => 'Integrasi Data']] : []),
             ...(auth()->user()->isAdmin() ? [['route' => 'administrasi.server', 'aktif' => 'administrasi.server', 'label' => 'Pemantauan Server']] : []),
           ] as $menu)

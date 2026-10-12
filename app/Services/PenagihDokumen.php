@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ArahTiket;
 use App\Enums\BerkasLpj;
 use App\Enums\IsianBiaya;
+use App\Enums\PesanWhatsapp;
 use App\Models\Dokumen;
 use App\Models\Usulan;
 use Carbon\Carbon;
@@ -21,6 +22,7 @@ class PenagihDokumen
     public function __construct(
         private PengaturanBerkasLpj $berkasWajib,
         private PemegangNominal $pemegang,
+        private FormatWhatsapp $format,
     ) {}
 
     /**
@@ -413,17 +415,17 @@ class PenagihDokumen
             ->map(fn (string $label, int $i) => ($i + 1).'. '.$label)
             ->implode("\n");
 
-        $sapaan = $usulan->user?->nama ?? 'Bapak/Ibu';
-        $selesai = $usulan->tanggal_selesai
-            ? Carbon::parse($usulan->tanggal_selesai)->translatedFormat('d F Y')
-            : '-';
-
-        return "Selamat pagi/siang {$sapaan},\n\n"
-            ."Menindaklanjuti perjalanan dinas {$usulan->no_usulan} ke {$usulan->lokasi} "
-            ."yang berakhir {$selesai}, berkas pertanggungjawaban berikut belum kami terima:\n\n"
-            ."{$daftar}\n\n"
-            ."Mohon diunggah melalui aplikasi PANGI pada menu Dokumen agar pembayaran dapat kami proses.\n\n"
-            .'Terima kasih. — Tim Keuangan Poltekkes Kemenkes Manado';
+        // Kalimatnya diatur dari Administrasi Sistem → Format WhatsApp.
+        return $this->format->susun(PesanWhatsapp::PenagihanBerkas, [
+            'nama' => $usulan->user?->nama ?? 'Bapak/Ibu',
+            'no_usulan' => (string) $usulan->no_usulan,
+            'lokasi' => (string) $usulan->lokasi,
+            'tanggal_selesai' => $usulan->tanggal_selesai
+                ? Carbon::parse($usulan->tanggal_selesai)->translatedFormat('d F Y')
+                : '-',
+            'daftar_berkas' => $daftar,
+            'jumlah_berkas' => (string) count($kurang),
+        ]);
     }
 
     /**
