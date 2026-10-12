@@ -242,4 +242,64 @@ class TransportLokalTest extends TestCase
 
         $this->assertSame(85_000.0, $this->daftarRiil()->rincian->sole()->nominal);
     }
+
+    // ── Koreksi nominal oleh tim keuangan ──
+
+    private function notaPertama(): RincianDaftarRiil
+    {
+        return $this->daftarRiil()->rincian->firstWhere('kunci_sumber', 'nota:1');
+    }
+
+    private function ubahNominal(RincianDaftarRiil $baris, int $nominal, ?User $oleh = null): TestResponse
+    {
+        return $this->actingAs($oleh ?? $this->timKeuangan)
+            ->put(route('keuangan.transport-lokal.update', [$this->usulan, $baris->id]), ['nominal' => $nominal]);
+    }
+
+    public function test_tim_keuangan_mengoreksi_nominal_dari_periksa_transport_lokal(): void
+    {
+        $this->simpanNota([1 => ['nominal' => 85_000, 'bukti' => UploadedFile::fake()->create('nota.pdf', 10, 'application/pdf')]]);
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.transport-lokal'))
+            ->assertOk()
+            ->assertSee(route('keuangan.transport-lokal.update', [$this->usulan->no_usulan, $this->notaPertama()->id]));
+
+        $this->ubahNominal($this->notaPertama(), 80_000)->assertSessionHas('success');
+
+        $this->assertSame(80_000.0, $this->notaPertama()->nominal);
+        $this->assertSame(80_000.0, (float) $this->daftarRiil()->total_riil);
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan.transport-lokal'))
+            ->assertSee('Dikoreksi tim keuangan — nota Rp 85.000');
+    }
+
+    /** Koreksinya bertahan saat pelaksana menyimpan ulang, kecuali notanya sendiri diubah. */
+    public function test_koreksi_bertahan_sampai_pelaksana_mengubah_notanya(): void
+    {
+        $bukti = UploadedFile::fake()->create('nota.pdf', 10, 'application/pdf');
+        $this->simpanNota([1 => ['nominal' => 85_000, 'bukti' => $bukti]]);
+        $this->ubahNominal($this->notaPertama(), 80_000);
+
+        $this->simpanNota([1 => ['nominal' => 85_000]])->assertSessionHasNoErrors();
+        $this->assertSame(80_000.0, $this->notaPertama()->nominal);
+
+        $this->simpanNota([1 => ['nominal' => 90_000]])->assertSessionHasNoErrors();
+        $this->assertSame(90_000.0, $this->notaPertama()->nominal);
+        $this->assertFalse($this->notaPertama()->dikoreksi());
+    }
+
+    public function test_koreksi_nominal_khusus_pengelola_biaya_dan_berkas_terbuka(): void
+    {
+        $this->simpanNota([1 => ['nominal' => 85_000, 'bukti' => UploadedFile::fake()->create('nota.pdf', 10, 'application/pdf')]]);
+
+        $this->ubahNominal($this->notaPertama(), 1, User::factory()->create(['role' => User::ROLE_PIMPINAN]))->assertForbidden();
+
+        // Setelah pelaksana menyetujui daftar riilnya, nominalnya terkunci.
+        $this->daftarRiil()->update(['dikirim_ke_pegawai_at' => now(), 'disetujui_pegawai_at' => now()]);
+        $this->ubahNominal($this->notaPertama(), 1)->assertForbidden();
+
+        $this->assertSame(85_000.0, $this->notaPertama()->nominal);
+    }
 }

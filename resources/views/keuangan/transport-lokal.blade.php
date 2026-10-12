@@ -92,6 +92,12 @@
                                     // Nota per ruas ditautkan dari usulannya, dicocokkan
                                     // lewat kunci sumber baris daftar riil.
                                     $nota = $item->usulan?->notaTransport?->keyBy('urutan') ?? collect();
+
+                                    // Nominalnya dapat dikoreksi tim keuangan selama daftar riil
+                                    // belum disetujui pelaksana maupun disahkan PPK.
+                                    $bolehUbahNominal = $item->usulan
+                                        && auth()->user()->bisaMengelolaBiaya()
+                                        && app(\App\Services\PenguncianBerkas::class)->daftarRiil($item->usulan) === null;
                                 @endphp
 
                                 @forelse ($item->rincian as $baris)
@@ -100,10 +106,16 @@
                                         $bukti = $nota->get($urutan)?->bukti;
                                     @endphp
 
-                                    <div class="flex items-center gap-2 mb-0.5">
+                                    <div x-data="{ ubah: false }" class="mb-0.5">
+                                    <div x-show="! ubah" class="flex flex-wrap items-center gap-2">
                                         <p class="text-xs text-slate-600">
                                             {{ $baris->uraian }}
                                             <span class="text-slate-400">· Rp {{ number_format($baris->nominal, 0, ',', '.') }}</span>
+                                            @if ($baris->dikoreksi())
+                                                <span class="block text-[10px] font-semibold text-amber-600">
+                                                    Dikoreksi tim keuangan — nota Rp {{ number_format($baris->nominal_nota, 0, ',', '.') }}
+                                                </span>
+                                            @endif
                                         </p>
 
                                         @if (! $baris->dariDokumen())
@@ -118,6 +130,31 @@
                                                 Nota
                                             </a>
                                         @endif
+
+                                        @if ($bolehUbahNominal)
+                                            <button type="button" @click="ubah = true"
+                                                    class="text-[10px] font-bold text-teal-600 hover:text-teal-700" title="Ubah nominal {{ $baris->uraian }}">
+                                                Ubah
+                                            </button>
+                                        @endif
+                                    </div>
+
+                                    @if ($bolehUbahNominal)
+                                        <form x-show="ubah" x-cloak method="POST"
+                                              action="{{ route('keuangan.transport-lokal.update', [$item->usulan->no_usulan, $baris->id]) }}"
+                                              class="flex flex-wrap items-center gap-1.5 py-1">
+                                            @csrf @method('PUT')
+                                            <span class="text-xs text-slate-600">{{ $baris->uraian }}</span>
+                                            <div class="flex items-stretch rounded-lg border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
+                                                <span class="px-2 py-1 text-[11px] text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
+                                                <input type="number" name="nominal" min="0" step="1" required value="{{ (int) $baris->nominal }}"
+                                                       aria-label="Nominal {{ $baris->uraian }}"
+                                                       class="w-28 px-2 py-1 text-xs border-0 focus:ring-0 focus:outline-none">
+                                            </div>
+                                            <button type="submit" class="px-2.5 py-1 bg-teal-500 hover:bg-teal-600 text-white text-[11px] font-bold rounded-lg transition">Simpan</button>
+                                            <button type="button" @click="ubah = false" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-semibold rounded-lg transition">Batal</button>
+                                        </form>
+                                    @endif
                                     </div>
                                 @empty
                                     <span class="text-xs text-slate-400">Belum dirinci</span>

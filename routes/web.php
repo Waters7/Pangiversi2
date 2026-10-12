@@ -265,6 +265,7 @@ Route::middleware('auth')->group(function () {
 
         // Transport lokal tulisan tim keuangan pada daftar riil pelaksana.
         Route::delete('/{usulan:no_usulan}/transport-lokal/{baris}', [KeuanganController::class, 'destroyTransportLokal'])->name('keuangan.transport-lokal.destroy');
+        Route::put('/{usulan:no_usulan}/transport-lokal/{baris}', [KeuanganController::class, 'ubahTransportLokal'])->name('keuangan.transport-lokal.update');
 
         // Nominal yang datang dari berkas pelaksana diperiksa satu per satu.
         Route::put('/{usulan:no_usulan}/rincian/{rincian}/validasi', [KeuanganController::class, 'validasiRincian'])->name('keuangan.rincian.validasi');

@@ -80,7 +80,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-sm">Proses Pembayaran Sisa</h3>
-                    <p class="text-xs text-slate-400">20% uang harian dan penggantian komponen yang dibayar pelaksana dahulu</p>
+                    <p class="text-xs text-slate-400">Sisa komponen yang baru dibayarkan 80% dan penggantian komponen yang dibayar pelaksana dahulu</p>
                 </div>
             </div>
         </div>

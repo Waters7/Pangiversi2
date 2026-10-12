@@ -136,6 +136,17 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.25',
+                'tanggal' => '12 Oktober 2026',
+                'butir' => [
+                    'Cara bayar tiap komponen kini tiga pilihan dan berlaku juga untuk uang harian: Sudah dibayarkan (penuh lewat uang muka), Baru dibayarkan 80% (20% saat pelunasan), dan Penggantian. Setiap komponen dikonfirmasi tim keuangan.',
+                    'Kartu pembayaran menampilkan uang harian yang dibayarkan penuh 100% dengan benar, serta merinci komponen yang sudah dibayarkan penuh dan yang baru dibayarkan 80%.',
+                    'Cetakan rincian biaya kembali memuat transport lokal dari daftar riil sebagai kelompok tersendiri, dan jumlahnya ikut terhitung.',
+                    'Periksa Transport Lokal: tim keuangan dapat mengoreksi nominal tiap ruas; angka nota pelaksana tetap disebut dan koreksinya bertahan sampai pelaksana mengubah notanya.',
+                    'Dokumen Perdin menampilkan pelaksana tiap perjalanan bagi super administrator.',
+                ],
+            ],
+            [
                 'versi' => '2.5.24',
                 'tanggal' => '12 Oktober 2026',
                 'butir' => [

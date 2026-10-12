@@ -45,6 +45,9 @@
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-100">
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3.5">Usulan</th>
+                            @if ($isAdmin)
+                                <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Pelaksana</th>
+                            @endif
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Kegiatan / Tujuan</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Periode</th>
                             <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Status</th>
@@ -55,7 +58,7 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach ($perBulan as $bulan => $perTanggal)
                             <tr class="bg-slate-100/70">
-                                <td colspan="5" class="px-6 py-2.5">
+                                <td colspan="{{ $isAdmin ? 6 : 5 }}" class="px-6 py-2.5">
                                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">
                                         {{ \Carbon\Carbon::parse($bulan.'-01')->translatedFormat('F Y') }}
                                     </span>
@@ -67,7 +70,7 @@
 
                             @foreach ($perTanggal as $tanggal => $sehari)
                                 <tr class="bg-slate-50/60">
-                                    <td colspan="5" class="px-6 py-1.5">
+                                    <td colspan="{{ $isAdmin ? 6 : 5 }}" class="px-6 py-1.5">
                                         <span class="text-[11px] font-semibold text-slate-500">
                                             {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('l, d F Y') }}
                                         </span>
@@ -80,6 +83,15 @@
                                     <p class="font-bold text-slate-800 text-xs">{{ $item->no_usulan }}</p>
                                     <p class="text-xs text-slate-400">{{ $item->created_at->format('d M Y') }}</p>
                                 </td>
+
+                                @if ($isAdmin)
+                                    <td class="px-4 py-4">
+                                        <p class="text-sm font-semibold text-slate-700">{{ $item->user?->nama ?? '—' }}</p>
+                                        <p class="text-xs text-slate-400">
+                                            {{ $item->user?->nip ? 'NIP '.$item->user->nip : '' }}{{ $item->user?->unit ? ' · '.$item->user->unit->nama : '' }}
+                                        </p>
+                                    </td>
+                                @endif
 
                                 <td class="px-4 py-4">
                                     <p class="text-sm text-slate-700">{{ $item->kategoriPerjadin?->nama ?? $item->kegiatan?->nama ?? '—' }}</p>

@@ -23,6 +23,7 @@ class RincianDaftarRiil extends Model
         'urutan',
         'uraian',
         'nominal',
+        'nominal_nota',
         'sumber',
         'kunci_sumber',
     ];
@@ -32,7 +33,7 @@ class RincianDaftarRiil extends Model
      */
     protected function casts(): array
     {
-        return ['urutan' => 'integer', 'nominal' => 'float'];
+        return ['urutan' => 'integer', 'nominal' => 'float', 'nominal_nota' => 'float'];
     }
 
     /**
@@ -46,5 +47,15 @@ class RincianDaftarRiil extends Model
     public function dariDokumen(): bool
     {
         return $this->sumber === self::SUMBER_DOKUMEN;
+    }
+
+    /**
+     * Nominal nota pelaksana yang sudah dikoreksi tim keuangan.
+     */
+    public function dikoreksi(): bool
+    {
+        return $this->dariDokumen()
+            && $this->nominal_nota !== null
+            && (float) $this->nominal_nota !== (float) $this->nominal;
     }
 }

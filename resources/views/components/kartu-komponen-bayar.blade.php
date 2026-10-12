@@ -4,21 +4,37 @@
      uang muka dan sisa bayar tersusun, dan apa yang belum ikut terhitung. --}}
 @php
     $rupiah = fn (float $nilai) => 'Rp '.number_format($nilai, 0, ',', '.');
+
+    // Uang harian mengikuti cara bayarnya: dibayarkan penuh di muka,
+    // baru 80%, atau seluruhnya saat pelunasan.
+    $uangHarian = $ringkasan['uang_harian'];
+    $keteranganUangHarian = match (true) {
+        $uangHarian <= 0 => 'Belum ada uang harian',
+        $ringkasan['uang_harian_pelunasan'] <= 0 => 'Dibayarkan penuh (100%) lewat uang muka',
+        $ringkasan['uang_harian_di_muka'] <= 0 => 'Seluruhnya dibayarkan saat pelunasan',
+        default => 'Di muka '.$rupiah($ringkasan['uang_harian_di_muka']).' · pelunasan '.$rupiah($ringkasan['uang_harian_pelunasan']),
+    };
 @endphp
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6" data-kartu-komponen-bayar>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6" data-kartu-komponen-bayar>
     <div class="rounded-xl border border-slate-200 p-3.5">
         <p class="text-[11px] font-semibold text-slate-500">Uang harian</p>
-        <p class="text-base font-bold text-slate-800 tabular-nums">{{ $rupiah($ringkasan['uang_harian']) }}</p>
-        <p class="text-[11px] text-slate-400 mt-1 leading-snug">
-            80% di muka {{ $rupiah($ringkasan['uang_harian_di_muka']) }} · 20% pelunasan {{ $rupiah($ringkasan['uang_harian_pelunasan']) }}
-        </p>
+        <p class="text-base font-bold text-slate-800 tabular-nums">{{ $rupiah($uangHarian) }}</p>
+        <p class="text-[11px] text-slate-400 mt-1 leading-snug">{{ $keteranganUangHarian }}</p>
+    </div>
+
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+        <p class="text-[11px] font-semibold text-emerald-700">Sudah dibayarkan penuh</p>
+        <p class="text-base font-bold text-emerald-800 tabular-nums">{{ $rupiah($ringkasan['dibayar_penuh']) }}</p>
+        <p class="text-[11px] text-emerald-700/80 mt-1">{{ $ringkasan['jumlah_dibayar_penuh'] }} komponen selain uang harian, lewat uang muka</p>
     </div>
 
     <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-        <p class="text-[11px] font-semibold text-amber-700">Dibayarkan lewat uang muka</p>
-        <p class="text-base font-bold text-amber-800 tabular-nums">{{ $rupiah($ringkasan['di_muka']) }}</p>
-        <p class="text-[11px] text-amber-700/80 mt-1">{{ $ringkasan['jumlah_di_muka'] }} komponen selain uang harian</p>
+        <p class="text-[11px] font-semibold text-amber-700">Baru dibayarkan 80%</p>
+        <p class="text-base font-bold text-amber-800 tabular-nums">{{ $rupiah($ringkasan['bertahap_di_muka']) }}</p>
+        <p class="text-[11px] text-amber-700/80 mt-1">
+            {{ $ringkasan['jumlah_bertahap'] }} komponen selain uang harian · sisa {{ $rupiah($ringkasan['bertahap_pelunasan']) }} saat pelunasan
+        </p>
     </div>
 
     <div class="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
@@ -44,7 +60,7 @@
 
 @if ($ringkasan['belum_dikonfirmasi'] > 0)
     <p class="mb-5 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-        Cara bayar {{ $ringkasan['belum_dikonfirmasi'] }} komponen belum dikonfirmasi tim keuangan — sementara dihitung masuk uang muka.
-        Lihat tabel <strong>Status Pembayaran Komponen</strong>.
+        Cara bayar {{ $ringkasan['belum_dikonfirmasi'] }} komponen belum dikonfirmasi tim keuangan — sementara dihitung
+        menurut bawaannya (uang harian 80%, komponen lain dibayarkan penuh). Lihat tabel <strong>Status Pembayaran Komponen</strong>.
     </p>
 @endif

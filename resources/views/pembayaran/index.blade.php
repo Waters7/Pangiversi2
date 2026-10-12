@@ -105,7 +105,7 @@
                         <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Perjalanan</th>
                         <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Anggaran</th>
                         <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Uang Muka</th>
-                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Sisa 20%</th>
+                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Sisa Bayar</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Aksi</th>
                     </tr>

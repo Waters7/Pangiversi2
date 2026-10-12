@@ -157,12 +157,21 @@ class SinkronBiayaDokumen
             $kunci = 'nota:'.$nota->urutan;
             $dipakai[] = $kunci;
 
+            // Koreksi tim keuangan bertahan selama pelaksana tidak mengubah
+            // nominal notanya sendiri; baris lama tanpa pembanding mengikuti nota.
+            $lama = $tersimpan->get($kunci);
+            $nominalNota = (float) $nota->nominal;
+            $nominal = $lama && $lama->nominal_nota !== null && (float) $lama->nominal_nota === $nominalNota
+                ? (float) $lama->nominal
+                : $nominalNota;
+
             $daftar->rincian()->updateOrCreate(
                 ['kunci_sumber' => $kunci],
                 [
                     'urutan' => ++$urutan,
                     'uraian' => $nota->label,
-                    'nominal' => (float) $nota->nominal,
+                    'nominal' => $nominal,
+                    'nominal_nota' => $nominalNota,
                     'sumber' => RincianDaftarRiil::SUMBER_DOKUMEN,
                 ],
             );

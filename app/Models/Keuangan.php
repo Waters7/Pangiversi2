@@ -96,9 +96,10 @@ class Keuangan extends Model
      * Hitung ulang total, uang muka, dan sisa dari rincian biaya.
      *
      * Yang dihitung hanya baris sah — tulisan tim keuangan dan nominal
-     * pelaksana yang sudah divalidasi. Uang harian dibagi 80/20; komponen
-     * lain masuk uang muka seutuhnya, kecuali yang dibayar pelaksana lebih
-     * dahulu: itu diganti saat pelunasan, jadi masuk sisa bayar.
+     * pelaksana yang sudah divalidasi. Tiap komponen dibagi menurut cara
+     * bayarnya: yang sudah dibayarkan masuk uang muka seutuhnya, yang baru
+     * dibayarkan 80% menyisakan 20% untuk pelunasan, dan yang dibayar
+     * pelaksana lebih dahulu diganti seluruhnya saat pelunasan.
      *
      * Uang muka yang sudah ditransfer tidak bergeser lagi — uangnya sudah
      * keluar. Perubahan sesudahnya, baris baru maupun koreksi, seluruhnya
@@ -118,15 +119,9 @@ class Keuangan extends Model
             return;
         }
 
-        $uangHarian = (float) $rincian
-            ->filter(fn (RincianBiaya $baris) => $baris->kategori === KategoriBiaya::UangHarian)
-            ->sum('jumlah');
-
-        $penggantian = (float) $rincian
-            ->filter(fn (RincianBiaya $baris) => $baris->caraBayar() === CaraBayarBiaya::Penggantian)
-            ->sum('jumlah');
-
-        $sisa = $uangHarian * (1 - self::PORSI_UANG_HARIAN_DI_MUKA) + $penggantian;
+        $sisa = (float) $rincian->sum(
+            fn (RincianBiaya $baris) => (float) $baris->jumlah * (1 - $baris->caraBayar()->porsiDiMuka()),
+        );
 
         $this->update([
             'total' => $total,
@@ -138,18 +133,17 @@ class Keuangan extends Model
     /**
      * Saat uang muka ditransfer, catat komponen mana yang ikut di dalamnya.
      *
-     * Komponen sah yang cara bayarnya belum ditentukan memang terhitung
-     * masuk uang muka; nominal pelaksana yang belum divalidasi tidak ikut,
-     * jadi kelak diganti saat pelunasan.
+     * Komponen sah yang cara bayarnya belum dikonfirmasi terhitung menurut
+     * bawaannya; nominal pelaksana yang belum divalidasi tidak ikut, jadi
+     * kelak diganti saat pelunasan.
      */
     public function catatCaraBayarUangMuka(): void
     {
         $this->rincianBiaya()
             ->whereNull('cara_bayar')
-            ->where('kategori', '!=', KategoriBiaya::UangHarian->value)
             ->get()
             ->each(fn (RincianBiaya $baris) => $baris->update([
-                'cara_bayar' => $baris->terhitung() ? CaraBayarBiaya::UangMuka : CaraBayarBiaya::Penggantian,
+                'cara_bayar' => $baris->terhitung() ? $baris->caraBayar() : CaraBayarBiaya::Penggantian,
             ]));
     }
 

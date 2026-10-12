@@ -38,7 +38,7 @@ class DokumenController extends Controller
         $isAdmin = $request->user()->isAdmin();
         $cari = $request->input('cari');
 
-        $usulan = Usulan::with('user', 'kegiatan', 'kategoriPerjadin')
+        $usulan = Usulan::with('user.unit', 'kegiatan', 'kategoriPerjadin')
             ->when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()))
             ->whereIn('status', ['disetujui', 'selesai'])
             ->when($cari, fn ($q) => $q->where(fn ($w) => $w
@@ -58,7 +58,9 @@ class DokumenController extends Controller
                 fn (Usulan $item) => Carbon::parse($item->tanggal_mulai)->toDateString()
             ));
 
-        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari'));
+        // Super administrator melihat dokumen semua pegawai, jadi pelaksananya
+        // ikut ditampilkan.
+        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'isAdmin'));
     }
 
     public function show(Usulan $usulan)

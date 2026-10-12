@@ -337,6 +337,30 @@ class NavigasiDanPengelompokanTest extends TestCase
             ->assertSeeInOrder(['Agustus 2026', 'Maret 2026']);
     }
 
+    /** Super administrator melihat dokumen semua pegawai, jadi pelaksananya disebut. */
+    public function test_dokumen_perdin_menampilkan_pelaksana_bagi_super_administrator(): void
+    {
+        $pelaksana = User::factory()->create(['role' => PeranPengguna::DosenTendik->value, 'nama' => 'Pelaksana Contoh Dokumen']);
+        $usulan = Usulan::factory()->create(['id_user' => $pelaksana->id, 'status' => StatusUsulan::Disetujui->value]);
+
+        $this->actingAs($this->admin)
+            ->get(route('dokumen'))
+            ->assertOk()
+            ->assertSeeInOrder(['Pelaksana', $usulan->no_usulan, 'Pelaksana Contoh Dokumen']);
+
+        $this->actingAs($this->admin)
+            ->get(route('dokumen.show', $usulan->no_usulan))
+            ->assertOk()
+            ->assertSee('Pelaksana: Pelaksana Contoh Dokumen');
+
+        // Pegawai biasa hanya melihat dokumennya sendiri, tanpa kolom pelaksana.
+        $this->actingAs($pelaksana)
+            ->get(route('dokumen'))
+            ->assertOk()
+            ->assertSee($usulan->no_usulan)
+            ->assertDontSee('px-4 py-3.5">Pelaksana</th>', false);
+    }
+
     // ── Verifikasi nominatif per status tanda tangan ──
 
     public function test_nominatif_disaring_menurut_status_tanda_tangan(): void

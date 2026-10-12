@@ -73,7 +73,6 @@ class RincianBiaya extends Model
         // ikut di dalam transfer itu: ia dibayarkan saat pelunasan.
         static::creating(function (self $baris): void {
             if ($baris->cara_bayar === null
-                && $baris->kategori !== KategoriBiaya::UangHarian
                 && Keuangan::whereKey($baris->id_keuangan)->whereNotNull('tanggal_transfer')->exists()) {
                 $baris->cara_bayar = CaraBayarBiaya::Penggantian;
             }
@@ -137,17 +136,15 @@ class RincianBiaya extends Model
     }
 
     /**
-     * Cara komponen ini dibayarkan; null untuk uang harian, yang selalu
-     * dibagi 80% di muka dan 20% saat pelunasan. Yang belum ditentukan
-     * dihitung masuk uang muka.
+     * Cara komponen ini dibayarkan. Yang belum dikonfirmasi tim keuangan
+     * mengikuti bawaannya: uang harian baru dibayarkan 80% di muka,
+     * komponen lain dibayarkan penuh lewat uang muka.
      */
-    public function caraBayar(): ?CaraBayarBiaya
+    public function caraBayar(): CaraBayarBiaya
     {
-        if ($this->kategori === KategoriBiaya::UangHarian) {
-            return null;
-        }
-
-        return $this->cara_bayar ?? CaraBayarBiaya::UangMuka;
+        return $this->cara_bayar ?? ($this->kategori === KategoriBiaya::UangHarian
+            ? CaraBayarBiaya::Bertahap
+            : CaraBayarBiaya::UangMuka);
     }
 
     /**

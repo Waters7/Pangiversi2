@@ -515,7 +515,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">Status Pembayaran Komponen</h3>
-                            <p class="text-xs text-slate-400">Dibayarkan lewat uang muka, atau dibayar pelaksana dahulu lalu diganti saat pelunasan</p>
+                            <p class="text-xs text-slate-400">Sudah dibayarkan penuh, baru dibayarkan 80%, atau dibayar pelaksana dahulu — dikonfirmasi tiap komponen</p>
                         </div>
                     </div>
                     @if ($ringkasanBayar['belum_dikonfirmasi'] > 0)
@@ -557,9 +557,7 @@
                                         {{ $isi['pelunasan'] > 0 ? 'Rp '.number_format($isi['pelunasan'], 0, ',', '.') : '—' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if ($cara === null)
-                                            <span class="text-[11px] text-slate-500">80% uang muka · 20% pelunasan</span>
-                                        @elseif ($bolehAturCaraBayar && ! $uangMukaTerkirim)
+                                        @if ($bolehAturCaraBayar && ! $uangMukaTerkirim)
                                             <form method="POST" action="{{ route('keuangan.rincian.cara-bayar', [$usulan->no_usulan, $barisBayar->id]) }}" class="flex items-center gap-1.5">
                                                 @csrf @method('PUT')
                                                 <select name="cara_bayar" aria-label="Cara bayar {{ $barisBayar->komponen }}"
@@ -582,13 +580,11 @@
                                                 </form>
                                             @endif
                                         @endif
-                                        @if ($cara !== null)
-                                            <span class="block text-[11px] mt-1 {{ $dikonfirmasi ? 'text-slate-400' : 'text-amber-600' }}">
-                                                {{ $dikonfirmasi
-                                                    ? 'Dikonfirmasi '.($barisBayar->pengonfirmasiBayar?->nama ?? 'tim keuangan').' · '.$barisBayar->cara_bayar_dikonfirmasi_at->translatedFormat('d M Y')
-                                                    : 'Belum dikonfirmasi tim keuangan' }}
-                                            </span>
-                                        @endif
+                                        <span class="block text-[11px] mt-1 {{ $dikonfirmasi ? 'text-slate-400' : 'text-amber-600' }}">
+                                            {{ $dikonfirmasi
+                                                ? 'Dikonfirmasi '.($barisBayar->pengonfirmasiBayar?->nama ?? 'tim keuangan').' · '.$barisBayar->cara_bayar_dikonfirmasi_at->translatedFormat('d M Y')
+                                                : 'Belum dikonfirmasi tim keuangan' }}
+                                        </span>
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="text-[11px] font-semibold {{ $isi['sudah_dibayar'] ? 'text-emerald-700' : 'text-slate-500' }}">{{ $isi['status'] }}</span>
@@ -700,6 +696,11 @@
                                 <td class="px-6 py-3 text-xs text-slate-400">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3 text-slate-700">
                                     {{ $baris->uraian }}
+                                    @if ($baris->dikoreksi())
+                                        <span class="block text-[11px] font-semibold text-amber-600 mt-0.5">
+                                            Dikoreksi tim keuangan — nota Rp {{ number_format($baris->nominal_nota, 0, ',', '.') }}
+                                        </span>
+                                    @endif
                                     @if (! $baris->dariDokumen())
                                         <span class="block text-[11px] text-slate-400 mt-0.5">Ditulis tim keuangan</span>
                                         @if ($nominalNota->contains((float) $baris->nominal))

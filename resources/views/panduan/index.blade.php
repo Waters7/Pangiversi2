@@ -526,8 +526,9 @@
                         <p class="text-[11px] text-slate-400">Lampiran II PMK 113/PMK.05/2012</p>
                     </div>
                     <p class="p-4 text-xs text-slate-600 leading-relaxed">
-                        Seluruh komponen biaya <strong>kecuali transport lokal</strong>: tiket,
-                        uang harian, uang penginapan, dan biaya penyelenggaraan.
+                        Seluruh komponen biaya: tiket, uang harian, uang penginapan, dan biaya
+                        penyelenggaraan — ditambah <strong>transport lokal</strong> dari daftar riil sebagai
+                        kelompok tersendiri, ikut terjumlah.
                     </p>
                 </div>
 
@@ -658,9 +659,11 @@
                 tabel. Tiap baris divalidasi sendiri-sendiri. Sebuah kotak konfirmasi muncul sebelum
                 validasi tersimpan, memuat komponen dan nominal yang akan dinyatakan benar;
                 mencabut validasi juga dikonfirmasi dan tercatat pada jejak audit. Pada tabel
-                <strong>Status Pembayaran Komponen</strong>, konfirmasi cara bayar tiap komponen: dibayarkan
-                lewat uang muka, atau dibayar pelaksana dahulu sehingga diganti saat pelunasan dan masuk sisa
-                bayar. Uang harian selalu 80% uang muka dan 20% pelunasan.
+                <strong>Status Pembayaran Komponen</strong>, konfirmasi cara bayar tiap komponen — termasuk
+                uang harian: <strong>Sudah dibayarkan</strong> (penuh lewat uang muka), <strong>Baru dibayarkan
+                80%</strong> (20% sisanya saat pelunasan), atau <strong>Penggantian</strong> (dibayar pelaksana
+                dahulu, diganti seluruhnya saat pelunasan). Selama belum dikonfirmasi, uang harian dihitung 80%
+                dan komponen lain dibayarkan penuh.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Periksa transport lokal">
@@ -669,7 +672,10 @@
                 lokal yang Anda catat sendiri — kategori <strong>Transport Lokal</strong> pada Tambah
                 Komponen, atau memindah baris yang terlanjur ditulis sebagai Transport — masuk ke tabel
                 Transport Lokal (Daftar Pengeluaran Riil), bukan ke rincian biaya, dan dapat dihapus
-                dari tabel itu bila keliru.
+                dari tabel itu bila keliru. Nominal tiap ruas dapat dikoreksi lewat tombol
+                <strong>Ubah</strong> selama daftar riilnya belum disetujui pelaksana maupun disahkan PPK;
+                angka nota pelaksana tetap disebut, dan koreksinya bertahan sampai pelaksana mengubah
+                notanya sendiri.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Berkas terkirim sendiri ke pelaksana">
@@ -805,8 +811,9 @@
             <x-panduan-langkah nomor="2" judul="Catat uang muka">
                 Isi tanggal transfer dan unggah buktinya. Kelengkapan berkas pelaksana ditampilkan
                 di tiap baris, sehingga terlihat mana yang belum boleh dilunasi. Kartu di atas formulirnya
-                merinci uang harian, komponen yang dibayarkan lewat uang muka, penggantian saat pelunasan,
-                transport lokal, dan nominal yang masih menunggu validasi. Sesudah dicatat, uang muka tidak
+                merinci uang harian (termasuk bila dibayarkan penuh 100%), komponen yang sudah dibayarkan
+                penuh, yang baru dibayarkan 80%, penggantian saat pelunasan, transport lokal, dan nominal
+                yang masih menunggu validasi. Sesudah dicatat, uang muka tidak
                 bergeser lagi: komponen atau koreksi yang menyusul masuk sisa bayar.
             </x-panduan-langkah>
 

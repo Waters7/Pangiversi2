@@ -342,6 +342,9 @@ class BiayaPenyelenggaraanTest extends TestCase
                 ->groupBy(fn (RincianBiaya $b) => $b->kategori->value)
                 ->sortBy(fn ($baris, $kategori) => KategoriBiaya::dari($kategori)->urutan()),
             'total' => $total,
+            'transportLokal' => $daftarRiil?->rincian ?? collect(),
+            'totalTransportLokal' => (float) ($daftarRiil?->total_riil ?? 0),
+            'totalKeseluruhan' => $total + (float) ($daftarRiil?->total_riil ?? 0),
             'terbilang' => app(Terbilang::class)->konversi($total),
             'daftarRiil' => $daftarRiil,
             'ppk' => null,

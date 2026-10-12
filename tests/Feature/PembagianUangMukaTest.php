@@ -250,13 +250,34 @@ class PembagianUangMukaTest extends TestCase
         $this->assertNotNull($this->baris('Tiket Pergi')->cara_bayar_dikonfirmasi_at);
     }
 
-    public function test_uang_harian_tidak_memakai_pilihan_cara_bayar(): void
+    /** Uang harian yang dibayarkan penuh tidak menyisakan apa pun untuk pelunasan. */
+    public function test_uang_harian_dapat_dibayarkan_penuh(): void
     {
         $this->tambah(KategoriBiaya::UangHarian, 'Uang harian', 1_590_000);
+        $this->assertSame(318_000.0, $this->keuangan->sisa);
 
-        $this->aturCaraBayar($this->baris('Uang harian'), CaraBayarBiaya::Penggantian)->assertSessionHas('error');
+        $this->aturCaraBayar($this->baris('Uang harian'), CaraBayarBiaya::UangMuka)->assertSessionHas('success');
 
-        $this->assertNull($this->baris('Uang harian')->cara_bayar);
+        $keuangan = $this->keuangan->fresh();
+        $this->assertSame(1_590_000.0, $keuangan->uang_muka);
+        $this->assertSame(0.0, $keuangan->sisa);
+
+        $this->actingAs(User::factory()->create(['role' => PeranPengguna::Bendahara->value]))
+            ->get(route('keuangan.detail', $this->usulan->no_usulan))
+            ->assertSee('Dibayarkan penuh (100%) lewat uang muka')
+            ->assertSee('Dibayarkan penuh saat uang muka ditransfer');
+    }
+
+    /** Komponen lain pun dapat baru dibayarkan 80%, menyisakan 20% untuk pelunasan. */
+    public function test_komponen_baru_dibayarkan_delapan_puluh_persen(): void
+    {
+        $this->tambah(KategoriBiaya::Penginapan, 'Uang Penginapan', 1_000_000);
+
+        $this->aturCaraBayar($this->baris('Uang Penginapan'), CaraBayarBiaya::Bertahap)->assertSessionHas('success');
+
+        $keuangan = $this->keuangan->fresh();
+        $this->assertSame(800_000.0, $keuangan->uang_muka);
+        $this->assertSame(200_000.0, $keuangan->sisa);
     }
 
     public function test_cara_bayar_dikonfirmasi_tim_keuangan_bukan_bendahara(): void
@@ -349,8 +370,10 @@ class PembagianUangMukaTest extends TestCase
             ->assertOk()
             ->assertSee('Status Pembayaran Komponen')
             ->assertSee('Menunggu pelunasan — masuk sisa bayar')
-            ->assertSee('80% uang muka · 20% pelunasan')
+            ->assertSee('80% lewat uang muka, 20% saat pelunasan')
+            ->assertSee('Di muka Rp 1.272.000 · pelunasan Rp 318.000')
             ->assertSeeInOrder(['Penggantian saat pelunasan', 'Rp 2.450.000', '1 komponen dibayar pelaksana dahulu'])
-            ->assertSee('Cara bayar 1 komponen belum dikonfirmasi tim keuangan');
+            // Uang harian pun dikonfirmasi tersendiri.
+            ->assertSee('Cara bayar 2 komponen belum dikonfirmasi tim keuangan');
     }
 }

@@ -71,6 +71,26 @@ class PencatatTransportLokal
     }
 
     /**
+     * Koreksi nominal satu baris transport lokal oleh tim keuangan.
+     *
+     * Baris dari nota pelaksana pun dapat dikoreksi; angka notanya tetap
+     * tersimpan sebagai pembanding, dan koreksinya bertahan sampai pelaksana
+     * mengubah nominal nota itu sendiri.
+     */
+    public function ubah(Usulan $usulan, RincianDaftarRiil $baris, float $nominal): void
+    {
+        $this->kunci->pastikanRiilTerbuka($usulan);
+
+        abort_unless($baris->daftarRiil?->id_usulan === $usulan->id, 404);
+
+        // Baris lama belum menyimpan angka notanya; angka sebelum dikoreksi
+        // itulah notanya, supaya koreksi ini tidak tertimpa penyalinan berikutnya.
+        $baris->update(['nominal' => $nominal]
+            + ($baris->dariDokumen() && $baris->nominal_nota === null ? ['nominal_nota' => (float) $baris->nominal] : []));
+        $baris->daftarRiil->hitungTotal(paksa: true);
+    }
+
+    /**
      * Hapus baris transport lokal tulisan tim keuangan. Baris dari nota
      * pelaksana diubah lewat notanya, bukan dari sini.
      */

@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-sm">Konfirmasi Pembayaran Uang Muka</h3>
-                    <p class="text-xs text-slate-400">80% uang harian ditambah komponen yang dibayarkan di muka</p>
+                    <p class="text-xs text-slate-400">Komponen yang dibayarkan di muka — penuh atau 80% — menurut cara bayarnya</p>
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-full">

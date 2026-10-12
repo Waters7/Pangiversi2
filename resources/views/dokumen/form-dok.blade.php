@@ -56,9 +56,9 @@
             <div>
                 <p class="text-sm font-bold text-teal-800">Perjalanan dinas dalam kota</p>
                 <p class="text-xs text-teal-700 mt-0.5 leading-relaxed">
-                    Kategori <strong>{{ $usulan->kategoriPerjadin?->nama }}</strong> tidak memakai tiket,
-                    penginapan, maupun kuitansi. Yang perlu Anda lengkapi hanya SPPD dan nota
-                    transportasi lokal — surat tugasnya sudah terkunci dari SPD.
+                    Kategori <strong>{{ $usulan->kategoriPerjadin?->nama }}</strong> tidak memakai SPD, tiket,
+                    penginapan, maupun kuitansi. Yang perlu Anda lengkapi hanya nota transportasi lokal
+                    (bila ada biaya) dan laporan perjalanan dinas.
                 </p>
             </div>
         </div>
@@ -90,6 +90,12 @@
         <div>
             <h1 class="text-xl font-bold text-slate-800">Dokumen Pertanggungjawaban</h1>
             <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }}</p>
+            {{-- Super administrator membuka dokumen pegawai lain: pelaksananya disebut. --}}
+            @if (auth()->user()->isAdmin() && $usulan->id_user !== auth()->id())
+                <p class="text-xs font-semibold text-teal-700 mt-1" data-pelaksana-dokumen>
+                    Pelaksana: {{ $usulan->user?->nama ?? '—' }}{{ $usulan->user?->nip ? ' · NIP '.$usulan->user->nip : '' }}
+                </p>
+            @endif
         </div>
     </div>
 

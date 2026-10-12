@@ -262,8 +262,8 @@ class KeuanganController extends Controller
         $usulan->load('user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta');
 
         // Hanya baris sah yang tercetak: tulisan tim keuangan dan nominal
-        // pelaksana yang sudah divalidasi. Transport lokal tidak termasuk —
-        // ia dicetak pada Daftar Pengeluaran Riil.
+        // pelaksana yang sudah divalidasi. Transport lokal tercantum sebagai
+        // kelompoknya sendiri dari Daftar Pengeluaran Riil, di bawah.
         $rincian = ($usulan->keuangan?->rincianBiaya ?? collect())
             ->filter(fn (RincianBiaya $item) => $item->terhitung())
             ->values();
@@ -286,30 +286,40 @@ class KeuanganController extends Controller
             ? DaftarRiil::where('id_peserta', $peserta->id)->sudahDitandatangani()->first()
             : null;
 
-        // Berkas peserta ini pada tahap mana pun — sumber tanggal pelaksana
-        // menyetujui rinciannya.
+        // Daftar riil peserta ini pada tahap mana pun: sumber transport lokal
+        // yang ikut tercetak — dokumen rincian biaya memuat seluruh biaya
+        // perjalanan — dan tanggal pelaksana menyetujui rinciannya.
         $berkasPeserta = $peserta
-            ? DaftarRiil::where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
+            ? DaftarRiil::with('rincian')->where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
             : null;
+        $transportLokal = $berkasPeserta?->rincian ?? collect();
+        $totalTransportLokal = (float) ($berkasPeserta?->total_riil ?? $transportLokal->sum('nominal'));
+        $totalKeseluruhan = $total + $totalTransportLokal;
 
         $keuangan = $usulan->keuangan;
 
-        // Yang sudah dibayarkan atas rincian ini: uang muka, ditambah sisanya
-        // bila sudah dilunasi. Penggantian transport lokal tercatat pada
-        // Daftar Pengeluaran Riil, bukan di sini.
+        // Yang sudah dibayarkan: uang muka, sisanya bila sudah dilunasi, dan
+        // transport lokal bila sudah diganti — lewat pembayaran tersendiri,
+        // atau ikut pelunasan setelah daftar riilnya disahkan PPK.
+        $transportTerbayar = $berkasPeserta?->sudahDibayar()
+            || ($keuangan?->sudahLunas() && $berkasPeserta?->sudah_ditandatangani);
         $dibayarkan = (float) ($keuangan?->uang_muka ?? 0)
-            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0);
+            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0)
+            + ($transportTerbayar ? $totalTransportLokal : 0);
 
         $pdf = Pdf::loadView('keuangan.cetak-rincian', [
             'usulan' => $usulan,
             'peserta' => $peserta,
             'rincianPerKategori' => $rincianPerKategori,
             'total' => $total,
+            'transportLokal' => $transportLokal,
+            'totalTransportLokal' => $totalTransportLokal,
+            'totalKeseluruhan' => $totalKeseluruhan,
             // Tanggal pelaksana menyetujui rincian ini — tercetak di atas tanda
             // tangannya, dari daftar riil pada tahap mana pun.
             'tanggalPelaksana' => $berkasPeserta?->rincian_disetujui_at ?? $berkasPeserta?->disetujui_pegawai_at,
             'dibayarkan' => $dibayarkan,
-            'terbilang' => $this->terbilang->konversi($total),
+            'terbilang' => $this->terbilang->konversi($totalKeseluruhan),
             'bendahara' => User::where('role', User::ROLE_BENDAHARA)->first(),
             'ppk' => User::where('role', User::ROLE_PPK)->first(),
             'daftarRiil' => $daftarRiil,
@@ -538,7 +548,8 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Tim keuangan mengonfirmasi cara bayar sebuah komponen: lewat uang muka,
+     * Tim keuangan mengonfirmasi cara bayar tiap komponen, termasuk uang
+     * harian: sudah dibayarkan penuh lewat uang muka, baru dibayarkan 80%,
      * atau dibayar pelaksana dahulu lalu diganti saat pelunasan.
      *
      * Setelah uang muka ditransfer, pilihan tidak dapat dibalik — uangnya
@@ -558,10 +569,6 @@ class KeuanganController extends Controller
         $keuangan = $usulan->keuangan;
         $cara = CaraBayarBiaya::from($validated['cara_bayar']);
         $kembali = redirect()->route('keuangan.detail', $usulan->no_usulan);
-
-        if ($rincian->kategori === KategoriBiaya::UangHarian) {
-            return $kembali->with('error', 'Uang harian selalu dibayarkan 80% lewat uang muka dan 20% saat pelunasan.');
-        }
 
         if ($keuangan->sudahLunas()) {
             return $kembali->with('error', 'Pembayaran sudah lunas, jadi cara bayar komponennya tidak diubah lagi.');
@@ -585,6 +592,34 @@ class KeuanganController extends Controller
         );
 
         return $kembali->with('success', "Cara bayar \"{$rincian->komponen}\" dikonfirmasi: {$cara->label()}.");
+    }
+
+    /**
+     * Koreksi nominal transport lokal dari submenu Periksa Transport Lokal.
+     */
+    public function ubahTransportLokal(Request $request, Usulan $usulan, RincianDaftarRiil $baris): RedirectResponse
+    {
+        $this->pastikanBolehMengelolaBiaya($request);
+        abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai.');
+
+        $validated = $request->validate([
+            'nominal' => ['required', 'numeric', 'min:0'],
+        ], [
+            'nominal.required' => 'Isi nominal transport lokal.',
+        ]);
+
+        $lama = (float) $baris->nominal;
+        $this->transportLokal->ubah($usulan, $baris, (float) $validated['nominal']);
+
+        $this->audit->catat(
+            AuditLog::AKSI_BIAYA,
+            "Nominal transport lokal \"{$baris->uraian}\" pada usulan {$usulan->no_usulan} dikoreksi dari Rp "
+                .number_format($lama, 0, ',', '.').' menjadi Rp '.number_format((float) $validated['nominal'], 0, ',', '.').'.',
+            ['usulan' => $usulan],
+        );
+
+        return back()->with('success', "Nominal transport lokal \"{$baris->uraian}\" disimpan: Rp "
+            .number_format((float) $validated['nominal'], 0, ',', '.').'.');
     }
 
     /**
