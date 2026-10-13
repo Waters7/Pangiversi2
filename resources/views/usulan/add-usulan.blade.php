@@ -365,7 +365,7 @@
                                        @if ($spdBersyarat) x-bind:required="butuhSpd" @else required @endif
                                        value="{{ old('no_spd') }}"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('no_spd') ? 'border-red-500' : 'border-slate-200' }}"
-                                       placeholder="cth: KU.02.04/F.XXX.8/1234/2026">
+                                       placeholder="cth: KU.02.05/F.XXX.8/1234/2026">
                                 <p class="text-xs text-slate-400 mt-1.5">
                                     Nomor naskah yang diterbitkan SRIKANDI saat SPD diregistrasi — salin persis seperti pada dokumen.
                                     Satu nomor hanya untuk satu usulan; nomor yang sudah dipakai usulan lain ditolak.

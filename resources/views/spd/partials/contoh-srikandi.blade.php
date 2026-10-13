@@ -5,7 +5,7 @@
         'Tipe Form' => 'Naskah Keluar',
         'Dikirimkan melalui' => 'Pejabat Pembuat Komitmen Politeknik Kesehatan Kementerian Kesehatan Manado',
         'Jenis / Sifat Naskah' => 'Naskah Dinas · Biasa',
-        'Klasifikasi' => 'KU.02.04 – Belanja Modal',
+        'Klasifikasi' => 'KU.02.05',
         'Nomor Naskah' => 'Tekan Ambil Nomor, lalu catat nomornya — nomor inilah yang nanti diisi pada usulan perjadin.',
         'Hal dan Isi Ringkas' => 'Surat Perjalanan Dinas a.n. nama pelaksana, beserta maksud, tujuan, dan tanggal perjalanan dari SPD.',
         'File naskah' => 'PDF hasil Unduh PDF di PANGI (maks. 5 MB), tanpa diubah.',

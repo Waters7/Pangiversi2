@@ -29,7 +29,9 @@
             <p class="text-sm text-slate-500 mt-1">{{ $spd->ringkasan }}</p>
         </div>
         <div class="flex gap-2 shrink-0">
-            <a href="{{ route('spd.cetak', $spd) }}"
+            {{-- Cara memasukkan SPD ke SRIKANDI ditampilkan dulu; PDF baru
+                 terunduh setelah pelaksana menyatakan sudah mengerti. --}}
+            <a href="{{ route('spd.cetak', $spd) }}" x-data @click.prevent="$dispatch('unduh-spd', { alamat: $el.href })"
                class="px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold transition">
                 Unduh PDF
             </a>
@@ -188,4 +190,6 @@
         @endif
     </div>
 </div>
+
+<x-popup-unduh-spd />
 @endsection

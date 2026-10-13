@@ -80,7 +80,7 @@
                                     <a href="{{ route('spd.edit', $item) }}"
                                        class="text-slate-500 hover:text-teal-600 text-xs font-bold">Ubah</a>
                                     @endif
-                                    <a href="{{ route('spd.cetak', $item) }}"
+                                    <a href="{{ route('spd.cetak', $item) }}" x-data @click.prevent="$dispatch('unduh-spd', { alamat: $el.href })"
                                        class="text-slate-500 hover:text-teal-600 text-xs font-bold">Unduh</a>
                                     <a href="{{ route('spd.show', $item) }}"
                                        class="text-teal-600 hover:text-teal-700 text-xs font-bold">Detail →</a>
@@ -106,4 +106,6 @@
         <div class="mt-5">{{ $spd->links() }}</div>
     @endif
 </div>
+
+<x-popup-unduh-spd />
 @endsection

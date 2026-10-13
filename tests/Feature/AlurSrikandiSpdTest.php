@@ -48,7 +48,7 @@ class AlurSrikandiSpdTest extends TestCase
             ->get(route('spd.show', $this->spd))
             ->assertOk()
             ->assertSee('Lihat contoh pengisian Registrasi Naskah Keluar')
-            ->assertSeeInOrder(['Tipe Form', 'Naskah Keluar', 'Klasifikasi', 'KU.02.04 – Belanja Modal', 'Nomor Naskah', 'Ambil Nomor'])
+            ->assertSeeInOrder(['Tipe Form', 'Naskah Keluar', 'Klasifikasi', 'KU.02.05', 'Nomor Naskah', 'Ambil Nomor'])
             ->assertSee('PPK lebih dulu, lalu Direktur');
 
         $this->actingAs($this->pelaksana)
@@ -57,6 +57,25 @@ class AlurSrikandiSpdTest extends TestCase
             ->assertSee('Contoh pengisian Registrasi Naskah Keluar di SRIKANDI')
             ->assertSee('images/panduan/srikandi-01-isi-naskah.webp', false)
             ->assertSee('images/panduan/srikandi-02-penandatangan.webp', false);
+    }
+
+    /** PDF baru terunduh setelah cara memasukkannya ke SRIKANDI ditampilkan dan dinyatakan dimengerti. */
+    public function test_unduh_spd_menampilkan_cara_memasukkan_ke_srikandi_lebih_dulu(): void
+    {
+        foreach ([route('spd.show', $this->spd), route('spd.index')] as $halaman) {
+            $this->actingAs($this->pelaksana)
+                ->get($halaman)
+                ->assertOk()
+                ->assertSee('href="'.route('spd.cetak', $this->spd).'" x-data @click.prevent="$dispatch(\'unduh-spd\'', false)
+                ->assertSeeInOrder([
+                    'Sebelum mengunduh: memasukkan SPD ke SRIKANDI',
+                    'Registrasi Naskah Keluar', 'Klasifikasi', 'KU.02.05',
+                    'unduh SPD bertanda tangan dari SRIKANDI',
+                    'jika SPD sudah ditandatangani, jangan lupa mengajukan usulan perjalanan',
+                    'Saya sudah mengerti cara memasukkan SPD ke SRIKANDI',
+                    'Mengerti, Unduh PDF',
+                ]);
+        }
     }
 
     public function test_formulir_usulan_mengingatkan_nomor_dari_srikandi(): void

@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.33',
+                'tanggal' => '13 Oktober 2026',
+                'butir' => [
+                    'Unduh PDF pada SPD kini menampilkan jendela cara memasukkan SPD ke SRIKANDI beserta pengingat mengajukan usulan perjadin setelah SPD ditandatangani; PDF baru terunduh setelah pelaksana menyatakan sudah mengerti.',
+                    'Klasifikasi SPD di SRIKANDI kini KU.02.05, menggantikan KU.02.04, pada contoh pengisian Registrasi Naskah Keluar dan contoh nomor SPD.',
+                ],
+            ],
+            [
                 'versi' => '2.5.32',
                 'tanggal' => '13 Oktober 2026',
                 'butir' => [

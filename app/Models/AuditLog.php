@@ -73,7 +73,7 @@ class AuditLog extends Model
 
     /**
      * Cuplikan disimpan tanpa meloloskan garis miring dan huruf non-ASCII,
-     * supaya nomor seperti "KU.02.04/F.XXX/2471/2026" dan nama bergelar
+     * supaya nomor seperti "KU.02.05/F.XXX/2471/2026" dan nama bergelar
      * tetap dapat dicari apa adanya pada halaman riwayat penghapusan.
      */
     protected function asJson($value, $flags = 0)

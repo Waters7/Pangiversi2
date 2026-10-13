@@ -21,11 +21,11 @@ class SpdPelaksana extends Model
     /**
      * Klasifikasi arsip pada nomor SPD Poltekkes Kemenkes Manado.
      *
-     * Pola lengkapnya KU.02.04/F.XXX.8/{nomor urut}/{tahun surat}. Pelaksana
+     * Pola lengkapnya KU.02.05/F.XXX.8/{nomor urut}/{tahun surat}. Pelaksana
      * hanya mengetik nomor urutnya sesuai buku agenda; awalan dan tahunnya
      * disusun sistem agar tidak ada surat yang salah format.
      */
-    public const AWALAN_NOMOR = 'KU.02.04/F.XXX.8/';
+    public const AWALAN_NOMOR = 'KU.02.05/F.XXX.8/';
 
     protected $fillable = [
         'id_spd',

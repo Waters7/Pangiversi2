@@ -146,7 +146,7 @@
                                 <input type="text" name="no_spd" id="no_spd"
                                        @if ($spdBersyarat) x-bind:required="butuhSpd" @else required @endif
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition border {{ $errors->has('no_spd') ? 'border-red-500' : 'border-slate-200' }}"
-                                       placeholder="cth: KU.02.04/F.XXX.8/1234/2026"
+                                       placeholder="cth: KU.02.05/F.XXX.8/1234/2026"
                                        value="{{ old('no_spd', $usulan->no_spd) }}">
                                 <p class="text-xs text-slate-400 mt-1">Nomor naskah dari SRIKANDI, disalin persis seperti pada dokumen</p>
                                 @error('no_spd')

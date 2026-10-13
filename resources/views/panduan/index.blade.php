@@ -224,7 +224,10 @@
             <x-panduan-langkah nomor="7" judul="Tandatangani lewat SRIKANDI" :terakhir="true">
                 Halaman SPD yang baru disimpan memuat keterangan <strong>Langkah berikutnya</strong>:
                 <ol class="mt-2 ml-4 list-decimal space-y-1">
-                    <li>Tekan <strong>Unduh PDF</strong>. Dokumennya sudah berformat SRIKANDI — penanda
+                    <li>Tekan <strong>Unduh PDF</strong>. Sebelum terunduh, muncul jendela berisi cara memasukkan SPD
+                        ke SRIKANDI dan pengingat mengajukan usulan perjadin setelah SPD ditandatangani; centang
+                        <strong>Saya sudah mengerti</strong>, lalu tekan <strong>Mengerti, Unduh PDF</strong>.
+                        Dokumennya sudah berformat SRIKANDI — penanda
                         <code>${nomor_naskah}</code>, <code>${ttd_pengirim1}</code>, dan
                         <code>${ttd_pengirim2}</code> jangan diubah atau dihapus.</li>
                     <li>Masukkan dokumen itu ke SRIKANDI lewat <strong>Naskah Keluar → Registrasi Naskah Keluar</strong>
@@ -248,7 +251,7 @@
                     @include('spd.partials.contoh-srikandi')
                 </div>
                 <x-panduan-gambar berkas="srikandi-01-isi-naskah"
-                    judul="Registrasi Naskah Keluar di SRIKANDI: Tipe Form Naskah Keluar (1), dikirim melalui PPK (2), Naskah Dinas bersifat Biasa (3), klasifikasi KU.02.04 (4), Ambil Nomor (5), Hal dan Isi Ringkas (6), lalu berkas SPD (7)." />
+                    judul="Registrasi Naskah Keluar di SRIKANDI: Tipe Form Naskah Keluar (1), dikirim melalui PPK (2), Naskah Dinas bersifat Biasa (3), klasifikasi (4) — pilih KU.02.05, Ambil Nomor (5), Hal dan Isi Ringkas (6), lalu berkas SPD (7)." />
                 <x-panduan-gambar berkas="srikandi-02-penandatangan"
                     judul="Unggah PDF SPD (1), pelaksana sebagai tujuan utama (2), verifikator (3), penandatangan PPK lalu Direktur (4), tanda tangan elektronik ber-QR 3x3 (5), lalu Simpan (6)." />
             </x-panduan-langkah>
