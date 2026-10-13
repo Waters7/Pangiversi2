@@ -923,7 +923,16 @@ class KeuanganController extends Controller
         abort_unless($keuangan?->sudahLunas(), 422, 'Usulan ini belum dilunasi.');
 
         $nominal = $keuangan->nilaiPelunasan();
-        $tanggal = $keuangan->tanggal_pelunasan->toDateString();
+
+        // Status lunas hasil koreksi administrator tidak membawa tanggal
+        // pelunasan. Jurnalnya lalu memakai pelunasan terakhir yang tercatat,
+        // atau hari ini bila tidak ada sama sekali.
+        $tanggal = ($keuangan->tanggal_pelunasan
+            ?? RiwayatPembayaran::where('id_keuangan', $keuangan->id)
+                ->where('jenis', RiwayatPembayaran::JENIS_PELUNASAN)
+                ->latest('id')
+                ->first()?->tanggal
+            ?? today())->toDateString();
 
         $keuangan->update([
             'tanggal_pelunasan' => null,
@@ -932,6 +941,11 @@ class KeuanganController extends Controller
 
         $keuangan->batalkanKonfirmasiPelunasan();
         $keuangan->dokumenKeuangan?->update(['transfer_sisa' => '']);
+
+        // Selesai berarti lunas: usulannya kembali diproses sampai dilunasi lagi.
+        if ($usulan->status === 'selesai') {
+            $usulan->update(['status' => 'disetujui']);
+        }
 
         RiwayatPembayaran::catat(
             $keuangan,

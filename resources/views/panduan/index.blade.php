@@ -854,7 +854,8 @@
                 <p class="text-xs text-amber-800 leading-relaxed">
                     Pembayaran yang telanjur salah dapat dibatalkan, dan pembatalannya ikut
                     tercatat di riwayat sebagai nilai negatif — bukan dihapus. Rekapitulasi
-                    keuangan harus dapat ditelusuri, termasuk kekeliruannya.
+                    keuangan harus dapat ditelusuri, termasuk kekeliruannya. Usulan yang sudah
+                    selesai kembali diproses bila pelunasannya dibatalkan, sampai dilunasi lagi.
                 </p>
             </div>
         </div>

@@ -361,6 +361,53 @@ class PenguncianBerkasTest extends TestCase
         $this->assertTrue(RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->exists());
     }
 
+    /** Status lunas hasil koreksi administrator tidak membawa tanggal pelunasan. */
+    public function test_pelunasan_hasil_koreksi_status_tetap_dapat_dibatalkan(): void
+    {
+        $this->siapkanNominal();
+        $this->bayarUangMuka();
+        $this->travelTo('2026-10-13 10:00');
+
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]))
+            ->put(route('keuangan.koreksi-status', $this->usulan), ['status_keuangan' => Keuangan::STATUS_LUNAS])
+            ->assertSessionHas('success');
+        $this->assertNull($this->usulan->keuangan->fresh()->tanggal_pelunasan);
+
+        $this->actingAs($this->bendahara)
+            ->from(route('keuangan.detail', $this->usulan))
+            ->put(route('keuangan.batal-pelunasan', $this->usulan), [
+                'alasan' => 'Status lunas dikoreksi keliru, sisa belum ditransfer.',
+            ])
+            ->assertRedirect(route('keuangan.detail', $this->usulan))
+            ->assertSessionHas('success');
+
+        $this->assertSame(Keuangan::STATUS_SEBAGIAN, $this->usulan->keuangan->fresh()->status);
+        $this->assertSame(
+            '2026-10-13',
+            RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->sole()->tanggal->toDateString(),
+        );
+    }
+
+    /** Selesai berarti lunas: usulan yang pelunasannya dibatalkan kembali diproses. */
+    public function test_usulan_selesai_kembali_diproses_setelah_pelunasan_dibatalkan(): void
+    {
+        $this->siapkanNominal();
+        $this->usulan->update(['status' => StatusUsulan::Selesai->value]);
+        $this->usulan->keuangan->update([
+            'status' => Keuangan::STATUS_LUNAS,
+            'tanggal_transfer' => '2026-04-04',
+            'tanggal_pelunasan' => '2026-04-20',
+        ]);
+
+        $this->actingAs($this->bendahara)
+            ->put(route('keuangan.batal-pelunasan', $this->usulan), [
+                'alasan' => 'Transfer pelunasan ditolak bank karena rekening tidak aktif.',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(StatusUsulan::Disetujui->value, $this->usulan->fresh()->status);
+    }
+
     public function test_pembatalan_tertutup_bagi_peran_tanpa_hak_pembayaran(): void
     {
         $this->siapkanNominal();

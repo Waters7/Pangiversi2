@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.30',
+                'tanggal' => '13 Oktober 2026',
+                'butir' => [
+                    'Perbaikan: pembatalan pencatatan pelunasan tidak lagi berakhir dengan halaman galat bila status lunasnya hasil koreksi administrator tanpa tanggal pelunasan.',
+                    'Usulan yang sudah selesai kembali berstatus disetujui saat pelunasannya dibatalkan, sehingga diproses lagi sampai dilunasi.',
+                ],
+            ],
+            [
                 'versi' => '2.5.29',
                 'tanggal' => '12 Oktober 2026',
                 'butir' => [
