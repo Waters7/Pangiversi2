@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.31')
+            ->assertSee('Pembatalan status lunas hasil Koreksi Status tidak lagi menulis pengurangan')
             ->assertSee('Versi 2.5.30')
             ->assertSee('Perbaikan: pembatalan pencatatan pelunasan tidak lagi berakhir dengan halaman galat')
             ->assertSee('Versi 2.5.29')

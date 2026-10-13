@@ -343,6 +343,7 @@ class PenguncianBerkasTest extends TestCase
             'tanggal_pelunasan' => '2026-04-20',
         ]);
         $keuangan->konfirmasiPelunasan();
+        RiwayatPembayaran::catat($keuangan, RiwayatPembayaran::JENIS_PELUNASAN, 1_000_000, '2026-04-20', $this->bendahara);
 
         $this->assertNotNull($keuangan->fresh()->kode_konfirmasi_bayar);
 
@@ -361,12 +362,15 @@ class PenguncianBerkasTest extends TestCase
         $this->assertTrue(RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->exists());
     }
 
-    /** Status lunas hasil koreksi administrator tidak membawa tanggal pelunasan. */
+    /**
+     * Status lunas hasil koreksi administrator tidak membawa tanggal pelunasan
+     * dan tidak tercatat di riwayat pembayaran — pembatalannya pun tidak
+     * menulis pengurangan tanpa pembayaran asalnya.
+     */
     public function test_pelunasan_hasil_koreksi_status_tetap_dapat_dibatalkan(): void
     {
         $this->siapkanNominal();
         $this->bayarUangMuka();
-        $this->travelTo('2026-10-13 10:00');
 
         $this->actingAs(User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]))
             ->put(route('keuangan.koreksi-status', $this->usulan), ['status_keuangan' => Keuangan::STATUS_LUNAS])
@@ -379,11 +383,28 @@ class PenguncianBerkasTest extends TestCase
                 'alasan' => 'Status lunas dikoreksi keliru, sisa belum ditransfer.',
             ])
             ->assertRedirect(route('keuangan.detail', $this->usulan))
-            ->assertSessionHas('success');
+            ->assertSessionHas('success', 'Status lunas dibatalkan. Riwayat pembayaran tidak berubah karena pelunasannya memang belum pernah tercatat.');
 
         $this->assertSame(Keuangan::STATUS_SEBAGIAN, $this->usulan->keuangan->fresh()->status);
+        $this->assertFalse(RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->exists());
+    }
+
+    /** Pelunasan yang dulu tercatat lalu statusnya dikoreksi tetap diimbangi pembatalannya, bertanggal pelunasan itu. */
+    public function test_pembatalan_mengimbangi_pelunasan_tercatat_walau_tanggalnya_terhapus_koreksi(): void
+    {
+        $this->siapkanNominal();
+        $this->bayarUangMuka();
+        RiwayatPembayaran::catat($this->usulan->keuangan, RiwayatPembayaran::JENIS_PELUNASAN, 1_000_000, '2026-04-20', $this->bendahara);
+        $this->usulan->keuangan->update(['status' => Keuangan::STATUS_LUNAS, 'tanggal_pelunasan' => null]);
+
+        $this->actingAs($this->bendahara)
+            ->put(route('keuangan.batal-pelunasan', $this->usulan), [
+                'alasan' => 'Transfer pelunasan ditolak bank karena rekening tidak aktif.',
+            ])
+            ->assertSessionHas('success', 'Pelunasan dibatalkan dan tercatat pada riwayat.');
+
         $this->assertSame(
-            '2026-10-13',
+            '2026-04-20',
             RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->sole()->tanggal->toDateString(),
         );
     }

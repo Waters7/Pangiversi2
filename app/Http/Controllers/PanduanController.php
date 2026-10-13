@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.31',
+                'tanggal' => '13 Oktober 2026',
+                'butir' => [
+                    'Pembatalan status lunas hasil Koreksi Status tidak lagi menulis pengurangan pada riwayat pembayaran, karena pelunasannya memang belum pernah tercatat di sana; pelunasan yang tercatat tetap diimbangi pembatalannya pada tanggal pelunasan itu.',
+                ],
+            ],
+            [
                 'versi' => '2.5.30',
                 'tanggal' => '13 Oktober 2026',
                 'butir' => [

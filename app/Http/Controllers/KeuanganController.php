@@ -924,15 +924,17 @@ class KeuanganController extends Controller
 
         $nominal = $keuangan->nilaiPelunasan();
 
-        // Status lunas hasil koreksi administrator tidak membawa tanggal
-        // pelunasan. Jurnalnya lalu memakai pelunasan terakhir yang tercatat,
-        // atau hari ini bila tidak ada sama sekali.
-        $tanggal = ($keuangan->tanggal_pelunasan
-            ?? RiwayatPembayaran::where('id_keuangan', $keuangan->id)
-                ->where('jenis', RiwayatPembayaran::JENIS_PELUNASAN)
-                ->latest('id')
-                ->first()?->tanggal
-            ?? today())->toDateString();
+        // Status lunas hasil Koreksi Status administrator tidak menulis
+        // pelunasan ke jurnal dan tidak membawa tanggalnya. Pembatalan hanya
+        // dijurnal bila masih ada pelunasan tercatat yang belum dibatalkan —
+        // selain itu rekap akan memuat pengurangan tanpa pembayaran asalnya.
+        $jurnal = RiwayatPembayaran::where('id_keuangan', $keuangan->id)
+            ->whereIn('jenis', [RiwayatPembayaran::JENIS_PELUNASAN, RiwayatPembayaran::JENIS_BATAL_PELUNASAN])
+            ->get();
+        $pelunasanTerakhir = $jurnal->where('jenis', RiwayatPembayaran::JENIS_PELUNASAN)->sortByDesc('id')->first();
+        $adaDiJurnal = $jurnal->where('jenis', RiwayatPembayaran::JENIS_PELUNASAN)->count()
+            > $jurnal->where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->count();
+        $tanggal = ($keuangan->tanggal_pelunasan ?? $pelunasanTerakhir?->tanggal)?->toDateString();
 
         $keuangan->update([
             'tanggal_pelunasan' => null,
@@ -947,19 +949,22 @@ class KeuanganController extends Controller
             $usulan->update(['status' => 'disetujui']);
         }
 
-        RiwayatPembayaran::catat(
-            $keuangan,
-            RiwayatPembayaran::JENIS_BATAL_PELUNASAN,
-            $nominal,
-            $tanggal,
-            $request->user(),
-            null,
-            $validated['alasan'],
-        );
+        if ($adaDiJurnal) {
+            RiwayatPembayaran::catat(
+                $keuangan,
+                RiwayatPembayaran::JENIS_BATAL_PELUNASAN,
+                $nominal,
+                $tanggal ?? today()->toDateString(),
+                $request->user(),
+                null,
+                $validated['alasan'],
+            );
+        }
 
         $this->audit->catat(
             AuditLog::AKSI_PEMBAYARAN,
-            'Pelunasan Rp '.number_format($nominal, 0, ',', '.')." pada usulan {$usulan->no_usulan} dibatalkan.",
+            'Pelunasan Rp '.number_format($nominal, 0, ',', '.')." pada usulan {$usulan->no_usulan} dibatalkan"
+                .($adaDiJurnal ? '.' : ' — status lunasnya hasil koreksi, tanpa pelunasan tercatat pada riwayat pembayaran.'),
             ['usulan' => $usulan, 'catatan' => $validated['alasan']],
         );
 
@@ -970,7 +975,9 @@ class KeuanganController extends Controller
             Notifikasi::TIPE_BAHAYA,
         );
 
-        return back()->with('success', 'Pelunasan dibatalkan dan tercatat pada riwayat.');
+        return back()->with('success', $adaDiJurnal
+            ? 'Pelunasan dibatalkan dan tercatat pada riwayat.'
+            : 'Status lunas dibatalkan. Riwayat pembayaran tidak berubah karena pelunasannya memang belum pernah tercatat.');
     }
 
     public function koreksiStatus(Request $request, Usulan $usulan)
