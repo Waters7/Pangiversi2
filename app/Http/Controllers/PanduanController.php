@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.32',
+                'tanggal' => '13 Oktober 2026',
+                'butir' => [
+                    'Koreksi Status ke Lunas kini mewajibkan tanggal pelunasan, sehingga dokumen cetak tidak lagi menganggap sisa bayarnya belum dibayar.',
+                    'Perbaikan: mencatat pelunasan atas usulan yang lunas tanpa tanggal kini ditolak dengan pesan, bukan halaman galat.',
+                ],
+            ],
+            [
                 'versi' => '2.5.31',
                 'tanggal' => '13 Oktober 2026',
                 'butir' => [

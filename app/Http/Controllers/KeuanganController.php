@@ -754,9 +754,10 @@ class KeuanganController extends Controller
 
         $keuangan = $usulan->keuangan;
 
+        // Status lunas hasil koreksi lama tidak selalu membawa tanggalnya.
         if ($keuangan?->sudahLunas()) {
-            return back()->with('error', 'Usulan ini sudah dilunasi pada '
-                .$keuangan->tanggal_pelunasan->translatedFormat('d F Y')
+            return back()->with('error', 'Usulan ini sudah dilunasi'
+                .($keuangan->tanggal_pelunasan ? ' pada '.$keuangan->tanggal_pelunasan->translatedFormat('d F Y') : '')
                 .'. Batalkan pelunasannya lebih dulu bila keliru.');
         }
 
@@ -984,8 +985,13 @@ class KeuanganController extends Controller
     {
         abort_if(! $request->user()->isAdmin(), 403);
 
+        // Lunas tanpa tanggal pelunasan membuat dokumen cetak menganggap sisanya
+        // belum dibayar, jadi tanggalnya wajib disebut saat dikoreksi ke Lunas.
         $request->validate([
             'status_keuangan' => ['required', 'in:belum bayar,bayar sebagian,lunas'],
+            'tanggal_pelunasan' => ['nullable', 'required_if:status_keuangan,'.Keuangan::STATUS_LUNAS, 'date'],
+        ], [
+            'tanggal_pelunasan.required_if' => 'Isi tanggal pelunasan — koreksi ke Lunas mencatat kapan sisa bayar dilunasi.',
         ]);
 
         $keuangan = $usulan->keuangan;
@@ -1000,6 +1006,8 @@ class KeuanganController extends Controller
             $updateData['tanggal_pelunasan'] = null;
         } elseif ($newStatus === 'bayar sebagian') {
             $updateData['tanggal_pelunasan'] = null;
+        } else {
+            $updateData['tanggal_pelunasan'] = $request->input('tanggal_pelunasan');
         }
 
         $statusKeuanganLama = $keuangan->status;

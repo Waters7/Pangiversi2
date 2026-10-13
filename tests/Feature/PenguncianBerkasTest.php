@@ -363,19 +363,15 @@ class PenguncianBerkasTest extends TestCase
     }
 
     /**
-     * Status lunas hasil koreksi administrator tidak membawa tanggal pelunasan
-     * dan tidak tercatat di riwayat pembayaran — pembatalannya pun tidak
-     * menulis pengurangan tanpa pembayaran asalnya.
+     * Koreksi Status lama dapat menandai lunas tanpa tanggal pelunasan dan
+     * tanpa riwayat pembayaran — pembatalannya pun tidak menulis pengurangan
+     * tanpa pembayaran asalnya.
      */
     public function test_pelunasan_hasil_koreksi_status_tetap_dapat_dibatalkan(): void
     {
         $this->siapkanNominal();
         $this->bayarUangMuka();
-
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]))
-            ->put(route('keuangan.koreksi-status', $this->usulan), ['status_keuangan' => Keuangan::STATUS_LUNAS])
-            ->assertSessionHas('success');
-        $this->assertNull($this->usulan->keuangan->fresh()->tanggal_pelunasan);
+        $this->usulan->keuangan->update(['status' => Keuangan::STATUS_LUNAS, 'tanggal_pelunasan' => null]);
 
         $this->actingAs($this->bendahara)
             ->from(route('keuangan.detail', $this->usulan))
@@ -387,6 +383,46 @@ class PenguncianBerkasTest extends TestCase
 
         $this->assertSame(Keuangan::STATUS_SEBAGIAN, $this->usulan->keuangan->fresh()->status);
         $this->assertFalse(RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_BATAL_PELUNASAN)->exists());
+    }
+
+    public function test_koreksi_status_ke_lunas_mewajibkan_tanggal_pelunasan(): void
+    {
+        $this->siapkanNominal();
+        $this->bayarUangMuka();
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
+
+        $this->actingAs($admin)
+            ->put(route('keuangan.koreksi-status', $this->usulan), ['status_keuangan' => Keuangan::STATUS_LUNAS])
+            ->assertSessionHasErrors('tanggal_pelunasan');
+        $this->assertSame(Keuangan::STATUS_SEBAGIAN, $this->usulan->keuangan->fresh()->status);
+
+        $this->actingAs($admin)
+            ->put(route('keuangan.koreksi-status', $this->usulan), [
+                'status_keuangan' => Keuangan::STATUS_LUNAS,
+                'tanggal_pelunasan' => '2026-04-20',
+            ])
+            ->assertSessionHas('success');
+
+        $keuangan = $this->usulan->keuangan->fresh();
+        $this->assertSame(Keuangan::STATUS_LUNAS, $keuangan->status);
+        $this->assertSame('2026-04-20', $keuangan->tanggal_pelunasan->toDateString());
+        // Koreksi tidak menulis riwayat: pembayaran sebenarnya dicatat bendahara.
+        $this->assertFalse(RiwayatPembayaran::where('jenis', RiwayatPembayaran::JENIS_PELUNASAN)->exists());
+    }
+
+    /** Mencatat pelunasan atas lunas tanpa tanggal menolak dengan pesan, bukan galat. */
+    public function test_pelunasan_ditolak_dengan_pesan_bila_sudah_lunas_tanpa_tanggal(): void
+    {
+        $this->siapkanNominal();
+        $this->bayarUangMuka();
+        $this->usulan->keuangan->update(['status' => Keuangan::STATUS_LUNAS, 'tanggal_pelunasan' => null]);
+
+        $this->actingAs($this->bendahara)
+            ->post(route('keuangan.bayar-sisa', $this->usulan), [
+                'tanggal_pelunasan' => '2026-04-20',
+                'bukti_pelunasan' => UploadedFile::fake()->create('lunas.pdf', 40, 'application/pdf'),
+            ])
+            ->assertSessionHas('error', 'Usulan ini sudah dilunasi. Batalkan pelunasannya lebih dulu bila keliru.');
     }
 
     /** Pelunasan yang dulu tercatat lalu statusnya dikoreksi tetap diimbangi pembatalannya, bertanggal pelunasan itu. */

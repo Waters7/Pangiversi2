@@ -856,6 +856,8 @@
                     tercatat di riwayat sebagai nilai negatif — bukan dihapus. Rekapitulasi
                     keuangan harus dapat ditelusuri, termasuk kekeliruannya. Usulan yang sudah
                     selesai kembali diproses bila pelunasannya dibatalkan, sampai dilunasi lagi.
+                    Koreksi Status ke Lunas oleh administrator meminta tanggal pelunasan dan tidak
+                    menambah riwayat pembayaran — pembayaran sebenarnya tetap dicatat bendahara.
                 </p>
             </div>
         </div>

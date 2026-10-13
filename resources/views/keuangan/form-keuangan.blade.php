@@ -1154,18 +1154,33 @@
                 <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">Admin</span>
             </div>
             <form action="{{ route('keuangan.koreksi-status', $usulan->no_usulan) }}" method="POST"
+                  x-data="{ status: {{ Js::from(old('status_keuangan', $keuangan->status)) }} }"
                   onsubmit="return confirm('Yakin ingin mengubah status keuangan?')">
                 @csrf
                 @method('PUT')
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status Keuangan</label>
-                        <select name="status_keuangan" required
+                        <select name="status_keuangan" required x-model="status"
                                 class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white">
                             <option value="belum bayar" {{ $keuangan->status === 'belum bayar' ? 'selected' : '' }}>Belum Bayar</option>
                             <option value="bayar sebagian" {{ $keuangan->status === 'bayar sebagian' ? 'selected' : '' }}>Bayar Sebagian</option>
                             <option value="lunas" {{ $keuangan->status === 'lunas' ? 'selected' : '' }}>Lunas</option>
                         </select>
+                    </div>
+                    {{-- Koreksi ke Lunas menyebut kapan sisa bayar dilunasi. Koreksi ini
+                         tidak menulis riwayat pembayaran: pembayaran sebenarnya tetap
+                         dicatat bendahara beserta buktinya. --}}
+                    <div x-show="status === 'lunas'" x-cloak>
+                        <label for="koreksi-tanggal-pelunasan" class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pelunasan</label>
+                        <input type="date" id="koreksi-tanggal-pelunasan" name="tanggal_pelunasan"
+                               value="{{ old('tanggal_pelunasan', $keuangan->tanggal_pelunasan?->toDateString()) }}"
+                               :required="status === 'lunas'"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white">
+                        @error('tanggal_pelunasan')
+                            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                        @enderror
+                        <p class="text-[11px] text-slate-400 mt-1">Tidak menambah riwayat pembayaran — pembayaran sebenarnya dicatat bendahara.</p>
                     </div>
                     <button type="submit"
                             class="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition">
