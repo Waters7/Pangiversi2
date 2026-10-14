@@ -143,6 +143,41 @@ class FormatDokumenCetakTest extends TestCase
         $this->assertStringContainsString("Ditetapkan sejumlah</td><td>: Rp {$keseluruhan}", $this->htmlRincian());
     }
 
+    /** Keseluruhan biaya pada cetakan rincian: komponen sah ditambah transport lokal. */
+    private function keseluruhan(): float
+    {
+        return (float) $this->rincian()->sum('jumlah') + (float) $this->daftar()->total_riil;
+    }
+
+    public function test_perhitungan_rampung_menyisakan_kekurangan_sebelum_dikonfirmasi_bendahara(): void
+    {
+        $this->usulan->keuangan->update(['status' => Keuangan::STATUS_SEBAGIAN, 'tanggal_transfer' => '2026-10-06', 'uang_muka' => 1_000_000]);
+
+        $html = $this->htmlRincian();
+
+        $this->assertStringContainsString('Yang telah dibayarkan semula</td><td>: Rp 1.000.000', $html);
+        $this->assertStringContainsString('Sisa kurang / lebih</td><td>: Rp '.number_format($this->keseluruhan() - 1_000_000, 0, ',', '.'), $html);
+    }
+
+    /**
+     * Tanda tangan bendahara menyatakan seluruhnya telah dibayar — juga pada
+     * lunas hasil koreksi yang tidak membawa tanggal pelunasan — jadi tidak
+     * ada sisa yang tercetak.
+     */
+    public function test_perhitungan_rampung_bersisa_nol_setelah_dikonfirmasi_bendahara(): void
+    {
+        $keuangan = $this->usulan->keuangan;
+        $keuangan->update(['status' => Keuangan::STATUS_LUNAS, 'tanggal_transfer' => '2026-10-06', 'tanggal_pelunasan' => null, 'uang_muka' => 1_000_000]);
+        $keuangan->konfirmasiPelunasan();
+
+        $html = $this->htmlRincian();
+        $keseluruhan = number_format($this->keseluruhan(), 0, ',', '.');
+
+        $this->assertStringContainsString("Telah dibayar sejumlah<br>\n                Rp {$keseluruhan}", $html);
+        $this->assertStringContainsString("Yang telah dibayarkan semula</td><td>: Rp {$keseluruhan}", $html);
+        $this->assertStringContainsString('Sisa kurang / lebih</td><td>: Rp 0</td>', $html);
+    }
+
     /**
      * Nominal pelaksana yang belum divalidasi tampil pada tabel detail
      * keuangan, tetapi belum tercetak maupun terjumlah.

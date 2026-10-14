@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.35',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Perbaikan: cetakan rincian biaya yang sudah ditandatangani bendahara kini mencatat seluruh jumlahnya sebagai telah dibayarkan, sehingga sisa kurang / lebih pada Perhitungan SPD Rampung menjadi Rp 0 — termasuk lunas hasil Koreksi Status tanpa tanggal pelunasan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.34',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

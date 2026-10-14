@@ -303,9 +303,15 @@ class KeuanganController extends Controller
         // atau ikut pelunasan setelah daftar riilnya disahkan PPK.
         $transportTerbayar = $berkasPeserta?->sudahDibayar()
             || ($keuangan?->sudahLunas() && $berkasPeserta?->sudah_ditandatangani);
-        $dibayarkan = (float) ($keuangan?->uang_muka ?? 0)
-            + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0)
-            + ($transportTerbayar ? $totalTransportLokal : 0);
+
+        // Tanda tangan bendahara menyatakan seluruh jumlahnya telah dibayar,
+        // jadi perhitungan rampungnya tidak lagi menyisakan kekurangan —
+        // termasuk lunas hasil koreksi yang tidak membawa tanggal pelunasan.
+        $dibayarkan = $keuangan?->sudahDikonfirmasiBayar()
+            ? $totalKeseluruhan
+            : (float) ($keuangan?->uang_muka ?? 0)
+                + ($keuangan?->tanggal_pelunasan ? (float) $keuangan->sisa : 0)
+                + ($transportTerbayar ? $totalTransportLokal : 0);
 
         $pdf = Pdf::loadView('keuangan.cetak-rincian', [
             'usulan' => $usulan,
