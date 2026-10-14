@@ -6,6 +6,7 @@ use App\Http\Controllers\AsistenAiController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BantuanController;
+use App\Http\Controllers\BerkasBersamaController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\BerkasLpjController;
 use App\Http\Controllers\DaftarRiilController;
@@ -70,6 +71,10 @@ Route::middleware('auth')->group(function () {
 
     // Tombol Cek pada isian nomor surat tugas: berkas bernomor sama dipakai ulang.
     Route::get('/surat-tugas/cek', [SuratTugasController::class, 'cek'])->name('surat-tugas.cek');
+
+    // Tombol Cek pada dokumen pertanggungjawaban: invoice tiket, bill hotel,
+    // dan bukti biaya penyelenggaraan yang sudah diunggah rekan dipakai ulang.
+    Route::get('/berkas-bersama/cek', BerkasBersamaController::class)->name('berkas-bersama.cek');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 

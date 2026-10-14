@@ -228,7 +228,8 @@
                     $hargaKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::dariArah($arah)->value] ?? null;
                 @endphp
 
-                <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
+                      x-data="{ cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'tiket', 'usulan' => $usulan->no_usulan]) }}, {{ Js::from(['kota_asal' => 'kotaAsal', 'kota_tujuan' => 'kotaTujuan', 'kode_booking' => 'kodeBooking']) }}) }">
                     @csrf
                     <input type="hidden" name="section" value="tiket">
                     <input type="hidden" name="arah" value="{{ $arah->value }}">
@@ -250,12 +251,36 @@
                         </div>
 
                         <div class="p-6 space-y-4">
+                            {{-- Nomor tiket lebih dulu: bila tiket bernomor sama sudah dicatat
+                                 rekan serombongan, tombol Cek memakai invoice-nya dan mengisi
+                                 rute serta kode booking. Harga dan boarding pass tetap masing-masing. --}}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nomor tiket <span class="text-red-500">*</span></label>
+                                    <input type="text" name="nomor_tiket" @disabled($terkunci) x-ref="nomorTiket" @input="cekBerkas.reset()"
+                                           value="{{ old('nomor_tiket', $data?->nomor_tiket) }}"
+                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Kode booking <span class="text-red-500">*</span></label>
+                                    <input type="text" name="kode_booking" @disabled($terkunci) x-ref="kodeBooking"
+                                           value="{{ old('kode_booking', $data?->kode_booking) }}"
+                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono uppercase focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                </div>
+                            </div>
+
+                            @unless ($terkunci)
+                                <div class="-mt-2">
+                                    @include('partials.cek-berkas-bersama', ['ref' => 'nomorTiket', 'tombol' => 'Cek Nomor Tiket'])
+                                </div>
+                            @endunless
+
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">
                                         {{ $arah === ArahTiket::Pergi ? 'Kota asal' : 'Kota perjadin' }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text" name="kota_asal" @disabled($terkunci)
+                                    <input type="text" name="kota_asal" @disabled($terkunci) x-ref="kotaAsal"
                                            value="{{ old('kota_asal', $data?->kota_asal) }}"
                                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                                 </div>
@@ -263,24 +288,9 @@
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">
                                         {{ $arah === ArahTiket::Pergi ? 'Kota tujuan' : 'Kota pulang' }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text" name="kota_tujuan" @disabled($terkunci)
+                                    <input type="text" name="kota_tujuan" @disabled($terkunci) x-ref="kotaTujuan"
                                            value="{{ old('kota_tujuan', $data?->kota_tujuan) }}"
                                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nomor tiket <span class="text-red-500">*</span></label>
-                                    <input type="text" name="nomor_tiket" @disabled($terkunci)
-                                           value="{{ old('nomor_tiket', $data?->nomor_tiket) }}"
-                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">Kode booking <span class="text-red-500">*</span></label>
-                                    <input type="text" name="kode_booking" @disabled($terkunci)
-                                           value="{{ old('kode_booking', $data?->kode_booking) }}"
-                                           class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono uppercase focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                                 </div>
                             </div>
 
@@ -454,7 +464,8 @@
 
             @if ($minta(\App\Enums\BerkasLpj::BillHotel) || $minta(\App\Enums\BerkasLpj::Kuitansi))
             {{-- ══════════ 4. AKOMODASI & BUKTI BIAYA ══════════ --}}
-            <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
+                  x-data="{ cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'hotel', 'usulan' => $usulan->no_usulan]) }}) }">
                 @csrf
                 <input type="hidden" name="section" value="akomodasi">
 
@@ -490,9 +501,14 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nomor transaksi</label>
-                                <input type="text" name="bill_hotel_no_transaksi" @disabled($terkunci)
+                                <input type="text" name="bill_hotel_no_transaksi" @disabled($terkunci) x-ref="noTransaksi" @input="cekBerkas.reset()"
                                        value="{{ old('bill_hotel_no_transaksi', $dokumen?->bill_hotel_no_transaksi) }}"
                                        class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                {{-- Nomor transaksi yang sama dengan milik rekan memakai bill
+                                     hotel dan kuitansinya; nominal tetap diisi masing-masing. --}}
+                                @unless ($terkunci)
+                                    @include('partials.cek-berkas-bersama', ['ref' => 'noTransaksi', 'tombol' => 'Cek Nomor Transaksi'])
+                                @endunless
                             </div>
                             <div>
                                 @if ($penginapanKeuangan)
@@ -534,7 +550,10 @@
 
             {{-- ══════════ 5. BIAYA PENYELENGGARAAN ══════════ --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
-                  x-data="{ ada: {{ old('penyelenggaraan_ada', $dokumen?->penyelenggaraan_ada ? '1' : '0') === '1' ? 'true' : 'false' }} }">
+                  x-data="{
+                      ada: {{ old('penyelenggaraan_ada', $dokumen?->penyelenggaraan_ada ? '1' : '0') === '1' ? 'true' : 'false' }},
+                      cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'penyelenggaraan', 'usulan' => $usulan->no_usulan]) }}),
+                  }">
                 @csrf
                 <input type="hidden" name="section" value="penyelenggaraan">
 
@@ -593,10 +612,14 @@
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">
                                         Nomor invoice <span class="font-normal text-slate-400">— bila ada</span>
                                     </label>
-                                    <input type="text" name="penyelenggaraan_invoice" @disabled($terkunci)
+                                    <input type="text" name="penyelenggaraan_invoice" @disabled($terkunci) x-ref="noInvoice" @input="cekBerkas.reset()"
                                            value="{{ old('penyelenggaraan_invoice', $dokumen?->penyelenggaraan_invoice) }}"
                                            placeholder="cth: INV/2026/0123"
                                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                                    {{-- Invoice yang sama dengan milik rekan memakai bukti bayarnya. --}}
+                                    @unless ($terkunci)
+                                        @include('partials.cek-berkas-bersama', ['ref' => 'noInvoice', 'tombol' => 'Cek Nomor Invoice'])
+                                    @endunless
                                 </div>
                             </div>
 

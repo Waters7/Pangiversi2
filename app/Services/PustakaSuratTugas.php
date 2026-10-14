@@ -38,6 +38,12 @@ class PustakaSuratTugas
         return str_replace(' ', '', mb_strtolower(trim((string) $nomor)));
     }
 
+    /** Ekspresi SQL yang menghasilkan kunci() dari sebuah kolom. */
+    public static function kunciSql(string $kolom): string
+    {
+        return sprintf(self::KUNCI_SQL, $kolom);
+    }
+
     /**
      * Berkas surat tugas yang tercatat untuk satu nomor, terlama lebih dulu.
      * Hanya berkas yang benar-benar ada di penyimpanan.

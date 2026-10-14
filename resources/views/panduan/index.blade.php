@@ -431,6 +431,13 @@
                     masuk transport lokal dan tidak diganti. Nota yang salah unggah dapat dihapus lewat
                     centang <strong>Hapus nota ruas ini</strong>.
                 </span>
+                <span class="block mb-3">
+                    Berkas rombongan cukup diunggah sekali: ketik nomor tiket, nomor transaksi hotel, atau nomor
+                    invoice biaya penyelenggaraan lalu tekan tombol <strong>Cek</strong>. Bila rekan sudah
+                    mengunggahnya, invoice tiket — beserta kota asal, kota tujuan, dan kode booking — bill hotel
+                    dan kuitansinya, atau bukti bayar penyelenggaraan dipakai otomatis. Harga tiket, nominal, dan
+                    boarding pass tetap diisi masing-masing; bila nomornya belum ada, unggah berkasnya seperti biasa.
+                </span>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="rounded-xl border border-slate-200 overflow-hidden">

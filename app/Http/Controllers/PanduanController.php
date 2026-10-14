@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.39',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Dokumen pertanggungjawaban: tombol Cek Nomor Tiket memakai invoice tiket rekan serombongan beserta kota asal, kota tujuan, dan kode booking — harga tiket dan boarding pass tetap masing-masing.',
+                    'Tombol Cek Nomor Transaksi memakai bill hotel dan kuitansi penyelenggara / hotel yang sudah diunggah rekan, dan Cek Nomor Invoice memakai bukti bayar biaya penyelenggaraan; nominal tetap diisi masing-masing. Bila nomornya belum ada, berkas tetap wajib diunggah.',
+                ],
+            ],
+            [
                 'versi' => '2.5.38',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

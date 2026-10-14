@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.39')
+            ->assertSee('Dokumen pertanggungjawaban: tombol Cek Nomor Tiket memakai invoice tiket rekan serombongan')
             ->assertSee('Versi 2.5.38')
             ->assertSee('Nota / bukti biaya transportasi kini hanya diminta pada perjalanan luar kota lintas pulau')
             ->assertSee('Versi 2.5.37')
