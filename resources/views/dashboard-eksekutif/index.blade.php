@@ -92,6 +92,13 @@
         </div>
     </div>
 
+    {{-- Pagu maksimal tiap kode akun berdampingan dengan realisasinya. --}}
+    <div class="mb-5">
+        <x-anggaran-per-akun :anggaran="$anggaranPerAkun"
+                             judul="Pagu dan Realisasi per Kode Akun — TA {{ $tahun }}"
+                             :tautan="$tahunAnggaran && auth()->user()->can('mengelola-master-data') ? route('master.tahun-anggaran.pagu-akun', $tahunAnggaran) : null" />
+    </div>
+
     {{-- Wawasan AI + agen tanya-jawab --}}
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5"
          x-data="asistenAi({{ $tahun }}, {{ $aiAktif ? 'true' : 'false' }})" x-init="muatWawasan()">

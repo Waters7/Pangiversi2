@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Enums\StatusUsulan;
+use App\Models\AkunPembiayaan;
 use App\Models\Keuangan;
+use App\Models\PaguAkun;
 use App\Models\PesertaUsulan;
 use App\Models\TahunAnggaran;
 use App\Models\Usulan;
@@ -100,6 +102,89 @@ class RingkasanEksekutif
             ->whereIn('usulan.status', $this->statusBerlaku())
             ->whereYear('usulan.tanggal_mulai', $tahun)
             ->sum('keuangan.total');
+    }
+
+    /**
+     * Pagu dan realisasi tiap kode akun, beserta rekapnya per sumber dana.
+     *
+     * Realisasi sebuah perjalanan dinas dibebankan ke akun yang ditetapkan
+     * pada daftar nominatif surat tugasnya. Yang belum berakun dikumpulkan
+     * tersendiri, supaya jumlah seluruhnya tetap sama dengan total realisasi.
+     * Akun tanpa pagu tetap tampil bila sudah ada realisasinya.
+     *
+     * @return array{
+     *     pagu: float,
+     *     akun: Collection<int, array{kode: string, nama: string, sumber: ?string, sumber_nama: ?string, pagu: float, realisasi: float, sisa: float, persen: ?float, melebihi: bool}>,
+     *     sumber: Collection<int, array{kode: ?string, nama: string, pagu: float, realisasi: float, sisa: float, persen: ?float, porsi: ?float}>,
+     *     belum_berakun: float
+     * }
+     */
+    public function anggaranPerAkun(int $tahun): array
+    {
+        $realisasi = Keuangan::query()
+            ->join('usulan', 'usulan.id', '=', 'keuangan.id_usulan')
+            ->leftJoin('daftar_nominatif', 'daftar_nominatif.no_tugas', '=', 'usulan.no_tugas')
+            ->whereIn('usulan.status', $this->statusBerlaku())
+            ->whereYear('usulan.tanggal_mulai', $tahun)
+            ->groupBy('daftar_nominatif.id_akun_pembiayaan')
+            ->selectRaw('daftar_nominatif.id_akun_pembiayaan as id_akun, SUM(keuangan.total) as jumlah')
+            ->get()
+            ->mapWithKeys(fn ($baris) => [(int) $baris->id_akun => (float) $baris->jumlah]);
+
+        $pagu = PaguAkun::with('sumberDana')
+            ->whereHas('tahunAnggaran', fn ($query) => $query->where('tahun', $tahun))
+            ->get()
+            ->keyBy('id_akun_pembiayaan');
+
+        $akun = AkunPembiayaan::whereIn('id', $pagu->keys()->merge($realisasi->keys()->filter()))
+            ->orderBy('urutan')
+            ->orderBy('kode')
+            ->get()
+            ->map(function (AkunPembiayaan $akun) use ($pagu, $realisasi): array {
+                $baris = $pagu->get($akun->id);
+                $nilaiPagu = (float) ($baris?->pagu ?? 0);
+                $nilaiRealisasi = (float) ($realisasi[$akun->id] ?? 0);
+
+                return [
+                    'kode' => $akun->kode,
+                    'nama' => $akun->nama,
+                    'sumber' => $baris?->sumberDana?->kode,
+                    'sumber_nama' => $baris?->sumberDana?->nama,
+                    'pagu' => $nilaiPagu,
+                    'realisasi' => $nilaiRealisasi,
+                    'sisa' => $nilaiPagu - $nilaiRealisasi,
+                    'persen' => $nilaiPagu > 0 ? round($nilaiRealisasi / $nilaiPagu * 100, 2) : null,
+                    'melebihi' => $nilaiRealisasi > $nilaiPagu,
+                ];
+            })
+            ->values();
+
+        $totalPagu = (float) $akun->sum('pagu');
+
+        $sumber = $akun->groupBy(fn (array $baris) => $baris['sumber'] ?? '')
+            ->map(function (Collection $baris, string $kode) use ($totalPagu): array {
+                $nilaiPagu = (float) $baris->sum('pagu');
+                $nilaiRealisasi = (float) $baris->sum('realisasi');
+
+                return [
+                    'kode' => $kode !== '' ? $kode : null,
+                    'nama' => $baris->first()['sumber_nama'] ?? 'Tanpa sumber dana',
+                    'pagu' => $nilaiPagu,
+                    'realisasi' => $nilaiRealisasi,
+                    'sisa' => $nilaiPagu - $nilaiRealisasi,
+                    'persen' => $nilaiPagu > 0 ? round($nilaiRealisasi / $nilaiPagu * 100, 2) : null,
+                    'porsi' => $totalPagu > 0 ? round($nilaiPagu / $totalPagu * 100, 2) : null,
+                ];
+            })
+            ->sortByDesc('pagu')
+            ->values();
+
+        return [
+            'pagu' => $totalPagu,
+            'akun' => $akun,
+            'sumber' => $sumber,
+            'belum_berakun' => (float) ($realisasi[0] ?? 0),
+        ];
     }
 
     /**

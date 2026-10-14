@@ -9,7 +9,7 @@
         ['route' => 'master.status-hasil', 'label' => 'Status Hasil', 'aktif' => 'master.status-hasil'],
         ['route' => 'master.kategori-pembiayaan', 'label' => 'Kategori Pembiayaan', 'aktif' => 'master.kategori-pembiayaan'],
         ['route' => 'master.akun-pembiayaan', 'label' => 'Akun Pembiayaan', 'aktif' => 'master.akun-pembiayaan'],
-        ['route' => 'master.tahun-anggaran', 'label' => 'Tahun Anggaran', 'aktif' => 'master.tahun-anggaran'],
+        ['route' => 'master.tahun-anggaran', 'label' => 'Tahun Anggaran', 'aktif' => 'master.tahun-anggaran*'],
         ['route' => 'kegiatan.index', 'label' => 'Jenis Kegiatan', 'aktif' => 'kegiatan.*'],
     ];
 @endphp

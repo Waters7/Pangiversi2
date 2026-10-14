@@ -918,7 +918,10 @@
             <x-panduan-langkah nomor="1" judul="Dashboard Eksekutif">
                 Submenu <strong>Dashboard Utama</strong> memuat realisasi anggaran per kategori dan
                 per bulan, pergerakan pegawai per unit kerja, serta siapa yang akan berangkat, sedang
-                berjalan, dan belum melapor; tahun anggarannya dapat dipilih. Submenu
+                berjalan, dan belum melapor; tahun anggarannya dapat dipilih. Kartu <strong>Pagu dan
+                Realisasi per Kode Akun</strong> membandingkan pagu tiap akun dengan realisasinya — dibebankan
+                menurut akun pada daftar nominatif — lengkap dengan sisa, serapan, akun yang melebihi pagu,
+                dan rekap per sumber dana (RM dan BLU). Submenu
                 <strong>News Feed</strong> menyajikan kabarnya seperti lini masa media sosial: siapa
                 yang akan dan sedang melakukan perjalanan dinas, ke mana, bersama siapa, serta tindak
                 lanjut hasil perjalanan yang dijadwalkan — yang melewati tenggat ditaruh paling atas.
@@ -1072,7 +1075,9 @@
                     Kategori perjadin menentukan berkas apa yang ditagih — penanda
                     <strong>dalam kota</strong> pada tiap kategori itulah yang memilah. Komponen
                     biaya, lokasi tujuan, unit kerja, jenis kegiatan, dan akun pembiayaan juga
-                    diatur di sini.
+                    diatur di sini. Pada <strong>Tahun Anggaran</strong>, tombol <strong>Pagu per akun</strong>
+                    menetapkan angka maksimal tiap kode akun beserta sumber dananya; pagu tahun anggaran
+                    menjadi jumlah seluruhnya, dan realisasinya tampil berdampingan.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Atur pengingat dokumen">

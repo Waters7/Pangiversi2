@@ -6,12 +6,12 @@
      x-data="{
         showForm: {{ $errors->any() ? 'true' : 'false' }},
         mode: 'tambah',
-        form: { id: null, tahun: {{ now()->year }}, pagu: 0, is_aktif: false },
+        form: { id: null, tahun: {{ now()->year }}, pagu: 0, is_aktif: false, dirinci: false },
         buka(mode, data = null) {
             this.mode = mode;
             this.form = data
                 ? { ...data }
-                : { id: null, tahun: {{ now()->year }}, pagu: 0, is_aktif: false };
+                : { id: null, tahun: {{ now()->year }}, pagu: 0, is_aktif: false, dirinci: false };
             this.showForm = true;
         }
      }">
@@ -65,6 +65,12 @@
             </div>
             <p class="text-xs text-slate-400 mt-2">{{ $persen }}% pagu terserap</p>
         </div>
+
+        <div class="mb-5">
+            <x-anggaran-per-akun :anggaran="$anggaranAktif"
+                                 judul="Pagu dan Realisasi per Kode Akun — TA {{ $aktif->tahun }}"
+                                 :tautan="route('master.tahun-anggaran.pagu-akun', $aktif)" />
+        </div>
     @endif
 
     {{-- Form Tambah / Ubah --}}
@@ -90,8 +96,12 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1.5">Pagu Anggaran (Rp) <span class="text-red-500">*</span></label>
-                    <input type="number" name="pagu" x-model="form.pagu" required min="0" step="1000000"
+                    {{-- Pagu yang sudah dirinci per kode akun mengikuti jumlah pagu akunnya. --}}
+                    <input type="number" name="pagu" x-model="form.pagu" min="0" step="1"
+                           :required="! form.dirinci" :readonly="form.dirinci"
+                           :class="form.dirinci ? 'bg-slate-50 text-slate-500' : ''"
                            class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    <p x-show="form.dirinci" x-cloak class="text-xs text-slate-400 mt-1">Jumlah pagu per kode akun — ubah lewat tombol Pagu per Akun.</p>
                     @error('pagu') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
@@ -137,7 +147,12 @@
                     @forelse ($tahunAnggaran as $item)
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-4 py-4 font-bold text-slate-800">{{ $item->tahun }}</td>
-                            <td class="px-4 py-4 text-right text-slate-700">Rp {{ number_format($item->pagu, 0, ',', '.') }}</td>
+                            <td class="px-4 py-4 text-right text-slate-700">
+                                Rp {{ number_format($item->pagu, 0, ',', '.') }}
+                                @if ($item->pagu_akun_count > 0)
+                                    <span class="block text-[11px] text-slate-400">{{ $item->pagu_akun_count }} kode akun</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-4 text-right text-amber-600 font-semibold">Rp {{ number_format($item->realisasi, 0, ',', '.') }}</td>
                             <td class="px-4 py-4 text-right text-emerald-600 font-semibold">Rp {{ number_format($item->sisa_pagu, 0, ',', '.') }}</td>
                             <td class="px-4 py-4 text-center">
@@ -162,7 +177,13 @@
                                             </button>
                                         </form>
                                     @endunless
-                                    <button @click="buka('ubah', {{ Js::from($item->only(['id', 'tahun', 'pagu', 'is_aktif'])) }})"
+                                    <a href="{{ route('master.tahun-anggaran.pagu-akun', $item) }}"
+                                       class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-teal-100 text-slate-600 hover:text-teal-700 flex items-center justify-center transition" title="Pagu per akun">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M4 6h16M4 12h16M4 18h10"/>
+                                        </svg>
+                                    </a>
+                                    <button @click="buka('ubah', {{ Js::from($item->only(['id', 'tahun', 'pagu', 'is_aktif']) + ['dirinci' => $item->pagu_akun_count > 0]) }})"
                                             class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 flex items-center justify-center transition" title="Ubah">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>

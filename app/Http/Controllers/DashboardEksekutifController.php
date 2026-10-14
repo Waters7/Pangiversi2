@@ -38,6 +38,7 @@ class DashboardEksekutifController extends Controller
             'realisasiPerKategori' => $realisasiPerKategori,
             'realisasiPerBulan' => $this->ringkasan->jumlahkanPerBulan($realisasiPerKategori),
             'totalRealisasi' => $this->ringkasan->totalRealisasi($tahun),
+            'anggaranPerAkun' => $this->ringkasan->anggaranPerAkun($tahun),
             'pegawaiPerBulan' => $this->ringkasan->pegawaiPerBulan($tahun),
             'pegawaiPerUnit' => $this->ringkasan->pegawaiPerUnit($tahun),
             'akanBerangkat' => $this->ringkasan->akanBerangkat(),

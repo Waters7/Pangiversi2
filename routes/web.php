@@ -408,6 +408,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/tahun-anggaran', [TahunAnggaranController::class, 'store'])->name('tahun-anggaran.store');
         Route::put('/tahun-anggaran/{tahunAnggaran}', [TahunAnggaranController::class, 'update'])->name('tahun-anggaran.update');
         Route::put('/tahun-anggaran/{tahunAnggaran}/aktifkan', [TahunAnggaranController::class, 'aktifkan'])->name('tahun-anggaran.aktifkan');
+        Route::get('/tahun-anggaran/{tahunAnggaran}/pagu-akun', [TahunAnggaranController::class, 'paguAkun'])->name('tahun-anggaran.pagu-akun');
+        Route::post('/tahun-anggaran/{tahunAnggaran}/pagu-akun', [TahunAnggaranController::class, 'simpanPaguAkun'])->name('tahun-anggaran.pagu-akun.simpan');
+        Route::delete('/tahun-anggaran/{tahunAnggaran}/pagu-akun/{paguAkun}', [TahunAnggaranController::class, 'hapusPaguAkun'])->middleware('can:menghapus-master-data')->name('tahun-anggaran.pagu-akun.hapus');
         Route::delete('/tahun-anggaran/{tahunAnggaran}', [TahunAnggaranController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('tahun-anggaran.destroy');
     });
 

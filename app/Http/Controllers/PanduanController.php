@@ -137,6 +137,16 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.34',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Pagu per kode akun: Master Data → Tahun Anggaran → Pagu per akun menetapkan angka maksimal tiap kode akun beserta sumber dananya, dan pagu tahun anggaran menjadi jumlahnya.',
+                    'Pagu perjalanan dinas TA 2026 diperbarui menurut Rincian Kertas Kerja Satker: Rp 2.375.475.000 — 524111 Rp 437.132.000 (RM), 524119 Rp 144.048.000 (RM), dan 525115 Belanja Perjalanan Rp 1.794.295.000 (BLU).',
+                    'Dashboard Eksekutif dan Master Data menampilkan pagu dan realisasi per kode akun beserta rekap per sumber dana; akun yang melebihi pagu ditandai merah.',
+                    'Realisasi pada Master Data → Tahun Anggaran kini memakai hitungan yang sama dengan Dashboard Eksekutif: usulan disetujui atau selesai yang berangkat pada tahun itu.',
+                ],
+            ],
+            [
                 'versi' => '2.5.33',
                 'tanggal' => '13 Oktober 2026',
                 'butir' => [

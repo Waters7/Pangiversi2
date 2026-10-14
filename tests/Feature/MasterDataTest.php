@@ -215,13 +215,17 @@ class MasterDataTest extends TestCase
             ->assertSessionHasErrors('tahun');
     }
 
+    /** Realisasi master tahun anggaran memakai hitungan dashboard eksekutif: disetujui atau selesai, berangkat pada tahunnya. */
     public function test_realisasi_tahun_anggaran_dihitung_dari_total_keuangan(): void
     {
         $tahun = TahunAnggaran::factory()->create(['tahun' => 2026, 'pagu' => 10_000_000]);
         User::factory()->create();
 
-        $usulan = Usulan::factory()->create(['id_tahun_anggaran' => $tahun->id]);
+        $usulan = Usulan::factory()->create(['id_tahun_anggaran' => $tahun->id, 'status' => 'disetujui', 'tanggal_mulai' => '2026-03-02', 'tanggal_selesai' => '2026-03-04']);
         $usulan->keuangan()->create(['total' => 4_000_000, 'uang_muka' => 0, 'sisa' => 0]);
+
+        $draf = Usulan::factory()->create(['id_tahun_anggaran' => $tahun->id, 'status' => 'draft', 'tanggal_mulai' => '2026-03-02', 'tanggal_selesai' => '2026-03-04']);
+        $draf->keuangan()->create(['total' => 9_000_000, 'uang_muka' => 0, 'sisa' => 0]);
 
         $this->assertSame(4_000_000.0, $tahun->fresh()->realisasi);
         $this->assertSame(6_000_000.0, $tahun->fresh()->sisa_pagu);

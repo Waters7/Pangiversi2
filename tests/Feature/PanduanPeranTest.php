@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.34')
+            ->assertSee('Pagu per kode akun: Master Data → Tahun Anggaran → Pagu per akun')
             ->assertSee('Versi 2.5.33')
             ->assertSee('Unduh PDF pada SPD kini menampilkan jendela cara memasukkan SPD ke SRIKANDI')
             ->assertSee('Versi 2.5.32')
