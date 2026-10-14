@@ -118,6 +118,67 @@ class SuratTugasBersamaTest extends TestCase
         $this->assertSame(self::ISI_BERKAS, Storage::disk('public')->get($berkas));
     }
 
+    /** Selama nomornya sama, berkas rombongan terkunci: unggahan lain diabaikan. */
+    public function test_unggahan_surat_tugas_diabaikan_bila_nomornya_sudah_ada(): void
+    {
+        $this->actingAs($this->rekan)
+            ->post(route('usulan.store'), $this->isian([
+                'surat_tugas' => UploadedFile::fake()->createWithContent('lain.pdf', '%PDF-1.4 berkas lain'),
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $berkas = Usulan::where('id_user', $this->rekan->id)->sole()->dokumen()->sole()->surat_tugas;
+
+        $this->assertSame(self::ISI_BERKAS, Storage::disk('public')->get($berkas));
+        $this->assertStringStartsWith('dokumen/surat-tugas/bersama-', $berkas);
+    }
+
+    /** Pengunggah asli tetap dapat mengganti berkasnya sendiri; berkas rekan tidak berubah. */
+    public function test_pengunggah_asli_tetap_dapat_mengganti_surat_tugasnya(): void
+    {
+        Storage::disk('public')->put('dokumen/surat-tugas/spd-asal.pdf', self::ISI_BERKAS);
+        $spd = $this->terbitkanSpd($this->perintis);
+        $spd->update(['no_tugas' => self::NOMOR, 'surat_tugas' => 'dokumen/surat-tugas/spd-asal.pdf']);
+
+        $this->actingAs($this->perintis)
+            ->put(route('spd.update', $spd), $this->isianSpd($this->perintis) + [
+                'surat_tugas' => UploadedFile::fake()->createWithContent('baru.pdf', '%PDF-1.4 surat tugas perbaikan'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('%PDF-1.4 surat tugas perbaikan', Storage::disk('public')->get($spd->fresh()->surat_tugas));
+        $this->assertSame(self::ISI_BERKAS, Storage::disk('public')->get('dokumen/surat-tugas/asal.pdf'));
+    }
+
+    /**
+     * Isian SPD pokok untuk penyuntingan.
+     *
+     * @return array<string, mixed>
+     */
+    private function isianSpd(User $pelaksana): array
+    {
+        return [
+            'dikeluarkan_di' => 'Manado',
+            'tanggal_surat' => today()->toDateString(),
+            'pelaksana' => [[
+                'nomor_surat' => '123',
+                'id_user' => $pelaksana->id,
+                'nama' => $pelaksana->nama,
+                'nip' => $pelaksana->nip,
+                'pangkat_golongan' => 'Penata Muda (III/a)',
+                'jabatan_instansi' => 'Pranata Komputer Ahli Pertama',
+                'tingkat_biaya' => 'Tingkat C',
+            ]],
+            'maksud' => 'Penugasan kedinasan.',
+            'alat_angkut' => 'Angkutan Darat',
+            'tempat_berangkat' => 'Manado',
+            'tempat_tujuan' => 'Tomohon',
+            'tanggal_berangkat' => today()->addWeek()->toDateString(),
+            'tanggal_kembali' => today()->addWeek()->toDateString(),
+            'no_tugas' => self::NOMOR,
+        ];
+    }
+
     public function test_nomor_surat_tugas_baru_tetap_wajib_diunggah(): void
     {
         $this->actingAs($this->rekan)

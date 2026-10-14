@@ -39,6 +39,10 @@
             spdSelalu: {{ $jenis->butuhSpd() ? 'true' : 'false' }},
             kategoriBerSpd: {{ Js::from($kategoriBerSpd) }},
             get butuhSpd() { return this.spdSelalu || this.kategoriBerSpd.includes(String(this.idKategori)); },
+            // Surat tugas bernomor sama milik rekan mengunci unggahan — kecuali
+            // bagi pengunggah aslinya.
+            cekSurat: cekSuratTugas({{ Js::from(route('surat-tugas.cek')) }}, {{ Js::from(['kecuali_usulan' => $usulan->id]) }}),
+            suratTugasAsli: {{ \App\Services\PustakaBerkasBersama::bolehDiganti($usulan->dokumen()->latest('id')->value('surat_tugas')) ? 'true' : 'false' }},
           }">
         @csrf
         @method('PUT')
@@ -158,7 +162,7 @@
 
                         {{-- Nomor Surat Tugas. Bila usulan ini belum berberkas surat tugas,
                              berkas bernomor sama yang sudah diunggah dipakai otomatis. --}}
-                        <div x-data="{ cekSurat: cekSuratTugas({{ Js::from(route('surat-tugas.cek')) }}, {{ Js::from(['kecuali_usulan' => $usulan->id]) }}) }">
+                        <div>
                             <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Nomor Surat Tugas <span class="text-red-500">*</span>
                             </label>
@@ -285,6 +289,7 @@
                                 </div>
                             @endif
                             <input type="file" name="surat_tugas" id="surat_tugas"
+                                   :disabled="cekSurat.tersedia && ! suratTugasAsli"
                                    accept=".pdf,.jpg,.jpeg,.png"
                                    data-max-mb="5"
                                    data-allowed="pdf,jpg,jpeg,png"

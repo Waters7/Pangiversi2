@@ -226,6 +226,9 @@
                 @php
                     $data = $tiket->get($arah->value);
                     $hargaKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::dariArah($arah)->value] ?? null;
+                    // Invoice rombongan yang ditemukan tombol Cek mengunci unggahan,
+                    // kecuali bagi pengunggah aslinya.
+                    $kunciInvoice = \App\Services\PustakaBerkasBersama::bolehDiganti($data?->invoice) ? null : "cekBerkas.mengunci('invoice')";
                 @endphp
 
                 <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
@@ -326,7 +329,8 @@
                                 :berkas="$data?->invoice"
                                 terima=".pdf,.jpg,.jpeg,.png"
                                 keterangan="Invoice atau e-ticket yang memuat harga — PDF, JPG, atau PNG, maks. 2 MB."
-                                :terkunci="$terkunci" />
+                                :terkunci="$terkunci"
+                                :kunci="$kunciInvoice" />
 
                             @unless ($terkunci)
                                 <button type="submit" class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">
@@ -493,7 +497,8 @@
                             :berkas="$dokumen?->bill_hotel"
                             terima=".pdf,.jpg,.jpeg,.png"
                             keterangan="PDF, JPG, atau PNG — maks. 2 MB."
-                            :terkunci="$terkunci" />
+                            :terkunci="$terkunci"
+                            :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->bill_hotel) ? null : 'cekBerkas.mengunci(\'bill_hotel\')'" />
                         <p class="-mt-3 text-[11px] text-slate-500">
                             Penginapan dibayar lewat biaya penyelenggaraan? Nyatakan pada bagian 5 — bill hotel lalu tidak perlu diunggah.
                         </p>
@@ -535,7 +540,8 @@
                             :berkas="$dokumen?->kwintasi"
                             terima=".pdf,.jpg,.jpeg,.png"
                             keterangan="Kuitansi resmi dari penyelenggara kegiatan atau dari hotel tempat menginap — PDF, JPG, atau PNG, maks. 2 MB."
-                            :terkunci="$terkunci" />
+                            :terkunci="$terkunci"
+                            :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->kwintasi) ? null : 'cekBerkas.mengunci(\'kwintasi\')'" />
                         @endif
 
                         @unless ($terkunci)
@@ -629,7 +635,8 @@
                                 :berkas="$dokumen?->penyelenggaraan_bukti"
                                 terima=".pdf,.jpg,.jpeg,.png"
                                 keterangan="Kuitansi, invoice lunas, atau bukti transfer — PDF, JPG, atau PNG, maks. 2 MB."
-                                :terkunci="$terkunci" />
+                                :terkunci="$terkunci"
+                                :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->penyelenggaraan_bukti) ? null : 'cekBerkas.mengunci(\'penyelenggaraan_bukti\')'" />
 
                             {{-- Hotel yang sudah dibayar lewat paket penyelenggaraan tidak
                                  ditagih bill hotelnya dan tidak dibayarkan dua kali. --}}

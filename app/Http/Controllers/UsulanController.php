@@ -21,6 +21,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PelacakUsulan;
 use App\Services\PenomoranPerjadin;
+use App\Services\PustakaBerkasBersama;
 use App\Services\PustakaSuratTugas;
 use App\Services\RekamPenghapusan;
 use App\Services\WorkflowUsulan;
@@ -511,12 +512,18 @@ class UsulanController extends Controller
         if ($dokumen) {
             $docData = [];
 
-            if ($request->hasFile('surat_tugas')) {
+            // Surat tugas bernomor sama milik usulan atau SPD lain mengunci
+            // unggahan — kecuali bagi pengunggah aslinya. Yang belum berberkas
+            // memakai salinannya.
+            $suratTugasTerkunci = ! PustakaBerkasBersama::bolehDiganti($dokumen->surat_tugas)
+                && $this->pustakaSuratTugas->temukan($request->no_tugas, kecualiUsulan: $usulan->id) !== null;
+
+            if ($suratTugasTerkunci) {
+                if (blank($dokumen->surat_tugas)) {
+                    $docData['surat_tugas'] = $this->pustakaSuratTugas->salinUntuk($request->no_tugas, kecualiUsulan: $usulan->id);
+                }
+            } elseif ($request->hasFile('surat_tugas')) {
                 $docData['surat_tugas'] = $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public');
-            } elseif (blank($dokumen->surat_tugas)
-                && ($salinan = $this->pustakaSuratTugas->salinUntuk($request->no_tugas, kecualiUsulan: $usulan->id))) {
-                // Usulan yang belum berberkas surat tugas memakai berkas bernomor sama.
-                $docData['surat_tugas'] = $salinan;
             }
 
             if ($request->hasFile('spd_ditandatangani')) {
@@ -665,12 +672,14 @@ class UsulanController extends Controller
     private function simpanBerkasPengajuan(Request $request, ?SuratPerjalananDinas $spd = null): array
     {
         return [
-            // Tanpa unggahan: surat tugas SPD terpilih, atau berkas bernomor
-            // sama yang sudah diunggah usulan maupun SPD lain.
-            'surat_tugas' => $request->hasFile('surat_tugas')
-                ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
-                : ($this->salinSuratTugasDariSpd($spd)
-                    ?? $this->pustakaSuratTugas->salinUntuk($request->input('no_tugas') ?: $spd?->no_tugas)),
+            // Surat tugas bernomor sama yang sudah diunggah usulan atau SPD lain
+            // dipakai dan terkunci: unggahan lain diabaikan supaya berkas
+            // rombongan tidak tertimpa. Selebihnya unggahan, atau surat tugas
+            // dari SPD terpilih.
+            'surat_tugas' => $this->pustakaSuratTugas->salinUntuk($request->input('no_tugas') ?: $spd?->no_tugas)
+                ?? ($request->hasFile('surat_tugas')
+                    ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
+                    : $this->salinSuratTugasDariSpd($spd)),
             // Jalur supervisi tidak mengunggah SPD sama sekali.
             'spd_ditandatangani' => $request->hasFile('spd_ditandatangani')
                 ? $request->file('spd_ditandatangani')->store('dokumen/spd', 'public')

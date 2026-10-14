@@ -81,7 +81,8 @@ class PustakaSuratTugas
 
         return $dariUsulan->concat($dariSpd)
             ->filter(fn (array $berkas) => $disk->exists($berkas['path']))
-            ->sortBy(fn (array $berkas) => $berkas['waktu']?->getTimestamp() ?? 0)
+            // Berkas asli lebih dulu, baru salinannya.
+            ->sortBy(fn (array $berkas) => [PustakaBerkasBersama::salinan($berkas['path']) ? 1 : 0, $berkas['waktu']?->getTimestamp() ?? 0])
             ->values();
     }
 
@@ -112,7 +113,7 @@ class PustakaSuratTugas
         }
 
         $disk = Storage::disk('public');
-        $tujuan = 'dokumen/surat-tugas/'.Str::uuid().'.'.pathinfo($asal['path'], PATHINFO_EXTENSION);
+        $tujuan = 'dokumen/surat-tugas/'.PustakaBerkasBersama::AWALAN_SALINAN.Str::uuid().'.'.pathinfo($asal['path'], PATHINFO_EXTENSION);
 
         return $disk->copy($asal['path'], $tujuan) ? $tujuan : null;
     }

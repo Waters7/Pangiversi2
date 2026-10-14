@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.40',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Berkas yang ditemukan tombol Cek — surat tugas, invoice tiket, bill hotel dan kuitansi, serta bukti bayar biaya penyelenggaraan — mengunci kolom unggahnya supaya berkas rombongan tidak tertimpa berkas lain. Pengunggah aslinya tetap dapat membetulkan berkasnya sendiri, dan pemeriksaannya berjalan sendiri saat formulir dibuka.',
+                ],
+            ],
+            [
                 'versi' => '2.5.39',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

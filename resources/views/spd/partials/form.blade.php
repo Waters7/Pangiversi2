@@ -337,7 +337,9 @@
                 </div>
                 <div>
                     <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">Berkas Surat Tugas</label>
+                    {{-- Terkunci selama memakai surat tugas rombongan — kecuali bagi pengunggah aslinya. --}}
                     <input type="file" name="surat_tugas" id="surat_tugas" accept=".pdf,.jpg,.jpeg,.png"
+                           @unless ($ubah && \App\Services\PustakaBerkasBersama::bolehDiganti($spd->surat_tugas)) :disabled="cekSurat.tersedia" @endunless
                            data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
                            class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}
                                   file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200">

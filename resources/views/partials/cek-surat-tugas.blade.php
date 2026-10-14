@@ -1,7 +1,10 @@
 {{-- Tombol Cek dan hasil pemeriksaan nomor surat tugas.
      Dipakai di dalam komponen Alpine yang memuat objek "cekSurat" — lihat
      window.cekSuratTugas di bawah — dan input nomor bertanda x-ref="noTugas". --}}
-<div class="mt-2 flex flex-wrap items-center gap-2">
+{{-- Nomor yang sudah terisi saat halaman dibuka diperiksa sendiri, supaya
+     kunci unggahan tetap berlaku sesudah disimpan. --}}
+<div class="mt-2 flex flex-wrap items-center gap-2"
+     x-init="$nextTick(() => { if ($refs.noTugas && $refs.noTugas.value.trim() !== '') { cekSurat.cek($refs.noTugas.value, true); } })">
     <button type="button" @click="cekSurat.cek($refs.noTugas.value)" :disabled="cekSurat.status === 'memuat'"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -20,7 +23,7 @@
         <span class="text-emerald-700" x-show="cekSurat.hasil && cekSurat.hasil.jumlah > 1"
               x-text="cekSurat.hasil ? '· sudah dipakai ' + cekSurat.hasil.jumlah + ' berkas usulan atau SPD' : ''"></span>
     </p>
-    <p class="mt-1 text-emerald-700">Unggah berkas lain hanya bila surat tugas Anda memang berbeda.</p>
+    <p class="mt-1 text-emerald-700">Kolom unggahnya dikunci supaya berkas rombongan tidak tertimpa berkas lain — kecuali bagi pengunggah aslinya. Ubah nomornya bila berkas Anda memang berbeda.</p>
 </div>
 
 <div x-show="cekSurat.status === 'belum'" x-cloak
@@ -49,7 +52,7 @@
                     this.status = null;
                     this.hasil = null;
                 },
-                async cek(nomor) {
+                async cek(nomor, diam = false) {
                     nomor = (nomor || '').trim();
                     if (nomor === '') {
                         this.status = 'galat';
@@ -68,9 +71,10 @@
                             throw new Error(String(jawaban.status));
                         }
                         this.hasil = await jawaban.json();
-                        this.status = this.hasil.ditemukan ? 'ada' : 'belum';
+                        // Pemeriksaan otomatis hanya menampilkan temuan.
+                        this.status = this.hasil.ditemukan ? 'ada' : (diam ? null : 'belum');
                     } catch (galat) {
-                        this.status = 'galat';
+                        this.status = diam ? null : 'galat';
                         this.hasil = { pesan: 'Pemeriksaan gagal. Coba lagi, atau unggah berkasnya langsung.' };
                     }
                 },

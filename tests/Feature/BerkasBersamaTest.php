@@ -145,6 +145,54 @@ class BerkasBersamaTest extends TestCase
         $this->assertSame(4_500_000.0, $tiket->harga);
     }
 
+    /** Selama nomornya sama, invoice rombongan terkunci: unggahan lain diabaikan. */
+    public function test_unggahan_invoice_diabaikan_selama_nomor_tiketnya_sama(): void
+    {
+        $this->simpan([
+            'section' => 'tiket', 'arah' => ArahTiket::Pergi->value,
+            'kota_asal' => 'Manado', 'kota_tujuan' => 'Medan', 'nomor_tiket' => '291326261025', 'kode_booking' => 'OG44WM',
+            'harga' => 4_500_000,
+            'boarding_pass' => UploadedFile::fake()->create('boarding-saya.pdf', 10, 'application/pdf'),
+            'invoice' => UploadedFile::fake()->createWithContent('lain.pdf', '%PDF invoice lain'),
+        ])->assertSessionHasNoErrors();
+
+        $invoice = $this->usulanRekan->tiket()->sole()->invoice;
+        $this->assertSame('%PDF invoice rombongan', $this->isiBerkas($invoice));
+        $this->assertStringStartsWith('dokumen/invoice-tiket/bersama-', $invoice);
+    }
+
+    /** Pengunggah asli tetap dapat mengganti invoicenya; salinan rekan tidak ikut berubah. */
+    public function test_pengunggah_asli_tetap_dapat_mengganti_invoicenya(): void
+    {
+        $isian = [
+            'section' => 'tiket', 'arah' => ArahTiket::Pergi->value,
+            'kota_asal' => 'Manado', 'kota_tujuan' => 'Medan', 'nomor_tiket' => '291326261025', 'kode_booking' => 'OG44WM',
+            'harga' => 4_500_000,
+        ];
+        $this->simpan($isian + ['boarding_pass' => UploadedFile::fake()->create('bp.pdf', 10, 'application/pdf')]);
+        $salinanRekan = $this->usulanRekan->tiket()->sole()->invoice;
+
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $this->usulanPerintis->id]);
+        $this->actingAs($this->perintis)
+            ->post(route('dokumen.store', $this->usulanPerintis), $isian + [
+                'invoice' => UploadedFile::fake()->createWithContent('perbaikan.pdf', '%PDF invoice perbaikan'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('%PDF invoice perbaikan', $this->isiBerkas($this->usulanPerintis->tiket()->sole()->invoice));
+        $this->assertSame('%PDF invoice rombongan', $this->isiBerkas($salinanRekan));
+    }
+
+    public function test_unggahan_bill_hotel_diabaikan_selama_nomor_transaksinya_sama(): void
+    {
+        $this->simpan([
+            'section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-77', 'bill_hotel_nominal' => 1_200_000,
+            'bill_hotel' => UploadedFile::fake()->createWithContent('bill-lain.pdf', '%PDF bill lain'),
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('%PDF bill rombongan', $this->isiBerkas($this->usulanRekan->dokumen()->latest('id')->first()->bill_hotel));
+    }
+
     public function test_nomor_tiket_baru_tetap_wajib_invoice(): void
     {
         $this->simpan([
@@ -199,6 +247,21 @@ class BerkasBersamaTest extends TestCase
             ->assertOk()
             ->assertSee('Cek Nomor Tiket')
             ->assertSee('Cek Nomor Transaksi')
-            ->assertSee('Cek Nomor Invoice');
+            ->assertSee('Cek Nomor Invoice')
+            // Kolom unggah dikunci selama berkas rombongannya ditemukan.
+            ->assertSee(':disabled="cekBerkas.mengunci(&#039;invoice&#039;)"', false)
+            ->assertSee(':disabled="cekBerkas.mengunci(&#039;bill_hotel&#039;)"', false)
+            ->assertSee(':disabled="cekBerkas.mengunci(&#039;penyelenggaraan_bukti&#039;)"', false);
+
+        // Pengunggah asli tidak dikunci atas berkasnya sendiri: hanya tiket
+        // pulang — yang belum berinvoice — yang masih dapat dikunci.
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $this->usulanPerintis->id]);
+        $isi = $this->actingAs($this->perintis)
+            ->get(route('dokumen.show', $this->usulanPerintis->no_usulan))
+            ->assertOk()
+            ->assertDontSee('cekBerkas.mengunci(&#039;bill_hotel&#039;)', false)
+            ->assertDontSee('cekBerkas.mengunci(&#039;penyelenggaraan_bukti&#039;)', false)
+            ->getContent();
+        $this->assertSame(1, substr_count($isi, ':disabled="cekBerkas.mengunci(&#039;invoice&#039;)"'));
     }
 }

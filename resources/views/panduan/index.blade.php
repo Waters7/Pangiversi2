@@ -301,7 +301,8 @@
                 secara manual, termasuk mengunggah surat tugas beserta nomornya. Ketik nomor surat tugasnya
                 lalu tekan <strong>Cek Nomor Surat Tugas</strong>: bila surat tugas bernomor sama sudah pernah
                 diunggah rekan seperjalanan — pada usulan maupun SPD — berkasnya dipakai otomatis; bila belum,
-                unggah berkasnya. Satu SPD hanya untuk
+                unggah berkasnya. Surat tugas yang ditemukan mengunci kolom unggahnya supaya tidak tertimpa berkas
+                lain. Satu SPD hanya untuk
                 satu usulan: SPD yang sudah dipakai usulan Anda tidak tampil lagi pada daftarnya, dan
                 muncul kembali setelah usulan itu dibatalkan atau dihapus.
                 <x-panduan-gambar berkas="usulan-02-dasar"
@@ -437,6 +438,8 @@
                     mengunggahnya, invoice tiket — beserta kota asal, kota tujuan, dan kode booking — bill hotel
                     dan kuitansinya, atau bukti bayar penyelenggaraan dipakai otomatis. Harga tiket, nominal, dan
                     boarding pass tetap diisi masing-masing; bila nomornya belum ada, unggah berkasnya seperti biasa.
+                    Begitu berkasnya ditemukan, kolom unggahnya <strong>dikunci</strong> supaya berkas rombongan tidak
+                    tertimpa berkas lain — kecuali bagi pengunggah aslinya, yang tetap dapat membetulkan berkasnya sendiri.
                 </span>
 
                 <div class="grid gap-3 sm:grid-cols-2">

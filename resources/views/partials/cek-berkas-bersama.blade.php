@@ -4,7 +4,10 @@
      bertanda x-ref sesuai $ref.
 
      Variabel: $ref (x-ref input nomor), $tombol (teks tombol). --}}
-<div class="mt-2 flex flex-wrap items-center gap-2">
+{{-- Nomor yang sudah terisi saat halaman dibuka diperiksa sendiri, supaya
+     kunci unggahan tetap berlaku sesudah disimpan. --}}
+<div class="mt-2 flex flex-wrap items-center gap-2"
+     x-init="$nextTick(() => { if ($refs.{{ $ref }} && $refs.{{ $ref }}.value.trim() !== '') { cekBerkas.cek($refs.{{ $ref }}.value, $refs, true); } })">
     <button type="button" @click="cekBerkas.cek($refs.{{ $ref }}.value, $refs)" :disabled="cekBerkas.status === 'memuat'"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -25,7 +28,7 @@
             </li>
         </template>
     </ul>
-    <p class="mt-1 text-emerald-700">Unggah berkas lain hanya bila milik Anda memang berbeda.</p>
+    <p class="mt-1 text-emerald-700">Kolom unggahnya dikunci supaya berkas rombongan tidak tertimpa berkas lain — kecuali bagi pengunggah aslinya. Ubah nomornya bila berkas Anda memang berbeda.</p>
 </div>
 
 <div x-show="cekBerkas.status === 'belum'" x-cloak
@@ -51,7 +54,12 @@
                     this.status = null;
                     this.hasil = null;
                 },
-                async cek(nomor, refs) {
+                // Kolom berkas yang dikunci karena berkas rombongannya ditemukan.
+                mengunci(kolom) {
+                    return this.status === 'ada'
+                        && ((this.hasil && this.hasil.berkas) || []).some((berkas) => berkas.kolom === kolom);
+                },
+                async cek(nomor, refs, diam = false) {
                     nomor = (nomor || '').trim();
                     if (nomor === '') {
                         this.status = 'galat';
@@ -70,9 +78,11 @@
                             throw new Error(String(jawaban.status));
                         }
                         this.hasil = await jawaban.json();
-                        this.status = this.hasil.ditemukan ? 'ada' : 'belum';
+                        // Pemeriksaan otomatis hanya menampilkan temuan dan tidak
+                        // menimpa isian yang sudah tersimpan.
+                        this.status = this.hasil.ditemukan ? 'ada' : (diam ? null : 'belum');
 
-                        if (this.hasil.ditemukan && this.hasil.data) {
+                        if (this.hasil.ditemukan && this.hasil.data && ! diam) {
                             Object.entries(isian).forEach(([kolom, ref]) => {
                                 if (refs[ref] && this.hasil.data[kolom]) {
                                     refs[ref].value = this.hasil.data[kolom];
@@ -80,7 +90,7 @@
                             });
                         }
                     } catch (galat) {
-                        this.status = 'galat';
+                        this.status = diam ? null : 'galat';
                         this.hasil = { pesan: 'Pemeriksaan gagal. Coba lagi, atau unggah berkasnya langsung.' };
                     }
                 },

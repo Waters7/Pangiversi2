@@ -7,6 +7,9 @@
     'terima' => '.pdf',
     'keterangan' => null,
     'terkunci' => false,
+    // Ekspresi Alpine: benar selama berkas rombongan yang ditemukan tombol Cek
+    // dipakai, sehingga kolom unggahnya dikunci.
+    'kunci' => null,
 ])
 
 {{-- Satu baris unggahan berkas pertanggungjawaban.
@@ -37,12 +40,19 @@
 
     @unless ($terkunci)
         <input type="file" name="{{ $nama }}" id="{{ $nama }}" accept="{{ $terima }}"
-               class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
+               @if ($kunci) :disabled="{{ $kunci }}" @endif
+               class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border disabled:opacity-50 disabled:cursor-not-allowed
                       file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200
                       {{ $errors->has($nama) ? 'border-red-500' : 'border-slate-200' }}">
 
         @if ($keterangan)
             <p class="text-xs text-slate-400 mt-1">{{ $keterangan }}</p>
+        @endif
+
+        @if ($kunci)
+            <p x-show="{{ $kunci }}" x-cloak class="text-xs font-semibold text-emerald-700 mt-1">
+                Terkunci — memakai berkas rombongan yang ditemukan tombol Cek.
+            </p>
         @endif
     @endunless
 

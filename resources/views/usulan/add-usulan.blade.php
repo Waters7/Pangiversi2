@@ -310,12 +310,16 @@
                                     Berkas Surat Tugas <span class="text-red-500" x-show="suratTugasWajib">*</span>
                                 </label>
                                 <input type="file" name="surat_tugas" id="surat_tugas" :required="suratTugasWajib"
+                                       :disabled="cekSurat.tersedia"
                                        accept=".pdf,.jpg,.jpeg,.png"
                                        data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
                                        class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
                                               file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200
                                               {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}">
                                 <p class="text-xs text-slate-400 mt-1">PDF, JPG, atau PNG — maks. 5 MB</p>
+                                <p x-show="cekSurat.tersedia" x-cloak class="text-xs font-semibold text-emerald-700 mt-1">
+                                    Terkunci — memakai surat tugas rombongan yang ditemukan tombol Cek.
+                                </p>
                                 <p class="file-error hidden text-red-500 text-xs mt-1"></p>
                                 @error('surat_tugas')
                                     <p class="text-red-500 text-xs mt-1">{{ $message }}</p>

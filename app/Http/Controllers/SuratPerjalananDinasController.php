@@ -17,6 +17,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PengaturanDokumen;
 use App\Services\PenomoranPerjadin;
+use App\Services\PustakaBerkasBersama;
 use App\Services\PustakaSuratTugas;
 use App\Services\RekamPenghapusan;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -110,8 +111,9 @@ class SuratPerjalananDinasController extends Controller
             $spd = SuratPerjalananDinas::create($this->kolomPokok($data) + [
                 'id_pembuat' => $request->user()->id,
                 'tanggal_surat' => today(),
-                'surat_tugas' => $this->simpanSuratTugas($request)
-                    ?? app(PustakaSuratTugas::class)->salinUntuk($data['no_tugas'] ?? null),
+                // Surat tugas bernomor sama yang sudah ada dipakai dan terkunci.
+                'surat_tugas' => app(PustakaSuratTugas::class)->salinUntuk($data['no_tugas'] ?? null)
+                    ?? $this->simpanSuratTugas($request),
             ]);
 
             $this->simpanPelaksana($spd, $data);
@@ -187,10 +189,16 @@ class SuratPerjalananDinasController extends Controller
         $bolehPengikut = $request->user()->punyaKemampuan(Kemampuan::MengisiPengikutSpd);
         $sudahDikabari = $spd->pelaksana()->pluck('id_user')->filter()->values()->all();
 
-        // Tanpa unggahan, SPD yang belum berberkas surat tugas memakai berkas
-        // bernomor sama yang sudah diunggah usulan atau SPD lain.
-        $suratTugasBaru = $this->simpanSuratTugas($request)
-            ?? ($spd->punyaSuratTugas() ? null : app(PustakaSuratTugas::class)->salinUntuk($data['no_tugas'] ?? null, kecualiSpd: $spd->id));
+        // Surat tugas bernomor sama milik usulan atau SPD lain mengunci
+        // unggahan — kecuali bagi pengunggah aslinya. SPD yang belum
+        // berberkas surat tugas memakai salinannya.
+        $pustaka = app(PustakaSuratTugas::class);
+        $suratTugasTerkunci = ! PustakaBerkasBersama::bolehDiganti($spd->surat_tugas)
+            && $pustaka->temukan($data['no_tugas'] ?? null, kecualiSpd: $spd->id) !== null;
+        $suratTugasBaru = match (true) {
+            $suratTugasTerkunci => $spd->punyaSuratTugas() ? null : $pustaka->salinUntuk($data['no_tugas'] ?? null, kecualiSpd: $spd->id),
+            default => $this->simpanSuratTugas($request),
+        };
 
         DB::transaction(function () use ($spd, $data, $bolehPengikut, $suratTugasBaru) {
             // Berkas lama dipertahankan bila tidak ada unggahan baru.

@@ -25,6 +25,28 @@ class PustakaBerkasBersama
     public const JENIS_PENYELENGGARAAN = 'penyelenggaraan';
 
     /**
+     * Awalan nama berkas salinan rombongan. Dengan tanda ini berkas asli
+     * dapat dibedakan dari salinannya: hanya pengunggah asli yang boleh
+     * mengganti berkasnya; salinan terkunci selama nomornya dipakai.
+     */
+    public const AWALAN_SALINAN = 'bersama-';
+
+    /** Apakah berkas ini salinan berkas rombongan. */
+    public static function salinan(?string $berkas): bool
+    {
+        return filled($berkas) && str_starts_with(basename((string) $berkas), self::AWALAN_SALINAN);
+    }
+
+    /**
+     * Berkas milik sendiri boleh diganti hanya bila berkas asli — bukan
+     * kosong dan bukan salinan berkas rombongan.
+     */
+    public static function bolehDiganti(?string $milikSendiri): bool
+    {
+        return filled($milikSendiri) && ! self::salinan($milikSendiri);
+    }
+
+    /**
      * Tiket bernomor sama milik usulan lain yang invoicenya tersimpan,
      * yang paling dulu dicatat.
      */
@@ -44,6 +66,8 @@ class PustakaBerkasBersama
             ->with('usulan.user')
             ->oldest('id')
             ->get()
+            // Berkas asli lebih dulu, baru salinannya.
+            ->sortBy(fn (TiketPerjadin $tiket) => [self::salinan($tiket->invoice) ? 1 : 0, $tiket->id])
             ->first(fn (TiketPerjadin $tiket) => $this->ada($tiket->invoice));
     }
 
@@ -72,7 +96,7 @@ class PustakaBerkasBersama
             return null;
         }
 
-        $tujuan = $folder.'/'.Str::uuid().'.'.pathinfo((string) $asal, PATHINFO_EXTENSION);
+        $tujuan = $folder.'/'.self::AWALAN_SALINAN.Str::uuid().'.'.pathinfo((string) $asal, PATHINFO_EXTENSION);
 
         return Storage::disk('public')->copy($asal, $tujuan) ? $tujuan : null;
     }
@@ -112,7 +136,7 @@ class PustakaBerkasBersama
                 'ditemukan' => true,
                 'pesan' => 'Tiket bernomor ini sudah dicatat'.$oleh.$rujukan.'. Invoice-nya dipakai otomatis, dan kota asal, kota tujuan, '
                     .'serta kode booking sudah diisikan. Harga tiket dan boarding pass tetap diisi masing-masing.',
-                'berkas' => [['label' => 'Invoice tiket', 'tautan' => route('berkas.lihat', $sumber->invoice)]],
+                'berkas' => [['kolom' => 'invoice', 'label' => 'Invoice tiket', 'tautan' => route('berkas.lihat', $sumber->invoice)]],
                 'data' => [
                     'kota_asal' => (string) $sumber->kota_asal,
                     'kota_tujuan' => (string) $sumber->kota_tujuan,
@@ -124,15 +148,15 @@ class PustakaBerkasBersama
                 'pesan' => 'Bill hotel atau kuitansi bernomor transaksi ini sudah diunggah'.$oleh.$rujukan.'. Berkasnya dipakai otomatis; '
                     .'nominal tetap diisi masing-masing.',
                 'berkas' => array_values(array_filter([
-                    $this->ada($sumber->bill_hotel) ? ['label' => 'Bill hotel', 'tautan' => route('berkas.lihat', $sumber->bill_hotel)] : null,
-                    $this->ada($sumber->kwintasi) ? ['label' => 'Kuitansi penyelenggara / hotel', 'tautan' => route('berkas.lihat', $sumber->kwintasi)] : null,
+                    $this->ada($sumber->bill_hotel) ? ['kolom' => 'bill_hotel', 'label' => 'Bill hotel', 'tautan' => route('berkas.lihat', $sumber->bill_hotel)] : null,
+                    $this->ada($sumber->kwintasi) ? ['kolom' => 'kwintasi', 'label' => 'Kuitansi penyelenggara / hotel', 'tautan' => route('berkas.lihat', $sumber->kwintasi)] : null,
                 ])),
             ],
             self::JENIS_PENYELENGGARAAN => [
                 'ditemukan' => true,
                 'pesan' => 'Bukti bayar bernomor invoice ini sudah diunggah'.$oleh.$rujukan.'. Berkasnya dipakai otomatis; '
                     .'nominal tetap diisi masing-masing.',
-                'berkas' => [['label' => 'Bukti bayar biaya penyelenggaraan', 'tautan' => route('berkas.lihat', $sumber->penyelenggaraan_bukti)]],
+                'berkas' => [['kolom' => 'penyelenggaraan_bukti', 'label' => 'Bukti bayar biaya penyelenggaraan', 'tautan' => route('berkas.lihat', $sumber->penyelenggaraan_bukti)]],
             ],
         };
     }
@@ -159,6 +183,8 @@ class PustakaBerkasBersama
             ->with('usulan.user')
             ->oldest('id')
             ->get()
+            // Berkas asli lebih dulu, baru salinannya.
+            ->sortBy(fn (Dokumen $dokumen) => [self::salinan($dokumen->{$kolomBerkas[0]}) ? 1 : 0, $dokumen->id])
             ->first(fn (Dokumen $dokumen) => collect($kolomBerkas)->contains(fn (string $kolom) => $this->ada($dokumen->{$kolom})));
     }
 

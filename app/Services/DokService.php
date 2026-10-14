@@ -70,8 +70,12 @@ class DokService
         $hargaDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::dariArah($arah));
 
         // Tiket bernomor sama yang invoicenya sudah diunggah rekan serombongan:
-        // invoice itu yang dipakai. Boarding pass tetap milik masing-masing.
-        $tiketRekan = $tiket->invoice ? null : $this->pustaka->tiket($request->input('nomor_tiket'), $usulan->id);
+        // invoice itu yang dipakai dan unggahannya terkunci supaya tidak
+        // tertimpa berkas lain — kecuali bagi pengunggah aslinya. Boarding
+        // pass tetap milik masing-masing.
+        $tiketRekan = PustakaBerkasBersama::bolehDiganti($tiket->invoice)
+            ? null
+            : $this->pustaka->tiket($request->input('nomor_tiket'), $usulan->id);
 
         $data = $request->validate([
             'kota_asal' => ['required', 'string', 'max:100'],
@@ -101,7 +105,9 @@ class DokService
         }
 
         foreach (['boarding_pass' => 'dokumen/boarding-pass', 'invoice' => 'dokumen/invoice-tiket'] as $kolom => $folder) {
-            if ($request->hasFile($kolom)) {
+            if ($kolom === 'invoice' && $tiketRekan) {
+                unset($data[$kolom]);
+            } elseif ($request->hasFile($kolom)) {
                 $this->hapusBerkasLama($tiket->{$kolom});
                 $data[$kolom] = $request->file($kolom)->store($folder, 'public');
             } else {
@@ -109,7 +115,7 @@ class DokService
             }
         }
 
-        if (! isset($data['invoice']) && $tiketRekan) {
+        if ($tiketRekan && blank($tiket->invoice)) {
             $data['invoice'] = $this->pustaka->salin($tiketRekan->invoice, 'dokumen/invoice-tiket');
         }
 
@@ -223,20 +229,21 @@ class DokService
         $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
 
         // Nomor transaksi hotel yang sama dengan milik rekan: bill hotel dan
-        // kuitansinya yang sudah diunggah dipakai, nominal tetap masing-masing.
+        // kuitansinya yang sudah diunggah dipakai, dan unggahannya terkunci
+        // kecuali bagi pengunggah aslinya. Nominal tetap masing-masing.
         $hotelRekan = $this->pustaka->hotel($request->input('bill_hotel_no_transaksi'), $usulan->id);
+        $terkunci = fn (string $kolom): bool => $this->pustaka->ada($hotelRekan?->{$kolom})
+            && ! PustakaBerkasBersama::bolehDiganti($dokumen?->{$kolom});
         $salinan = array_filter([
-            'bill_hotel' => ! $tanpaBillHotel && ! $request->hasFile('bill_hotel') && blank($dokumen?->bill_hotel)
-                && $this->pustaka->ada($hotelRekan?->bill_hotel) ? $hotelRekan->bill_hotel : null,
-            'kwintasi' => ! $request->hasFile('kwintasi') && blank($dokumen?->kwintasi)
-                && $this->pustaka->ada($hotelRekan?->kwintasi) ? $hotelRekan->kwintasi : null,
+            'bill_hotel' => ! $tanpaBillHotel && $terkunci('bill_hotel') && blank($dokumen?->bill_hotel) ? $hotelRekan->bill_hotel : null,
+            'kwintasi' => $terkunci('kwintasi') && blank($dokumen?->kwintasi) ? $hotelRekan->kwintasi : null,
         ]);
 
         $request->validate([
-            'bill_hotel' => [$tanpaBillHotel || isset($salinan['bill_hotel']) ? 'nullable' : $this->aturanBerkas($dokumen, 'bill_hotel'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'bill_hotel' => [$tanpaBillHotel || $terkunci('bill_hotel') ? 'nullable' : $this->aturanBerkas($dokumen, 'bill_hotel'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'bill_hotel_no_transaksi' => ['nullable', 'string', 'max:100'],
             'bill_hotel_nominal' => ['nullable', 'numeric', 'min:0'],
-            'kwintasi' => [isset($salinan['kwintasi']) ? 'nullable' : $this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'kwintasi' => [$terkunci('kwintasi') ? 'nullable' : $this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ], [
             'bill_hotel.required' => 'Unggah bill hotel.',
             'kwintasi.required' => 'Unggah kuitansi penyelenggara atau hotel.',
@@ -249,7 +256,9 @@ class DokService
         // Nominal penginapan yang ditetapkan tim keuangan mengunci kolom ini.
         $nominalDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan);
 
-        $this->simpanBerkas($request, $usulan, ['bill_hotel', 'kwintasi'], collect($salinan)
+        $kolomUnggah = array_values(array_filter(['bill_hotel', 'kwintasi'], fn (string $kolom) => ! $terkunci($kolom)));
+
+        $this->simpanBerkas($request, $usulan, $kolomUnggah, collect($salinan)
             ->map(fn (string $asal, string $kolom) => $this->pustaka->salin($asal, 'dokumen/'.$kolom))
             ->filter()
             ->all() + [
@@ -279,10 +288,12 @@ class DokService
         // buktinya tetap diunggah.
         $nominalDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penyelenggaraan);
 
-        // Nomor invoice yang sama dengan milik rekan: bukti bayarnya dipakai.
-        $buktiRekan = $ada && ! $request->hasFile('penyelenggaraan_bukti') && blank($dokumen?->penyelenggaraan_bukti)
+        // Nomor invoice yang sama dengan milik rekan: bukti bayarnya dipakai,
+        // dan unggahannya terkunci kecuali bagi pengunggah aslinya.
+        $buktiTerkunci = $ada && ! PustakaBerkasBersama::bolehDiganti($dokumen?->penyelenggaraan_bukti)
             ? $this->pustaka->penyelenggaraan($request->input('penyelenggaraan_invoice'), $usulan->id)?->penyelenggaraan_bukti
             : null;
+        $buktiRekan = $buktiTerkunci && blank($dokumen?->penyelenggaraan_bukti) ? $buktiTerkunci : null;
 
         $request->validate([
             'penyelenggaraan_ada' => ['required', 'in:0,1'],
@@ -290,7 +301,7 @@ class DokService
             'penyelenggaraan_nominal' => [$ada && ! $nominalDariKeuangan ? 'required' : 'nullable', 'numeric', 'min:1'],
             'penyelenggaraan_invoice' => ['nullable', 'string', 'max:100'],
             'penyelenggaraan_bukti' => [
-                $ada && ! $buktiRekan ? $this->aturanBerkas($dokumen, 'penyelenggaraan_bukti') : 'nullable',
+                $ada && ! $buktiTerkunci ? $this->aturanBerkas($dokumen, 'penyelenggaraan_bukti') : 'nullable',
                 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
             ],
         ], [
@@ -322,7 +333,7 @@ class DokService
             return true;
         }
 
-        return $this->simpanBerkas($request, $usulan, ['penyelenggaraan_bukti'], array_filter([
+        return $this->simpanBerkas($request, $usulan, $buktiTerkunci ? [] : ['penyelenggaraan_bukti'], array_filter([
             'penyelenggaraan_bukti' => $buktiRekan ? $this->pustaka->salin($buktiRekan, 'dokumen/penyelenggaraan_bukti') : null,
         ]) + [
             'penyelenggaraan_ada' => true,
