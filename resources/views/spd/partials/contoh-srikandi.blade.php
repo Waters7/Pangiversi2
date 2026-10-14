@@ -10,7 +10,7 @@
         'Hal dan Isi Ringkas' => 'Surat Perjalanan Dinas a.n. nama pelaksana, beserta maksud, tujuan, dan tanggal perjalanan dari SPD.',
         'File naskah' => 'PDF hasil Unduh PDF di PANGI (maks. 5 MB), tanpa diubah.',
         'Tujuan Utama' => 'Pelaksana perjalanan dinas.',
-        'Verifikator' => 'Kepala Sub Bagian Administrasi Umum, Wakil Direktur II, dan Sekretaris.',
+        'Verifikator' => 'Wakil Direktur II dan Sekretaris.',
         'Penandatangan' => 'PPK lebih dulu, lalu Direktur — urutannya menentukan kotak tanda tangan lembar pertama dan kedua.',
         'Tanda tangan' => 'Elektronik · Visual TTE QR Code · Ukuran QR 3x3, lalu tekan Simpan.',
     ] as $isian => $nilai)

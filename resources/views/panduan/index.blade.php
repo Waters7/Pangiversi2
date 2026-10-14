@@ -253,7 +253,7 @@
                 <x-panduan-gambar berkas="srikandi-01-isi-naskah"
                     judul="Registrasi Naskah Keluar di SRIKANDI: Tipe Form Naskah Keluar (1), dikirim melalui PPK (2), Naskah Dinas bersifat Biasa (3), klasifikasi (4) — pilih KU.02.05, Ambil Nomor (5), Hal dan Isi Ringkas (6), lalu berkas SPD (7)." />
                 <x-panduan-gambar berkas="srikandi-02-penandatangan"
-                    judul="Unggah PDF SPD (1), pelaksana sebagai tujuan utama (2), verifikator (3), penandatangan PPK lalu Direktur (4), tanda tangan elektronik ber-QR 3x3 (5), lalu Simpan (6)." />
+                    judul="Unggah PDF SPD (1), pelaksana sebagai tujuan utama (2), verifikator (3) — kini cukup Wakil Direktur II dan Sekretaris, penandatangan PPK lalu Direktur (4), tanda tangan elektronik ber-QR 3x3 (5), lalu Simpan (6)." />
             </x-panduan-langkah>
         </div>
     </div>

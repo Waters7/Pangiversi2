@@ -49,7 +49,10 @@ class AlurSrikandiSpdTest extends TestCase
             ->assertOk()
             ->assertSee('Lihat contoh pengisian Registrasi Naskah Keluar')
             ->assertSeeInOrder(['Tipe Form', 'Naskah Keluar', 'Klasifikasi', 'KU.02.05', 'Nomor Naskah', 'Ambil Nomor'])
-            ->assertSee('PPK lebih dulu, lalu Direktur');
+            ->assertSee('PPK lebih dulu, lalu Direktur')
+            // Verifikasi kini cukup Wakil Direktur II dan Sekretaris.
+            ->assertSeeInOrder(['Verifikator', 'Wakil Direktur II dan Sekretaris.'])
+            ->assertDontSee('Kepala Sub Bagian Administrasi Umum');
 
         $this->actingAs($this->pelaksana)
             ->get(route('panduan'))

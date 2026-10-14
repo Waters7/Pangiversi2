@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.36',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Verifikator SPD di SRIKANDI kini cukup Wakil Direktur II dan Sekretaris; Kepala Sub Bagian Administrasi Umum tidak lagi diikutkan pada contoh pengisian Registrasi Naskah Keluar.',
+                ],
+            ],
+            [
                 'versi' => '2.5.35',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

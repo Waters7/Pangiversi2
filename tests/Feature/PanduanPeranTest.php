@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.36')
+            ->assertSee('Verifikator SPD di SRIKANDI kini cukup Wakil Direktur II dan Sekretaris')
             ->assertSee('Versi 2.5.35')
             ->assertSee('Perbaikan: cetakan rincian biaya yang sudah ditandatangani bendahara')
             ->assertSee('Versi 2.5.34')
