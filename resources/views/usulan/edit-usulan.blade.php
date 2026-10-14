@@ -156,12 +156,13 @@
                         </div>
                         @endif
 
-                        {{-- Nomor Surat Tugas --}}
-                        <div>
+                        {{-- Nomor Surat Tugas. Bila usulan ini belum berberkas surat tugas,
+                             berkas bernomor sama yang sudah diunggah dipakai otomatis. --}}
+                        <div x-data="{ cekSurat: cekSuratTugas({{ Js::from(route('surat-tugas.cek')) }}, {{ Js::from(['kecuali_usulan' => $usulan->id]) }}) }">
                             <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Nomor Surat Tugas <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" name="no_tugas" id="no_tugas"
+                            <input type="text" name="no_tugas" id="no_tugas" x-ref="noTugas" @input="cekSurat.reset()"
                                    class="w-full px-4 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
                                    placeholder="cth: KP.01.02/F.XXX/123/2026"
                                    value="{{ old('no_tugas', $usulan->no_tugas) }}" required>
@@ -172,6 +173,7 @@
                                     {{ $message }}
                                 </p>
                             @enderror
+                            @include('partials.cek-surat-tugas')
                         </div>
 
                         {{-- Lokasi Tujuan + Instansi --}}

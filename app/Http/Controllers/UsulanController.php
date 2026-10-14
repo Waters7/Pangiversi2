@@ -21,6 +21,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PelacakUsulan;
 use App\Services\PenomoranPerjadin;
+use App\Services\PustakaSuratTugas;
 use App\Services\RekamPenghapusan;
 use App\Services\WorkflowUsulan;
 use Closure;
@@ -44,6 +45,7 @@ class UsulanController extends Controller
         private EkspresiTanggal $tanggal,
         private PelacakUsulan $pelacak,
         private RekamPenghapusan $penghapusan,
+        private PustakaSuratTugas $pustakaSuratTugas,
     ) {}
 
     /**
@@ -511,6 +513,10 @@ class UsulanController extends Controller
 
             if ($request->hasFile('surat_tugas')) {
                 $docData['surat_tugas'] = $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public');
+            } elseif (blank($dokumen->surat_tugas)
+                && ($salinan = $this->pustakaSuratTugas->salinUntuk($request->no_tugas, kecualiUsulan: $usulan->id))) {
+                // Usulan yang belum berberkas surat tugas memakai berkas bernomor sama.
+                $docData['surat_tugas'] = $salinan;
             }
 
             if ($request->hasFile('spd_ditandatangani')) {
@@ -578,6 +584,10 @@ class UsulanController extends Controller
             $spdTerpilih = null;
         }
 
+        // Surat tugas bernomor sama yang sudah pernah diunggah rekan
+        // seperjalanan dipakai ulang, jadi berkasnya tidak wajib diunggah.
+        $suratTugasTercatat = $this->pustakaSuratTugas->temukan($request->input('no_tugas') ?: $spdTerpilih?->no_tugas) !== null;
+
         $request->validate([
             'jenis' => ['nullable', Rule::enum(JenisPerjadin::class)],
             // SPD dari aplikasi tidak wajib: memilihnya hanya menyalin isian.
@@ -596,7 +606,7 @@ class UsulanController extends Controller
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'uraian' => ['nullable', 'string'],
-            'surat_tugas' => [$suratTugasDariSpd ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'surat_tugas' => [$suratTugasDariSpd || $suratTugasTercatat ? 'nullable' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'rundown' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
             'dokumen_pendukung' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ], [
@@ -655,9 +665,12 @@ class UsulanController extends Controller
     private function simpanBerkasPengajuan(Request $request, ?SuratPerjalananDinas $spd = null): array
     {
         return [
+            // Tanpa unggahan: surat tugas SPD terpilih, atau berkas bernomor
+            // sama yang sudah diunggah usulan maupun SPD lain.
             'surat_tugas' => $request->hasFile('surat_tugas')
                 ? $request->file('surat_tugas')->store('dokumen/surat-tugas', 'public')
-                : $this->salinSuratTugasDariSpd($spd),
+                : ($this->salinSuratTugasDariSpd($spd)
+                    ?? $this->pustakaSuratTugas->salinUntuk($request->input('no_tugas') ?: $spd?->no_tugas)),
             // Jalur supervisi tidak mengunggah SPD sama sekali.
             'spd_ditandatangani' => $request->hasFile('spd_ditandatangani')
                 ? $request->file('spd_ditandatangani')->store('dokumen/spd', 'public')

@@ -42,6 +42,7 @@ use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RincianSayaController;
 use App\Http\Controllers\StatusHasilController;
 use App\Http\Controllers\SuratPerjalananDinasController;
+use App\Http\Controllers\SuratTugasController;
 use App\Http\Controllers\TahunAnggaranController;
 use App\Http\Controllers\UnitKerjaController;
 use App\Http\Controllers\UsulanController;
@@ -66,6 +67,9 @@ Route::middleware('auth')->group(function () {
     // Berkas unggahan disajikan lewat aplikasi, bukan tautan simbolik
     // public/storage yang kerap tidak diikuti peladen hosting bersama.
     Route::get('/berkas/{path}', [BerkasController::class, 'lihat'])->name('berkas.lihat')->where('path', '.*');
+
+    // Tombol Cek pada isian nomor surat tugas: berkas bernomor sama dipakai ulang.
+    Route::get('/surat-tugas/cek', [SuratTugasController::class, 'cek'])->name('surat-tugas.cek');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -426,6 +430,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log');
         Route::get('/audit-log/penghapusan', [AuditLogController::class, 'penghapusan'])->name('audit-log.penghapusan');
         Route::get('/audit-log/nomor-surat', [NomorSuratController::class, 'index'])->name('audit-log.nomor-surat');
+        Route::get('/audit-log/surat-tugas', [SuratTugasController::class, 'index'])->name('audit-log.surat-tugas');
         Route::get('/audit-log/nomor-surat/ekspor', [NomorSuratController::class, 'ekspor'])->name('audit-log.nomor-surat.ekspor');
     });
 

@@ -190,8 +190,9 @@
                 PNG, maks. 5 MB) dan salin nomornya persis seperti tertulis. Tidak wajib, tetapi
                 bila diisi di sini, usulan perjadin yang memilih SPD ini
                 <strong>tidak perlu mengunggah dan menyalin nomornya lagi</strong> &mdash; keduanya
-                diambil dari SPD. Saat menyunting SPD, biarkan kolom berkasnya kosong untuk
-                mempertahankan yang sudah ada.
+                diambil dari SPD. Tombol <strong>Cek Nomor Surat Tugas</strong> memeriksa apakah nomornya
+                sudah pernah diunggah; bila sudah dan kolom berkasnya dibiarkan kosong, berkas itulah yang
+                dipakai. Saat menyunting SPD, biarkan kolom berkasnya kosong untuk mempertahankan yang sudah ada.
                 <x-panduan-gambar berkas="spd-05-surat-tugas" ukuran="sedang"
                     judul="Nomor dan berkas surat tugas (1), lalu tombol Pratinjau (2) dan Simpan (3)." />
             </x-panduan-langkah>
@@ -297,7 +298,10 @@
                 SPD sengaja tidak ikut terisi, karena yang diisi nomor naskah dari SRIKANDI. Bila SPD itu sudah melampirkan surat tugas, berkas dan nomor
                 surat tugasnya ikut diambil — <strong>tidak perlu diunggah maupun disalin
                 lagi</strong>. Bila tidak ada SPD dari aplikasi, lewati dan isi data perjalanan
-                secara manual, termasuk mengunggah surat tugas beserta nomornya. Satu SPD hanya untuk
+                secara manual, termasuk mengunggah surat tugas beserta nomornya. Ketik nomor surat tugasnya
+                lalu tekan <strong>Cek Nomor Surat Tugas</strong>: bila surat tugas bernomor sama sudah pernah
+                diunggah rekan seperjalanan — pada usulan maupun SPD — berkasnya dipakai otomatis; bila belum,
+                unggah berkasnya. Satu SPD hanya untuk
                 satu usulan: SPD yang sudah dipakai usulan Anda tidak tampil lagi pada daftarnya, dan
                 muncul kembali setelah usulan itu dibatalkan atau dihapus.
                 <x-panduan-gambar berkas="usulan-02-dasar"
@@ -1113,7 +1117,9 @@
                     nomor, pelaksana, tujuan, tanggal — serta siapa yang menghapus, kapan, dan dari
                     alamat mana. Submenu <strong>Nomor Surat</strong> mendaftar nomor SPD dan surat tugas
                     per bulan dan tahun, dan dapat diekspor ke Excel untuk dicocokkan arsiparis dengan
-                    buku agenda surat keluar.
+                    buku agenda surat keluar. Submenu <strong>Surat Tugas &amp; Dokumen</strong> mendaftar tiap
+                    nomor surat tugas beserta berkasnya, siapa yang pertama mengunggah, dan usulan serta SPD
+                    yang memakainya.
                 </x-panduan-langkah>
             @endif
         </div>

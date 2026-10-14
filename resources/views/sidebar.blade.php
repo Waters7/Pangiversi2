@@ -696,6 +696,7 @@
             ['route' => 'audit-log', 'label' => 'Semua Aktivitas'],
             ['route' => 'audit-log.penghapusan', 'label' => 'Penghapusan Usulan & SPD'],
             ['route' => 'audit-log.nomor-surat', 'label' => 'Nomor Surat'],
+            ['route' => 'audit-log.surat-tugas', 'label' => 'Surat Tugas & Dokumen'],
           ] as $menu)
             <a href="{{ route($menu['route']) }}"
               class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all

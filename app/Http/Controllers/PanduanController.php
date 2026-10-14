@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.37',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Tombol Cek Nomor Surat Tugas pada formulir usulan perjadin dan SPD: bila surat tugas bernomor sama sudah pernah diunggah pengguna lain, berkasnya dipakai otomatis tanpa unggah ulang; bila belum, berkasnya tetap wajib diunggah.',
+                    'Jejak Audit → Surat Tugas & Dokumen: daftar tiap nomor surat tugas beserta berkasnya, pengunggah pertama, serta usulan dan SPD yang memakainya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.36',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

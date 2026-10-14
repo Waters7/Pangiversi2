@@ -113,6 +113,9 @@
             },
             // Berkas surat tugas diambil dari SPD terpilih bila SPD itu melampirkannya.
             get suratTugasDariSpd() { return !! (this.spd && this.spd.surat_tugas); },
+            // Nomor yang sudah pernah diunggah memakai berkas yang ada.
+            cekSurat: cekSuratTugas({{ Js::from(route('surat-tugas.cek')) }}),
+            get suratTugasWajib() { return ! this.suratTugasDariSpd && ! this.cekSurat.tersedia; },
           }">
         @csrf
         <input type="hidden" name="jenis" value="{{ $jenis->value }}">
@@ -264,8 +267,9 @@
                                 <div>
                                     <p class="text-sm font-bold text-teal-900">Surat Tugas</p>
                                     <p class="text-xs text-teal-700 leading-relaxed mt-0.5">
-                                        Unggah berkas surat tugas, lalu salin nomornya
-                                        persis seperti tertulis pada dokumen.
+                                        Isi nomor surat tugas lalu tekan <strong>Cek</strong>. Bila surat tugas
+                                        bernomor sama sudah pernah diunggah, berkasnya dipakai otomatis; bila
+                                        belum, unggah berkasnya.
                                     </p>
                                 </div>
                             </div>
@@ -277,42 +281,44 @@
                                 Unggah di bawah hanya bila ingin menggantinya.
                             </div>
 
-                            {{-- 1. Unggah berkas --}}
-                            <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Berkas Surat Tugas <span class="text-red-500" x-show="! suratTugasDariSpd">*</span>
+                            {{-- 1. Nomor surat, disalin dari dokumen, lalu diperiksa --}}
+                            <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                Nomor Surat Tugas <span class="text-red-500">*</span>
                             </label>
-                            <input type="file" name="surat_tugas" id="surat_tugas" :required="! suratTugasDariSpd"
-                                   accept=".pdf,.jpg,.jpeg,.png"
-                                   data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
-                                   class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
-                                          file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200
-                                          {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}">
-                            <p class="text-xs text-slate-400 mt-1">PDF, JPG, atau PNG — maks. 5 MB</p>
-                            <p class="file-error hidden text-red-500 text-xs mt-1"></p>
-                            @error('surat_tugas')
-                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+
+                            <input type="text" name="no_tugas" id="no_tugas" required x-ref="noTugas"
+                                   value="{{ old('no_tugas') }}" @input="cekSurat.reset()"
+                                   class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
+                                   placeholder="cth: KP.01.02/F.XXX/1557/2026">
+
+                            <p class="text-xs text-slate-400 mt-1.5">
+                                Salin persis seperti tertulis pada surat, termasuk garis miring dan tahunnya.
+                            </p>
+
+                            @error('no_tugas')
+                                <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    {{ $message }}
+                                </p>
                             @enderror
 
-                            {{-- 2. Nomor surat, disalin dari dokumen --}}
+                            @include('partials.cek-surat-tugas')
+
+                            {{-- 2. Unggah berkas — tidak diminta bila nomornya sudah pernah diunggah --}}
                             <div class="mt-4 pt-4 border-t border-teal-100">
-                                <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
-                                    Nomor Surat Tugas <span class="text-red-500">*</span>
+                                <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Berkas Surat Tugas <span class="text-red-500" x-show="suratTugasWajib">*</span>
                                 </label>
-
-                                <input type="text" name="no_tugas" id="no_tugas" required x-ref="noTugas"
-                                       value="{{ old('no_tugas') }}"
-                                       class="w-full px-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }}"
-                                       placeholder="cth: KP.01.02/F.XXX/1557/2026">
-
-                                <p class="text-xs text-slate-400 mt-1.5">
-                                    Salin persis seperti tertulis pada surat, termasuk garis miring dan tahunnya.
-                                </p>
-
-                                @error('no_tugas')
-                                    <p class="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                        {{ $message }}
-                                    </p>
+                                <input type="file" name="surat_tugas" id="surat_tugas" :required="suratTugasWajib"
+                                       accept=".pdf,.jpg,.jpeg,.png"
+                                       data-max-mb="5" data-allowed="pdf,jpg,jpeg,png"
+                                       class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border
+                                              file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200
+                                              {{ $errors->has('surat_tugas') ? 'border-red-500' : 'border-slate-200' }}">
+                                <p class="text-xs text-slate-400 mt-1">PDF, JPG, atau PNG — maks. 5 MB</p>
+                                <p class="file-error hidden text-red-500 text-xs mt-1"></p>
+                                @error('surat_tugas')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>

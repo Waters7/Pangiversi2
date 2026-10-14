@@ -321,14 +321,19 @@
                     Dilampirkan sekali di sini; usulan perjadin yang mengacu pada SPD ini tidak perlu mengunggah dan menyalin nomornya lagi.
                 </p>
             </div>
-            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {{-- Nomor yang sudah pernah diunggah — pada usulan maupun SPD lain —
+                 memakai berkas yang ada bila SPD ini belum berberkas surat tugas. --}}
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+                 x-data="{ cekSurat: cekSuratTugas({{ Js::from(route('surat-tugas.cek')) }}, {{ Js::from($ubah ? ['kecuali_spd' => $spd->id] : []) }}) }">
                 <div>
                     <label for="no_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">Nomor Surat Tugas</label>
                     <input type="text" name="no_tugas" id="no_tugas" value="{{ old('no_tugas', $ubah ? $spd->no_tugas : '') }}"
+                           x-ref="noTugas" @input="cekSurat.reset()"
                            placeholder="cth: KP.01.02/F.XXX/1557/2026"
                            class="w-full px-4 py-2.5 rounded-xl text-sm border {{ $errors->has('no_tugas') ? 'border-red-500' : 'border-slate-200' }} focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                     <p class="text-xs text-slate-400 mt-1">Salin persis seperti tertulis pada surat, termasuk garis miring dan tahunnya.</p>
                     @error('no_tugas') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    @include('partials.cek-surat-tugas')
                 </div>
                 <div>
                     <label for="surat_tugas" class="block text-sm font-semibold text-slate-700 mb-1.5">Berkas Surat Tugas</label>

@@ -147,9 +147,10 @@ class PenomoranPerjadinTest extends TestCase
         $this->assertNotFalse($posisiNomor);
         $this->assertNotFalse($posisiLokasi);
 
-        // Berkasnya diunggah lebih dulu, baru nomornya disalin dari dokumen itu.
-        $this->assertLessThan($posisiNomor, $posisiBerkas, 'Berkas surat tugas harus diminta sebelum nomornya.');
-        $this->assertLessThan($posisiLokasi, $posisiNomor, 'Surat tugas harus berada di atas data perjalanan.');
+        // Nomornya diisi dan dicek lebih dulu: bila surat tugas bernomor sama
+        // sudah pernah diunggah, berkasnya tidak diminta lagi.
+        $this->assertLessThan($posisiBerkas, $posisiNomor, 'Nomor surat tugas harus diminta sebelum berkasnya.');
+        $this->assertLessThan($posisiLokasi, $posisiBerkas, 'Surat tugas harus berada di atas data perjalanan.');
     }
 
     public function test_formulir_menawarkan_jenis_kegiatan_dari_master_data(): void

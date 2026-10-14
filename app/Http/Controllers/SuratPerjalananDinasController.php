@@ -17,6 +17,7 @@ use App\Services\EkspresiTanggal;
 use App\Services\NotifikasiService;
 use App\Services\PengaturanDokumen;
 use App\Services\PenomoranPerjadin;
+use App\Services\PustakaSuratTugas;
 use App\Services\RekamPenghapusan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -109,7 +110,8 @@ class SuratPerjalananDinasController extends Controller
             $spd = SuratPerjalananDinas::create($this->kolomPokok($data) + [
                 'id_pembuat' => $request->user()->id,
                 'tanggal_surat' => today(),
-                'surat_tugas' => $this->simpanSuratTugas($request),
+                'surat_tugas' => $this->simpanSuratTugas($request)
+                    ?? app(PustakaSuratTugas::class)->salinUntuk($data['no_tugas'] ?? null),
             ]);
 
             $this->simpanPelaksana($spd, $data);
@@ -185,7 +187,10 @@ class SuratPerjalananDinasController extends Controller
         $bolehPengikut = $request->user()->punyaKemampuan(Kemampuan::MengisiPengikutSpd);
         $sudahDikabari = $spd->pelaksana()->pluck('id_user')->filter()->values()->all();
 
-        $suratTugasBaru = $this->simpanSuratTugas($request);
+        // Tanpa unggahan, SPD yang belum berberkas surat tugas memakai berkas
+        // bernomor sama yang sudah diunggah usulan atau SPD lain.
+        $suratTugasBaru = $this->simpanSuratTugas($request)
+            ?? ($spd->punyaSuratTugas() ? null : app(PustakaSuratTugas::class)->salinUntuk($data['no_tugas'] ?? null, kecualiSpd: $spd->id));
 
         DB::transaction(function () use ($spd, $data, $bolehPengikut, $suratTugasBaru) {
             // Berkas lama dipertahankan bila tidak ada unggahan baru.
