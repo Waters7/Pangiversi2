@@ -58,8 +58,13 @@ enum BerkasLpj: string
     }
 
     /**
-     * Susunan bawaan tiap jalur — sama persis dengan aturan sebelum
-     * pengaturan ini ada, sehingga pemasangan lama tidak berubah perilakunya.
+     * Susunan bawaan tiap jalur, dipakai selama administrator belum
+     * mengaturnya sendiri.
+     *
+     * Nota transport hanya ditagih pada perjalanan luar kota lintas pulau.
+     * Jalur lain tidak memiliki transport lokal, jadi daftar pengeluaran
+     * riilnya kosong — tidak perlu ditandatangani — dan berkasnya langsung
+     * dapat masuk daftar nominatif.
      *
      * @return list<self>
      */
@@ -69,13 +74,16 @@ enum BerkasLpj: string
             JenisPerjadin::LuarKota => self::cases(),
             // Dalam satu provinsi umumnya lewat jalan darat, jadi tiket tidak
             // ditagih; administrator dapat menambahkannya bila perlu.
-            JenisPerjadin::LuarKotaDalamProvinsi => array_values(array_filter(self::cases(), fn (self $berkas) => $berkas !== self::Tiket)),
+            JenisPerjadin::LuarKotaDalamProvinsi => array_values(array_filter(
+                self::cases(),
+                fn (self $berkas) => ! in_array($berkas, [self::Tiket, self::NotaTransport], true),
+            )),
             // Perjalanan dalam kota tidak memakai SPD, jadi SPPD pun tidak ditagih.
-            JenisPerjadin::DalamKota => [self::NotaTransport, self::Penyelenggaraan, self::Laporan],
+            JenisPerjadin::DalamKota => [self::Penyelenggaraan, self::Laporan],
             // Supervisi di dalam kota berdasar surat tugas saja — SPPD-nya
             // gugur sendiri lewat untukUsulan(), jadi yang tersisa di sini
             // berlaku untuk supervisi ke luar kota.
-            JenisPerjadin::Supervisi => [self::Sppd, self::NotaTransport, self::Penyelenggaraan, self::Laporan],
+            JenisPerjadin::Supervisi => [self::Sppd, self::Penyelenggaraan, self::Laporan],
         };
     }
 

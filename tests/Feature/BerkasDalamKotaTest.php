@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BerkasLpj;
+use App\Enums\JenisPerjadin;
 use App\Enums\PeranPengguna;
 use App\Enums\RuasTransport;
 use App\Enums\StatusUsulan;
@@ -11,6 +13,7 @@ use App\Models\KategoriPerjadin;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\PenagihDokumen;
+use App\Services\PengaturanBerkasLpj;
 use App\Services\SinkronBiayaDokumen;
 use Database\Seeders\KategoriPerjadinSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,6 +76,14 @@ class BerkasDalamKotaTest extends TestCase
     private function penagih(): PenagihDokumen
     {
         return app(PenagihDokumen::class);
+    }
+
+    /** Administrator menagih nota transport juga pada jalur dalam kota. */
+    private function tagihNotaDalamKota(): void
+    {
+        app(PengaturanBerkasLpj::class)->simpan(JenisPerjadin::DalamKota, [
+            BerkasLpj::NotaTransport->value, BerkasLpj::Penyelenggaraan->value, BerkasLpj::Laporan->value,
+        ]);
     }
 
     // ── Master data ──
@@ -144,12 +155,23 @@ class BerkasDalamKotaTest extends TestCase
         $this->assertContains('Laporan perjalanan dinas', $kurang);
     }
 
+    /** Perjalanan dalam kota tidak ditagih nota transport sama sekali — cukup laporannya. */
+    public function test_dalam_kota_lengkap_tanpa_nota_transport(): void
+    {
+        $usulan = $this->usulan(dalamKota: true);
+        $usulan->laporan()->create(['diselesaikan_at' => now()]);
+
+        $this->assertTrue($this->penagih()->lengkap($usulan->fresh()));
+    }
+
     /**
-     * Transport lokal tidak diwajibkan — yang dijemput panitia memang tidak
+     * Bila administrator menagih nota pada jalur dalam kota, transport lokal
+     * tetap tidak diwajibkan — yang dijemput panitia memang tidak
      * mengeluarkannya. Hanya nominal tanpa nota yang ditagih.
      */
     public function test_transport_lokal_kosong_tidak_ditagih(): void
     {
+        $this->tagihNotaDalamKota();
         $usulan = $this->usulan(dalamKota: true);
         Dokumen::updateOrCreate(['id_usulan' => $usulan->id], ['sppd' => 'demo/sppd.pdf']);
         $usulan->laporan()->create(['diselesaikan_at' => now()]);
@@ -183,10 +205,7 @@ class BerkasDalamKotaTest extends TestCase
 
         $label = collect($this->penagih()->checklist($usulan))->pluck('label');
 
-        $this->assertEqualsCanonicalizing(
-            ['Nota Transportasi Lokal', 'Laporan Perjalanan Dinas'],
-            $label->all()
-        );
+        $this->assertEqualsCanonicalizing(['Laporan Perjalanan Dinas'], $label->all());
     }
 
     public function test_checklist_luar_kota_memuat_seluruhnya(): void
@@ -210,9 +229,21 @@ class BerkasDalamKotaTest extends TestCase
             ->get(route('dokumen.show', $usulan->no_usulan))
             ->assertOk()
             ->assertSee('Perjalanan dinas dalam kota')
-            ->assertSee('3. Nota / Bukti Biaya Transportasi')
+            ->assertDontSee('3. Nota / Bukti Biaya Transportasi')
             ->assertDontSee('2a. Tiket Pergi')
             ->assertDontSee('4. Akomodasi');
+    }
+
+    /** Nota bernominal yang telanjur tersimpan tetap tampil supaya dapat diperiksa atau dihapus. */
+    public function test_nota_lama_dalam_kota_tetap_tampil(): void
+    {
+        $usulan = $this->usulan(dalamKota: true);
+        $usulan->notaTransport()->create(['urutan' => RuasTransport::Lokal->value, 'nominal' => 50_000, 'bukti' => 'demo/nota.pdf']);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $usulan->no_usulan))
+            ->assertOk()
+            ->assertSee('3. Nota / Bukti Biaya Transportasi');
     }
 
     /**
@@ -221,6 +252,7 @@ class BerkasDalamKotaTest extends TestCase
      */
     public function test_formulir_dalam_kota_hanya_satu_baris_transport_lokal(): void
     {
+        $this->tagihNotaDalamKota();
         $usulan = $this->usulan(dalamKota: true);
 
         $this->actingAs($this->pelaksana)
@@ -320,6 +352,7 @@ class BerkasDalamKotaTest extends TestCase
 
     public function test_checklist_dan_daftar_riil_menyebut_transport_lokal(): void
     {
+        $this->tagihNotaDalamKota();
         $usulan = $this->usulan(dalamKota: true);
         $this->isiBerkasDalamKota($usulan);
 

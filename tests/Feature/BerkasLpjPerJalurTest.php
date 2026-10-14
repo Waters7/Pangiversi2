@@ -65,25 +65,26 @@ class BerkasLpjPerJalurTest extends TestCase
 
     // ── Bawaan ──
 
-    public function test_bawaan_tiap_jalur_sama_dengan_aturan_sebelumnya(): void
+    /** Nota transport hanya ditagih pada perjalanan luar kota lintas pulau. */
+    public function test_bawaan_tiap_jalur(): void
     {
         $this->assertSame(BerkasLpj::cases(), $this->atur()->untuk(JenisPerjadin::LuarKota));
 
-        // Luar kota dalam satu provinsi umumnya lewat darat: tanpa tiket.
+        // Luar kota dalam satu provinsi umumnya lewat darat: tanpa tiket dan nota transport.
         $this->assertSame(
-            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::BillHotel, BerkasLpj::Kuitansi, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Sppd, BerkasLpj::BillHotel, BerkasLpj::Kuitansi, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::LuarKotaDalamProvinsi),
         );
 
         // Dalam kota tidak memakai SPD, jadi SPPD tidak ditagih.
         $this->assertSame(
-            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
 
         // Supervisi menagih SPPD hanya pada usulan yang menerbitkannya.
         $this->assertSame(
-            [BerkasLpj::Sppd, BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Sppd, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::Supervisi),
         );
 
@@ -96,6 +97,7 @@ class BerkasLpjPerJalurTest extends TestCase
     {
         $luar = $this->labelChecklist($this->usulan('LK-NFB', 'luar-kota'));
         $this->assertContains('Tiket Pergi', $luar);
+        $this->assertContains('Nota Transportasi Lokal', $luar);
         $this->assertContains('Bill Hotel', $luar);
         $this->assertContains('Kuitansi penyelenggara / hotel', $luar);
 
@@ -103,17 +105,22 @@ class BerkasLpjPerJalurTest extends TestCase
         $this->assertNotContains('SPPD Bertanda Tangan', $dalam);
         $this->assertNotContains('Tiket Pergi', $dalam);
         $this->assertNotContains('Bill Hotel', $dalam);
+        $this->assertNotContains('Nota Transportasi Lokal', $dalam);
+
+        $provinsi = $this->labelChecklist($this->usulan('LK-NFB', 'luar-kota-provinsi'));
+        $this->assertContains('Bill Hotel', $provinsi);
+        $this->assertNotContains('Nota Transportasi Lokal', $provinsi);
 
         // Supervisi ke luar kota menerbitkan SPD, jadi SPPD-nya ikut ditagih.
         $supervisiLuar = $this->labelChecklist($this->usulan('SV-LK', 'supervisi'));
         $this->assertContains('SPPD Bertanda Tangan', $supervisiLuar);
-        $this->assertContains('Nota Transportasi Lokal', $supervisiLuar);
+        $this->assertNotContains('Nota Transportasi Lokal', $supervisiLuar);
         $this->assertContains('Laporan Perjalanan Dinas', $supervisiLuar);
 
         // Yang di dalam kota tidak memakai SPD sama sekali.
         $supervisiDalam = $this->labelChecklist($this->usulan('SV-DK', 'supervisi'));
         $this->assertNotContains('SPPD Bertanda Tangan', $supervisiDalam);
-        $this->assertContains('Nota Transportasi Lokal', $supervisiDalam);
+        $this->assertNotContains('Nota Transportasi Lokal', $supervisiDalam);
         $this->assertContains('Laporan Perjalanan Dinas', $supervisiDalam);
     }
 
@@ -192,7 +199,7 @@ class BerkasLpjPerJalurTest extends TestCase
 
         // Jalur lain tidak ikut berubah.
         $this->assertSame(
-            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
     }
@@ -227,10 +234,28 @@ class BerkasLpjPerJalurTest extends TestCase
 
         app(PengaturanBerkasLpj::class)->lupakan();
         $this->assertSame(
-            [BerkasLpj::NotaTransport, BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
+            [BerkasLpj::Penyelenggaraan, BerkasLpj::Laporan],
             $this->atur()->untuk(JenisPerjadin::DalamKota),
         );
         $this->assertFalse($this->atur()->sudahDiatur(JenisPerjadin::DalamKota));
+    }
+
+    /** Jalur yang sudah diatur administrator dilepaskan dari nota transport, kecuali lintas pulau. */
+    public function test_migrasi_melepas_nota_transport_dari_pengaturan_selain_lintas_pulau(): void
+    {
+        $this->atur()->simpan(JenisPerjadin::DalamKota, ['nota_transport', 'laporan']);
+        $this->atur()->simpan(JenisPerjadin::LuarKotaDalamProvinsi, ['sppd', 'nota_transport', 'bill_hotel']);
+        $this->atur()->simpan(JenisPerjadin::LuarKota, ['sppd', 'nota_transport']);
+
+        $migrasi = require database_path('migrations/2026_10_14_045039_nota_transport_hanya_untuk_luar_kota_lintas_pulau.php');
+        $migrasi->up();
+        $this->atur()->lupakan();
+
+        $this->assertSame([BerkasLpj::Laporan], $this->atur()->untuk(JenisPerjadin::DalamKota));
+        $this->assertSame([BerkasLpj::Sppd, BerkasLpj::BillHotel], $this->atur()->untuk(JenisPerjadin::LuarKotaDalamProvinsi));
+        $this->assertSame([BerkasLpj::Sppd, BerkasLpj::NotaTransport], $this->atur()->untuk(JenisPerjadin::LuarKota));
+        // Jalur yang belum diatur tetap memakai bawaan.
+        $this->assertFalse($this->atur()->sudahDiatur(JenisPerjadin::Supervisi));
     }
 
     // ── Formulir dokumen ikut menyesuaikan ──

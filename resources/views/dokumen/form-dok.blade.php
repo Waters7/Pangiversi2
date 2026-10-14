@@ -57,8 +57,9 @@
                 <p class="text-sm font-bold text-teal-800">Perjalanan dinas dalam kota</p>
                 <p class="text-xs text-teal-700 mt-0.5 leading-relaxed">
                     Kategori <strong>{{ $usulan->kategoriPerjadin?->nama }}</strong> tidak memakai SPD, tiket,
-                    penginapan, maupun kuitansi. Yang perlu Anda lengkapi hanya nota transportasi lokal
-                    (bila ada biaya) dan laporan perjalanan dinas.
+                    penginapan, maupun kuitansi. Yang perlu Anda lengkapi hanya
+                    {{ $minta(\App\Enums\BerkasLpj::NotaTransport) ? 'nota transportasi lokal (bila ada biaya)' : 'bukti biaya penyelenggaraan (bila ada)' }}
+                    dan laporan perjalanan dinas.
                 </p>
             </div>
         </div>
@@ -328,7 +329,11 @@
             @endforeach
             @endif
 
-            {{-- ══════════ 3. NOTA TRANSPORTASI LOKAL ══════════ --}}
+            {{-- ══════════ 3. NOTA TRANSPORTASI LOKAL ══════════
+                 Hanya bila jalurnya menagih nota transport — bawaannya luar kota
+                 lintas pulau. Nota bernominal yang telanjur tersimpan tetap
+                 ditampilkan supaya masih dapat diperiksa atau dihapus. --}}
+            @if ($minta(\App\Enums\BerkasLpj::NotaTransport) || $nota->contains(fn ($baris) => (float) $baris->nominal > 0))
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="nota">
@@ -445,6 +450,7 @@
                     </div>
                 </div>
             </form>
+            @endif
 
             @if ($minta(\App\Enums\BerkasLpj::BillHotel) || $minta(\App\Enums\BerkasLpj::Kuitansi))
             {{-- ══════════ 4. AKOMODASI & BUKTI BIAYA ══════════ --}}

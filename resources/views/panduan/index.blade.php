@@ -438,7 +438,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Dalam kota</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['Nota transport lokal — bila ada biaya', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -452,7 +452,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota dalam satu provinsi</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -502,10 +502,12 @@
                 <div class="text-xs text-red-800 leading-relaxed">
                     <p class="font-bold mb-1">Nota menentukan penggantian biaya</p>
                     <p>
-                        Nota transport lokal hanya diminta untuk ruas yang <strong>bernominal</strong>;
-                        ruas tanpa biaya dikosongkan, dan perjalanan tanpa transport lokal sama sekali tetap
-                        dapat selesai. Perjalanan dalam kota cukup satu baris transport lokal. Nominal tanpa
-                        nota <strong>tidak dapat diganti</strong> — simpan seluruh bukti sejak hari keberangkatan.
+                        Nota transport lokal hanya diminta pada perjalanan <strong>luar kota lintas pulau</strong>,
+                        dan hanya untuk ruas yang <strong>bernominal</strong>; ruas tanpa biaya dikosongkan, dan
+                        perjalanan tanpa transport lokal sama sekali tetap dapat selesai. Jalur lain tidak memiliki
+                        transport lokal: daftar pengeluaran riilnya kosong, tidak perlu ditandatangani, dan berkasnya
+                        langsung dapat masuk daftar nominatif. Nominal tanpa nota <strong>tidak dapat diganti</strong>
+                        — simpan seluruh bukti sejak hari keberangkatan.
                     </p>
                     <p class="mt-2">
                         <strong>Biaya penyelenggaraan</strong> (kontribusi atau registrasi kegiatan) ditanya

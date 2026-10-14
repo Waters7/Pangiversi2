@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.38',
+                'tanggal' => '14 Oktober 2026',
+                'butir' => [
+                    'Nota / bukti biaya transportasi kini hanya diminta pada perjalanan luar kota lintas pulau. Jalur dalam kota, luar kota dalam satu provinsi, dan supervisi tidak lagi menampilkan bagian nota pada dokumen pertanggungjawaban; daftar pengeluaran riilnya kosong dan berkasnya langsung dapat masuk daftar nominatif. Pengaturan berkas jalur-jalur itu yang sudah pernah disimpan ikut dilepaskan dari nota transport.',
+                ],
+            ],
+            [
                 'versi' => '2.5.37',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [
