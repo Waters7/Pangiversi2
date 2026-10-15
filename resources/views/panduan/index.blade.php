@@ -492,6 +492,10 @@
                 tempat dan uraian kegiatan tiap hari, hasil yang dicapai, kesimpulan, dan rencana
                 tindak lanjut. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
                 laporan boleh dicicil. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
+                Bila Anda sudah menyusun laporan lengkap — misalnya berfoto — unggah pada kolom
+                <strong>Berkas laporan</strong> (opsional; PDF, Word, JPG, atau PNG, maks. 10 MB). Isian di
+                formulir tetap diisi karena itulah yang dikonfirmasi pimpinan; berkasnya ikut terbuka bagi
+                pimpinan dan tim keuangan.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Simpan dan kirim ke pimpinan" :terakhir="true">

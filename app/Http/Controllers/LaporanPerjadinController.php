@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -138,9 +139,18 @@ class LaporanPerjadinController extends Controller
             'tindak_lanjut.*.penanggung_jawab' => ['nullable', 'string', 'max:255'],
             'tindak_lanjut.*.target_selesai' => ['nullable', 'date'],
             'tindak_lanjut.*.status' => ['nullable', Rule::in(array_keys(StatusTindakLanjut::options()))],
+
+            // Berkas laporan opsional — melengkapi isian di atas, misalnya
+            // laporan lengkap berfoto yang sudah disusun pelaksana.
+            'berkas_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240'],
+            'hapus_berkas_laporan' => ['nullable', 'boolean'],
+        ], [
+            'berkas_laporan.mimes' => 'Berkas laporan harus berupa PDF, Word, JPG, atau PNG.',
+            'berkas_laporan.max' => 'Ukuran berkas laporan paling besar 10 MB.',
         ]);
 
         $laporan = $this->laporan($usulan);
+        $this->simpanBerkasLaporan($request, $laporan);
 
         DB::transaction(function () use ($laporan, $data): void {
             $laporan->update([
@@ -194,6 +204,27 @@ class LaporanPerjadinController extends Controller
         return redirect()
             ->route('dokumen.laporan.edit', $usulan->no_usulan)
             ->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
+    }
+
+    /**
+     * Berkas laporan yang diunggah menggantikan yang lama; centang hapus
+     * melepasnya. Tanpa keduanya, berkas yang tersimpan dibiarkan.
+     */
+    private function simpanBerkasLaporan(Request $request, LaporanPerjadin $laporan): void
+    {
+        $lama = $laporan->berkas_laporan;
+
+        if ($request->hasFile('berkas_laporan')) {
+            $laporan->update(['berkas_laporan' => $request->file('berkas_laporan')->store('dokumen/laporan', 'public')]);
+        } elseif ($request->boolean('hapus_berkas_laporan')) {
+            $laporan->update(['berkas_laporan' => null]);
+        } else {
+            return;
+        }
+
+        if (filled($lama)) {
+            Storage::disk('public')->delete($lama);
+        }
     }
 
     /**

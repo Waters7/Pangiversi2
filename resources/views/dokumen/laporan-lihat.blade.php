@@ -24,6 +24,12 @@
             <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }}</p>
         </div>
         <div class="ml-auto flex items-center gap-2 shrink-0">
+            @if ($laporan->berkas_laporan)
+                <a href="{{ route('berkas.lihat', $laporan->berkas_laporan) }}" target="_blank" rel="noopener"
+                   class="px-4 py-2 border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition">
+                    Berkas Laporan Pelaksana
+                </a>
+            @endif
             @if ($laporan->sudahSelesai())
                 <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition">

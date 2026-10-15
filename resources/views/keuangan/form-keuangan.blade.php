@@ -1103,6 +1103,12 @@
                             Unduh PDF
                         </a>
                     @endif
+                    @if ($laporanPerjadin->berkas_laporan)
+                        <a href="{{ route('berkas.lihat', $laporanPerjadin->berkas_laporan) }}" target="_blank" rel="noopener"
+                           class="px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                            Berkas Laporan Pelaksana
+                        </a>
+                    @endif
                 </div>
             @else
                 <p class="mt-4 text-xs text-slate-400">Pelaksana belum mulai menyusun laporannya.</p>

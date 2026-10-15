@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\FormatLaporanPerjadin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -141,6 +143,63 @@ class LaporanPerjadinTest extends TestCase
 
         $this->assertSame(1, $laporan->kegiatan()->count());
         $this->assertSame('Hanya satu kegiatan.', $laporan->kegiatan()->first()->uraian);
+    }
+
+    // ── Berkas laporan opsional ──
+
+    public function test_berkas_laporan_opsional_dapat_diunggah_diganti_dan_dihapus(): void
+    {
+        Storage::fake('public');
+        $laporan = fn () => LaporanPerjadin::firstWhere('id_usulan', $this->usulan->id);
+
+        // Tanpa berkas pun laporan tersimpan.
+        $this->isiLaporan()->assertSessionHasNoErrors();
+        $this->assertNull($laporan()->berkas_laporan);
+
+        $this->isiLaporan(['berkas_laporan' => UploadedFile::fake()->create('laporan.pdf', 300, 'application/pdf')])
+            ->assertSessionHasNoErrors();
+        $pertama = $laporan()->berkas_laporan;
+        Storage::disk('public')->assertExists($pertama);
+
+        // Menyimpan ulang tanpa berkas tidak melepas yang tersimpan.
+        $this->isiLaporan()->assertSessionHasNoErrors();
+        $this->assertSame($pertama, $laporan()->berkas_laporan);
+
+        $this->isiLaporan(['berkas_laporan' => UploadedFile::fake()->create('laporan-revisi.docx', 300)])
+            ->assertSessionHasNoErrors();
+        Storage::disk('public')->assertMissing($pertama);
+        $kedua = $laporan()->berkas_laporan;
+
+        $this->isiLaporan(['hapus_berkas_laporan' => '1'])->assertSessionHasNoErrors();
+        $this->assertNull($laporan()->berkas_laporan);
+        Storage::disk('public')->assertMissing($kedua);
+    }
+
+    public function test_berkas_laporan_harus_dokumen_atau_gambar(): void
+    {
+        Storage::fake('public');
+
+        $this->isiLaporan(['berkas_laporan' => UploadedFile::fake()->create('program.exe', 10)])
+            ->assertSessionHasErrors('berkas_laporan');
+    }
+
+    public function test_berkas_laporan_tampil_bagi_yang_melihat_laporan(): void
+    {
+        Storage::fake('public');
+        $this->isiLaporan(['berkas_laporan' => UploadedFile::fake()->create('laporan.pdf', 300, 'application/pdf')]);
+        $berkas = LaporanPerjadin::firstWhere('id_usulan', $this->usulan->id)->berkas_laporan;
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.laporan.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('Berkas Laporan Pelaksana')
+            ->assertSee(route('berkas.lihat', $berkas));
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.laporan.edit', $this->usulan))
+            ->assertOk()
+            ->assertSee('Berkas laporan tersimpan — lihat')
+            ->assertSee('Hapus berkas ini');
     }
 
     // ── Menyelesaikan laporan ──

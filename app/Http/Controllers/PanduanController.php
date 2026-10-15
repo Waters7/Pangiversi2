@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.41',
+                'tanggal' => '15 Oktober 2026',
+                'butir' => [
+                    'Laporan perjalanan dinas dapat dilengkapi berkas laporan yang diunggah (opsional) — misalnya laporan lengkap berfoto — yang ikut terbuka pada halaman laporan dan detail keuangan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.40',
                 'tanggal' => '14 Oktober 2026',
                 'butir' => [

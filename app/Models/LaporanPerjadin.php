@@ -29,6 +29,7 @@ class LaporanPerjadin extends Model
         'hasil',
         'id_status_hasil',
         'kesimpulan',
+        'berkas_laporan',
         'diselesaikan_at',
         'dikirim_at',
         'kode_pelaksana',
