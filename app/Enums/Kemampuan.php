@@ -16,6 +16,20 @@ enum Kemampuan: string
 
     case MelihatSemuaSpd = 'melihat-semua-spd';
 
+    /**
+     * Membuka dokumen pertanggungjawaban dan laporan perjalanan dinas
+     * seluruh pegawai — menu Dokumen Perdin dan List Laporan Perjadin —
+     * tanpa ikut mengunggah.
+     */
+    case MelihatSemuaDokumen = 'melihat-semua-dokumen';
+
+    /**
+     * Mengunggah berkas pertanggungjawaban atas nama pelaksananya, misalnya
+     * operator unit yang membantu pegawai melengkapi tiket, bill hotel, dan
+     * nota. Laporan perjalanan dinas tetap disusun pelaksananya sendiri.
+     */
+    case MembantuUnggahDokumen = 'membantu-unggah-dokumen';
+
     case MemvalidasiUsulan = 'memvalidasi-usulan';
 
     case MelihatKeuangan = 'melihat-keuangan';
@@ -139,6 +153,8 @@ enum Kemampuan: string
             self::MengajukanUsulan => 'Mengajukan perjalanan dinas',
             self::MelihatSemuaUsulan => 'Melihat seluruh usulan',
             self::MelihatSemuaSpd => 'Melihat seluruh Surat Perjalanan Dinas',
+            self::MelihatSemuaDokumen => 'Melihat dokumen seluruh perjalanan dinas',
+            self::MembantuUnggahDokumen => 'Membantu mengunggah dokumen pertanggungjawaban',
             self::MemvalidasiUsulan => 'Memvalidasi usulan',
             self::MelihatKeuangan => 'Melihat data keuangan',
             self::MengelolaBiaya => 'Menginput rincian biaya',
@@ -176,6 +192,7 @@ enum Kemampuan: string
         return match ($this) {
             self::MelihatSemuaUsulan,
             self::MelihatSemuaSpd,
+            self::MelihatSemuaDokumen,
             self::MelihatKeuangan,
             self::MelihatPembayaran,
             self::MelihatJadwalPerjalanan,
@@ -197,7 +214,8 @@ enum Kemampuan: string
      * Kemampuan lain yang dengan sendirinya mencakup kemampuan ini.
      *
      * Yang berhak menandatangani persetujuan tentu boleh membuka menunya,
-     * meski kotak "lihat"-nya tidak dicentang pada matriks hak akses.
+     * meski kotak "lihat"-nya tidak dicentang pada matriks hak akses —
+     * begitu pula yang membantu mengunggah dokumen pertanggungjawaban.
      *
      * @return list<self>
      */
@@ -205,6 +223,7 @@ enum Kemampuan: string
     {
         return match ($this) {
             self::MelihatPersetujuan => [self::MenandatanganiDaftarRiil],
+            self::MelihatSemuaDokumen => [self::MembantuUnggahDokumen],
             default => [],
         };
     }

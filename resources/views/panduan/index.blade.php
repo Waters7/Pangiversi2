@@ -420,7 +420,8 @@
             <x-panduan-langkah nomor="1" judul="Buka menu Dokumen → Dokumen Perdin">
                 Pilih usulan yang perjalanannya sudah selesai. Halaman formulirnya sudah
                 menyesuaikan diri: bagian yang tidak berlaku bagi perjalanan Anda tidak
-                ditampilkan sama sekali.
+                ditampilkan sama sekali. Petugas yang diberi hak membantu mengunggah dapat
+                mengunggahkan berkas Anda; setiap kali itu terjadi Anda menerima notifikasi.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Unggah berkas sesuai wilayah perjalanan">
@@ -1034,7 +1035,12 @@
                     tetap hanya bagi pelaksana, pembuat, atau peserta usulannya. Hak <strong>Menghapus
                     komponen rincian biaya</strong> (Keuangan → Hapus) mengatur tombol hapus pada detail
                     keuangan, dan hak <strong>Melihat persetujuan</strong> (Persetujuan → Lihat) membuka
-                    menu Persetujuan tanpa ikut menandatangani. Tombol
+                    menu Persetujuan tanpa ikut menandatangani. Hak <strong>Melihat dokumen seluruh
+                    perjalanan dinas</strong> (Dokumen → Lihat) membuka Dokumen Perdin dan List Laporan
+                    Perjadin semua pegawai dalam mode lihat saja, sedangkan hak <strong>Membantu mengunggah
+                    dokumen pertanggungjawaban</strong> (Dokumen → Ubah) membolehkan mengunggah berkas atas
+                    nama pelaksana — pelaksana menerima notifikasi dan jejak audit mencatat nama
+                    pengunggahnya; laporan perjalanan dinas tetap disusun pelaksananya. Tombol
                     <strong>Tambah Peran</strong> membuat peran baru (kodenya dibuat dari nama) yang
                     langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
                     tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh

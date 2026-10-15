@@ -21,6 +21,8 @@ enum MenuAplikasi: string
 
     case Persetujuan = 'persetujuan';
 
+    case Dokumen = 'dokumen';
+
     case JadwalPerjalanan = 'jadwal-perjalanan';
 
     case Pembayaran = 'pembayaran';
@@ -44,6 +46,7 @@ enum MenuAplikasi: string
             self::UsulanPerjadin => 'Usulan Perjadin',
             self::LaporanPerjadin => 'Laporan Perjadin (pimpinan)',
             self::Persetujuan => 'Persetujuan (PPK)',
+            self::Dokumen => 'Dokumen',
             self::JadwalPerjalanan => 'Jadwal Perjalanan',
             self::Pembayaran => 'Pembayaran',
             self::Keuangan => 'Keuangan',
@@ -63,6 +66,7 @@ enum MenuAplikasi: string
             self::UsulanPerjadin => 'Kewenangan tambahan atas usulan milik orang lain.',
             self::LaporanPerjadin => 'Mengonfirmasi, menandatangani, atau mengembalikan laporan perjalanan dinas.',
             self::Persetujuan => 'Menandatangani rincian biaya, daftar riil, dan daftar nominatif.',
+            self::Dokumen => 'Kewenangan tambahan atas dokumen pertanggungjawaban dan laporan perjalanan dinas milik orang lain.',
             self::JadwalPerjalanan => 'Siapa saja yang berangkat dan kapan.',
             self::Pembayaran => 'Uang muka, pelunasan, transport lokal, dan bukti bayar.',
             self::Keuangan => 'Rincian biaya per usulan beserta validasinya.',
@@ -87,6 +91,7 @@ enum MenuAplikasi: string
             self::UsulanPerjadin => [Kemampuan::MelihatSemuaUsulan, Kemampuan::MemvalidasiUsulan],
             self::LaporanPerjadin => [Kemampuan::MengonfirmasiLaporanPerjadin],
             self::Persetujuan => [Kemampuan::MelihatPersetujuan, Kemampuan::MenandatanganiDaftarRiil],
+            self::Dokumen => [Kemampuan::MelihatSemuaDokumen, Kemampuan::MembantuUnggahDokumen],
             self::JadwalPerjalanan => [Kemampuan::MelihatJadwalPerjalanan],
             self::Pembayaran => [Kemampuan::MelihatPembayaran, Kemampuan::MencatatPembayaran],
             self::Keuangan => [Kemampuan::MelihatKeuangan, Kemampuan::MengelolaBiaya, Kemampuan::MemvalidasiBiaya, Kemampuan::MenghapusRincianBiaya],

@@ -67,11 +67,18 @@
                             // Terkunci setelah perjalanannya ditutup; sejak itu
                             // berkasnya sudah divalidasi dan dibayarkan.
                             $bolehUbah = $laporan ? $laporan->bolehDisunting() : $item->status !== 'selesai';
+                            // Laporan pegawai lain hanya dibaca: isinya milik pelaksana.
+                            $penyusun = $item->id_user === auth()->id() || auth()->user()->isAdmin();
                             $statusLaporan = $laporan?->status() ?? \App\Enums\StatusLaporanPerjadin::Draf;
                         @endphp
 
                         <tr class="hover:bg-slate-50/60 transition">
-                            <td class="px-4 py-3.5 font-mono text-xs font-semibold text-slate-700">{{ $item->no_usulan }}</td>
+                            <td class="px-4 py-3.5">
+                                <p class="font-mono text-xs font-semibold text-slate-700">{{ $item->no_usulan }}</p>
+                                @if ($lihatSemua)
+                                    <p class="text-xs text-slate-400 mt-0.5" data-pelaksana-laporan>{{ $item->user?->nama ?? '—' }}</p>
+                                @endif
+                            </td>
                             <td class="px-4 py-3.5 text-slate-600">{{ $item->lokasi }}</td>
                             <td class="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
                                 {{ \Carbon\Carbon::parse($item->tanggal_mulai)->translatedFormat('d M') }}–{{ \Carbon\Carbon::parse($item->tanggal_selesai)->translatedFormat('d M Y') }}
@@ -97,7 +104,9 @@
 
                                     {{-- Tautan ubah disembunyikan bila tak lagi berwenang,
                                          supaya tidak menjanjikan sesuatu yang berujung 403. --}}
-                                    @if ($bolehUbah)
+                                    @if (! $penyusun)
+                                        {{-- Bukan penyusunnya: tidak ada yang disunting. --}}
+                                    @elseif ($bolehUbah)
                                         <a href="{{ route('dokumen.laporan.edit', $item->no_usulan) }}"
                                            class="text-xs font-bold text-teal-600 hover:text-teal-700">Edit</a>
                                     @else

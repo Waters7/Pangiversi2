@@ -58,11 +58,11 @@ class LaporanPerjadinController extends Controller
      */
     public function index(Request $request): View
     {
-        $isAdmin = $request->user()->isAdmin();
+        $lihatSemua = $request->user()->punyaKemampuan(Kemampuan::MelihatSemuaDokumen);
         $cari = $request->input('cari');
 
         $usulan = Usulan::with('laporan.statusHasil', 'user')
-            ->when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()))
+            ->when(! $lihatSemua, fn ($q) => $q->where('id_user', Auth::id()))
             ->whereIn('status', [StatusUsulan::Disetujui->value, StatusUsulan::Selesai->value])
             ->when($cari, fn ($q) => $q->where(fn ($w) => $w
                 ->where('no_usulan', 'like', "%{$cari}%")
@@ -76,6 +76,7 @@ class LaporanPerjadinController extends Controller
         return view('dokumen.daftar-laporan', [
             'usulan' => $usulan,
             'cari' => $cari,
+            'lihatSemua' => $lihatSemua,
             'jumlahBelumSelesai' => (clone $usulan)->getCollection()
                 ->reject(fn (Usulan $item) => $item->laporan?->sudahSelesai() === true)
                 ->count(),
@@ -497,11 +498,13 @@ class LaporanPerjadinController extends Controller
     /**
      * Pimpinan yang mengonfirmasi laporan perlu membaca dan mencetaknya,
      * begitu pula tim keuangan dan bendahara — konfirmasinya syarat
-     * pelunasan. Keduanya tidak menyunting isinya; itu tetap milik pelaksana.
+     * pelunasan — serta peran yang melihat dokumen seluruh perjalanan.
+     * Tak satu pun menyunting isinya; itu tetap milik pelaksana.
      */
     private function pastikanBolehMelihat(Request $request, Usulan $usulan): void
     {
         if ($request->user()->punyaKemampuan(Kemampuan::MengonfirmasiLaporanPerjadin)
+            || $request->user()->punyaKemampuan(Kemampuan::MelihatSemuaDokumen)
             || $request->user()->bisaAksesKeuangan()) {
             return;
         }

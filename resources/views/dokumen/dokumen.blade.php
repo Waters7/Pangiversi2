@@ -45,7 +45,7 @@
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-100">
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3.5">Usulan</th>
-                            @if ($isAdmin)
+                            @if ($lihatSemua)
                                 <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Pelaksana</th>
                             @endif
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Kegiatan / Tujuan</th>
@@ -58,7 +58,7 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach ($perBulan as $bulan => $perTanggal)
                             <tr class="bg-slate-100/70">
-                                <td colspan="{{ $isAdmin ? 6 : 5 }}" class="px-6 py-2.5">
+                                <td colspan="{{ $lihatSemua ? 6 : 5 }}" class="px-6 py-2.5">
                                     <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">
                                         {{ \Carbon\Carbon::parse($bulan.'-01')->translatedFormat('F Y') }}
                                     </span>
@@ -70,7 +70,7 @@
 
                             @foreach ($perTanggal as $tanggal => $sehari)
                                 <tr class="bg-slate-50/60">
-                                    <td colspan="{{ $isAdmin ? 6 : 5 }}" class="px-6 py-1.5">
+                                    <td colspan="{{ $lihatSemua ? 6 : 5 }}" class="px-6 py-1.5">
                                         <span class="text-[11px] font-semibold text-slate-500">
                                             {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('l, d F Y') }}
                                         </span>
@@ -84,7 +84,7 @@
                                     <p class="text-xs text-slate-400">{{ $item->created_at->format('d M Y') }}</p>
                                 </td>
 
-                                @if ($isAdmin)
+                                @if ($lihatSemua)
                                     <td class="px-4 py-4">
                                         <p class="text-sm font-semibold text-slate-700">{{ $item->user?->nama ?? '—' }}</p>
                                         <p class="text-xs text-slate-400">
@@ -119,7 +119,8 @@
                                                 <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
-                                            Upload
+                                            {{-- Dokumen pegawai lain hanya dibuka, kecuali bagi yang berhak membantu mengunggah. --}}
+                                            {{ $item->id_user === auth()->id() || $bantuUnggah ? 'Upload' : 'Lihat' }}
                                         </a>
                                     </div>
                                 </td>

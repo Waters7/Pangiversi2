@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Kemampuan;
 use App\Models\AuditLog;
 use App\Models\Notifikasi;
 use App\Models\User;
@@ -35,11 +36,12 @@ class DokumenController extends Controller
 
     public function index(Request $request)
     {
-        $isAdmin = $request->user()->isAdmin();
+        $lihatSemua = $request->user()->punyaKemampuan(Kemampuan::MelihatSemuaDokumen);
+        $bantuUnggah = $request->user()->punyaKemampuan(Kemampuan::MembantuUnggahDokumen);
         $cari = $request->input('cari');
 
         $usulan = Usulan::with('user.unit', 'kegiatan', 'kategoriPerjadin')
-            ->when(! $isAdmin, fn ($q) => $q->where('id_user', Auth::id()))
+            ->when(! $lihatSemua, fn ($q) => $q->where('id_user', Auth::id()))
             ->whereIn('status', ['disetujui', 'selesai'])
             ->when($cari, fn ($q) => $q->where(fn ($w) => $w
                 ->where('no_usulan', 'like', "%{$cari}%")
@@ -58,14 +60,14 @@ class DokumenController extends Controller
                 fn (Usulan $item) => Carbon::parse($item->tanggal_mulai)->toDateString()
             ));
 
-        // Super administrator melihat dokumen semua pegawai, jadi pelaksananya
-        // ikut ditampilkan.
-        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'isAdmin'));
+        // Peran yang melihat dokumen seluruh perjalanan — super administrator
+        // dan yang diberi hak akses menu Dokumen — mendapati pelaksananya.
+        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'lihatSemua', 'bantuUnggah'));
     }
 
     public function show(Usulan $usulan)
     {
-        abort_if($usulan->id_user !== Auth::id() && ! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->bolehMelihatDokumen($usulan), 403);
 
         $usulan->load('user', 'kegiatan', 'kategoriPerjadin', 'dokumen', 'tiket', 'notaTransport', 'laporan');
 
@@ -88,7 +90,7 @@ class DokumenController extends Controller
      */
     public function formatLaporan(Usulan $usulan, FormatLaporanPerjadin $format): Response
     {
-        abort_if($usulan->id_user !== Auth::id() && ! request()->user()->isAdmin(), 403);
+        abort_unless(request()->user()->bolehMelihatDokumen($usulan), 403);
 
         $pdf = Pdf::loadView('dokumen.format-laporan', $format->data($usulan))
             ->setPaper(KertasCetak::UKURAN);
@@ -98,7 +100,7 @@ class DokumenController extends Controller
 
     public function store(Request $request, Usulan $usulan)
     {
-        abort_if($usulan->id_user !== Auth::id() && ! $request->user()->isAdmin(), 403);
+        abort_unless($request->user()->bolehMengunggahDokumen($usulan), 403);
         abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai, dokumen tidak dapat diubah.');
 
         // Tiket, nota, dan bill hotel adalah sumber angka pada kedua
@@ -113,11 +115,30 @@ class DokumenController extends Controller
         if ($result) {
             $label = $type !== '' ? str_replace('_', ' ', $type) : 'pendukung';
 
+            // Diunggah orang lain atas nama pelaksananya: namanya ikut dicatat.
+            $pembantu = $usulan->id_user !== $request->user()->id ? $request->user() : null;
+
             $this->audit->catat(
                 AuditLog::AKSI_DOKUMEN,
-                "Dokumen {$label} untuk usulan {$usulan->no_usulan} diunggah.",
+                "Dokumen {$label} untuk usulan {$usulan->no_usulan} diunggah"
+                    .($pembantu ? " oleh {$pembantu->nama} atas nama {$usulan->user?->nama}." : '.'),
                 ['usulan' => $usulan],
             );
+
+            // Pelaksana perlu tahu berkasnya diunggahkan, supaya ia memeriksanya
+            // dan tidak mengunggah ulang.
+            if ($pembantu && $usulan->user) {
+                $this->notifikasi->kirim(
+                    $usulan->user,
+                    'Dokumen Anda diunggahkan',
+                    "{$pembantu->nama} mengunggah dokumen {$label} untuk usulan {$usulan->no_usulan} atas nama Anda.",
+                    [
+                        'usulan' => $usulan,
+                        'tipe' => Notifikasi::TIPE_INFO,
+                        'url' => route('dokumen.show', $usulan->no_usulan),
+                    ],
+                );
+            }
 
             // Bagian keuangan perlu tahu ada berkas pertanggungjawaban baru untuk diverifikasi.
             $this->notifikasi->kirimKePeran(

@@ -301,6 +301,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Dokumen pertanggungjawaban perjalanan ini boleh dibuka: miliknya
+     * sendiri, atau perannya berhak melihat dokumen seluruh perjalanan.
+     */
+    public function bolehMelihatDokumen(Usulan $usulan): bool
+    {
+        return $usulan->id_user === $this->id || $this->punyaKemampuan(Kemampuan::MelihatSemuaDokumen);
+    }
+
+    /**
+     * Berkas pertanggungjawaban perjalanan ini boleh diunggah: miliknya
+     * sendiri, atau perannya ditugasi membantu pelaksana mengunggah.
+     */
+    public function bolehMengunggahDokumen(Usulan $usulan): bool
+    {
+        return $usulan->id_user === $this->id || $this->punyaKemampuan(Kemampuan::MembantuUnggahDokumen);
+    }
+
+    /**
      * Daftar usulan tempat pengguna ini kembali: Daftar Usulan Perjadin bagi
      * peran yang melihat seluruh usulan, Usulan Perjadin Saya bagi yang lain.
      */

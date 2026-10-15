@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.42',
+                'tanggal' => '15 Oktober 2026',
+                'butir' => [
+                    'Hak akses baru pada menu Dokumen: melihat dokumen seluruh perjalanan dinas (Dokumen Perdin dan List Laporan Perjadin semua pegawai, mode lihat saja) dan membantu mengunggah dokumen pertanggungjawaban atas nama pelaksana. Pelaksana menerima notifikasi setiap kali berkasnya diunggahkan dan jejak audit mencatat nama pengunggahnya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.41',
                 'tanggal' => '15 Oktober 2026',
                 'butir' => [

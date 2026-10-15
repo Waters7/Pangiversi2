@@ -24,7 +24,13 @@
     // dan daftar riil. Begitu salah satunya ditandatangani, sumbernya
     // ikut terkunci supaya angka yang sudah disetujui tidak bergeser.
     $alasanKunci = app(\App\Services\PenguncianBerkas::class)->unggahanPelaksana($usulan);
+
+    // Dokumen pegawai lain hanya dapat diunggah peran yang ditugasi membantu
+    // mengunggah; yang sekadar berhak melihat mendapati formulirnya terkunci.
+    $milikSendiri = $usulan->id_user === auth()->id();
+    $bolehUnggah = auth()->user()->bolehMengunggahDokumen($usulan);
     $terkunci = $alasanKunci !== null
+        || ! $bolehUnggah
         || ($usulan->status === 'selesai' && ! auth()->user()->isAdmin());
 
     // Komponen yang nominalnya sudah ditetapkan tim keuangan: kolom nominal
@@ -80,6 +86,40 @@
         </div>
     @endif
 
+    {{-- Dokumen pegawai lain: yang membantu mengunggah diingatkan bahwa ia
+         bertindak atas nama pelaksana; selebihnya hanya membuka berkasnya. --}}
+    @unless ($milikSendiri)
+        @if ($bolehUnggah)
+            <div class="mb-5 flex items-start gap-3 px-5 py-3.5 bg-sky-50 border border-sky-200 rounded-xl" data-bantu-unggah>
+                <svg class="w-5 h-5 text-sky-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-sky-800">Membantu mengunggah atas nama pelaksana</p>
+                    <p class="text-xs text-sky-700 mt-0.5 leading-relaxed">
+                        Berkas yang Anda unggah tercatat sebagai berkas {{ $usulan->user?->nama ?? 'pelaksana' }}.
+                        Jejak audit mencatat nama Anda, dan pelaksana menerima notifikasi setiap kali berkasnya diunggahkan.
+                        Laporan perjalanan dinas tetap disusun pelaksananya sendiri.
+                    </p>
+                </div>
+            </div>
+        @else
+            <div class="mb-5 flex items-start gap-3 px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl" data-mode-lihat-dokumen>
+                <svg class="w-5 h-5 text-slate-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-slate-700">Mode lihat saja</p>
+                    <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                        Anda dapat membuka berkas perjalanan ini tanpa mengunggah atau mengubahnya. Unggahan dilakukan
+                        pelaksananya, atau peran yang diberi hak membantu mengunggah dokumen pertanggungjawaban.
+                    </p>
+                </div>
+            </div>
+        @endif
+    @endunless
+
     {{-- Page Header --}}
     <div class="mb-6 flex items-center gap-3">
         <a href="{{ route('dokumen') }}"
@@ -91,12 +131,12 @@
         <div>
             <h1 class="text-xl font-bold text-slate-800">Dokumen Pertanggungjawaban</h1>
             <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }}</p>
-            {{-- Super administrator membuka dokumen pegawai lain: pelaksananya disebut. --}}
-            @if (auth()->user()->isAdmin() && $usulan->id_user !== auth()->id())
+            {{-- Dokumen pegawai lain: pelaksananya disebut. --}}
+            @unless ($milikSendiri)
                 <p class="text-xs font-semibold text-teal-700 mt-1" data-pelaksana-dokumen>
                     Pelaksana: {{ $usulan->user?->nama ?? '—' }}{{ $usulan->user?->nip ? ' · NIP '.$usulan->user->nip : '' }}
                 </p>
-            @endif
+            @endunless
         </div>
     </div>
 
@@ -684,10 +724,18 @@
                     </p>
 
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('dokumen.laporan.edit', $usulan->no_usulan) }}"
-                           class="px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold rounded-xl transition">
-                            {{ $usulan->laporan?->sudahSelesai() ? 'Lihat / Ubah Laporan' : 'Isi Laporan' }}
-                        </a>
+                        {{-- Isi laporan milik pelaksana; orang lain cukup membacanya. --}}
+                        @if ($milikSendiri || auth()->user()->isAdmin())
+                            <a href="{{ route('dokumen.laporan.edit', $usulan->no_usulan) }}"
+                               class="px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold rounded-xl transition">
+                                {{ $usulan->laporan?->sudahSelesai() ? 'Lihat / Ubah Laporan' : 'Isi Laporan' }}
+                            </a>
+                        @else
+                            <a href="{{ route('dokumen.laporan.show', $usulan->no_usulan) }}"
+                               class="px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold rounded-xl transition">
+                                Lihat Laporan
+                            </a>
+                        @endif
 
                         @if ($usulan->laporan?->sudahSelesai())
                             <a href="{{ route('dokumen.laporan.cetak', $usulan->no_usulan) }}"
