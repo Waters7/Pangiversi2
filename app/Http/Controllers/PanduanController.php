@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.44',
+                'tanggal' => '19 Oktober 2026',
+                'butir' => [
+                    'Perjalanan luar kota dalam satu provinsi ditanya dulu "Apakah ada biaya penginapan?" pada bagian Akomodasi dokumen pertanggungjawaban. Bila tidak ada, bill hotel dan kuitansinya tidak ditagih dan uang penginapan tidak masuk rincian biaya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.43',
                 'tanggal' => '19 Oktober 2026',
                 'butir' => [

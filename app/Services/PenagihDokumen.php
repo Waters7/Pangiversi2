@@ -70,8 +70,9 @@ class PenagihDokumen
         }
 
         // Penginapan yang sudah dibayar lewat biaya penyelenggaraan tidak
-        // berbill hotel sendiri.
-        $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
+        // berbill hotel sendiri, begitu pula perjalanan tanpa penginapan.
+        $tanpaPenginapan = $this->tanpaPenginapan($usulan, $dokumen);
+        $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan() || $tanpaPenginapan;
 
         if ($diminta(BerkasLpj::BillHotel) && ! $tanpaBillHotel) {
             if (blank($dokumen?->bill_hotel)) {
@@ -81,7 +82,7 @@ class PenagihDokumen
             $kurang = $kurang->concat($this->rincianHotelKurang($usulan, $dokumen));
         }
 
-        if ($diminta(BerkasLpj::Kuitansi) && blank($dokumen?->kwintasi)) {
+        if ($diminta(BerkasLpj::Kuitansi) && ! $tanpaPenginapan && blank($dokumen?->kwintasi)) {
             $kurang->push(self::LABEL['kwintasi']);
         }
 
@@ -172,7 +173,16 @@ class PenagihDokumen
         }
 
         // Seksi 4 — akomodasi dan bukti biaya.
-        if ($diminta(BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan()) {
+        $tanpaPenginapan = $this->tanpaPenginapan($usulan, $dokumen);
+
+        if ($diminta(BerkasLpj::BillHotel) && $tanpaPenginapan) {
+            $baris[] = [
+                'label' => 'Bill Hotel',
+                'terpenuhi' => true,
+                'berkas' => [],
+                'catatan' => 'Tidak perlu — pelaksana menyatakan tidak ada biaya penginapan',
+            ];
+        } elseif ($diminta(BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan()) {
             $baris[] = [
                 'label' => 'Bill Hotel',
                 'terpenuhi' => true,
@@ -192,7 +202,14 @@ class PenagihDokumen
             ];
         }
 
-        if ($diminta(BerkasLpj::Kuitansi)) {
+        if ($diminta(BerkasLpj::Kuitansi) && $tanpaPenginapan) {
+            $baris[] = [
+                'label' => 'Kuitansi penyelenggara / hotel',
+                'terpenuhi' => true,
+                'berkas' => filled($dokumen?->kwintasi) ? [['label' => 'Kuitansi penyelenggara / hotel', 'path' => $dokumen->kwintasi]] : [],
+                'catatan' => 'Tidak perlu — tidak ada biaya penginapan',
+            ];
+        } elseif ($diminta(BerkasLpj::Kuitansi)) {
             $baris[] = $this->barisChecklist('Kuitansi penyelenggara / hotel', $dokumen?->kwintasi);
         }
 
@@ -228,6 +245,15 @@ class PenagihDokumen
         }
 
         return $baris;
+    }
+
+    /**
+     * Pelaksana luar kota dalam satu provinsi yang menyatakan tidak ada biaya
+     * penginapan tidak ditagih bill hotel maupun kuitansinya.
+     */
+    private function tanpaPenginapan(Usulan $usulan, ?Dokumen $dokumen): bool
+    {
+        return $usulan->tanyaPenginapan() && $dokumen?->tanpaPenginapan() === true;
     }
 
     /**

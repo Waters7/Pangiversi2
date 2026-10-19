@@ -144,6 +144,16 @@ class Usulan extends Model
             ?? JenisPerjadin::untukKategori($this->kategoriPerjadin);
     }
 
+    /**
+     * Luar kota dalam satu provinsi kerap tanpa menginap, jadi pelaksananya
+     * ditanya dulu ada atau tidaknya biaya penginapan sebelum ditagih bill
+     * hotel dan kuitansinya.
+     */
+    public function tanyaPenginapan(): bool
+    {
+        return $this->jalur() === JenisPerjadin::LuarKotaDalamProvinsi;
+    }
+
     /** Supervisi di dalam kota tidak berdasar SPD bertanda tangan. */
     public function butuhSpd(): bool
     {

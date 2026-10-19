@@ -26,6 +26,7 @@ class Dokumen extends Model
         'bill_hotel',
         'bill_hotel_no_transaksi',
         'bill_hotel_nominal',
+        'penginapan_ada',
         'penyelenggaraan_ada',
         'penyelenggaraan_termasuk_penginapan',
         'penyelenggaraan_nominal',
@@ -42,6 +43,7 @@ class Dokumen extends Model
     {
         return [
             'bill_hotel_nominal' => 'float',
+            'penginapan_ada' => 'boolean',
             'penyelenggaraan_ada' => 'boolean',
             'penyelenggaraan_termasuk_penginapan' => 'boolean',
             'penyelenggaraan_nominal' => 'float',
@@ -63,6 +65,15 @@ class Dokumen extends Model
     public function penginapanTermasukPenyelenggaraan(): bool
     {
         return $this->adaPenyelenggaraan() && $this->penyelenggaraan_termasuk_penginapan === true;
+    }
+
+    /**
+     * Pelaksana menyatakan tidak ada biaya penginapan. Belum dijawab tidak
+     * dihitung sebagai tidak ada.
+     */
+    public function tanpaPenginapan(): bool
+    {
+        return $this->penginapan_ada === false;
     }
 
     public function usulan()

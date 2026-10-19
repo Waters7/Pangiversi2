@@ -507,9 +507,18 @@
             @endif
 
             @if ($minta(\App\Enums\BerkasLpj::BillHotel) || $minta(\App\Enums\BerkasLpj::Kuitansi))
+            @php
+                // Luar kota dalam satu provinsi kerap tanpa menginap: ditanya dulu
+                // supaya yang tidak menginap tidak ditagih bill hotel dan kuitansinya.
+                $tanyaPenginapan = $usulan->tanyaPenginapan() && ! $dokumen?->penginapanTermasukPenyelenggaraan();
+                $adaPenginapan = old('penginapan_ada', $dokumen?->tanpaPenginapan() ? '0' : '1') !== '0';
+            @endphp
             {{-- ══════════ 4. AKOMODASI & BUKTI BIAYA ══════════ --}}
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
-                  x-data="{ cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'hotel', 'usulan' => $usulan->no_usulan]) }}) }">
+                  x-data="{
+                      adaPenginapan: {{ ! $tanyaPenginapan || $adaPenginapan ? 'true' : 'false' }},
+                      cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'hotel', 'usulan' => $usulan->no_usulan]) }}),
+                  }">
                 @csrf
                 <input type="hidden" name="section" value="akomodasi">
 
@@ -525,6 +534,34 @@
                     </div>
 
                     <div class="p-6 space-y-5">
+                        @if ($tanyaPenginapan)
+                        <div data-tanya-penginapan>
+                            <p class="text-sm font-semibold text-slate-700 mb-2">Apakah ada biaya penginapan?</p>
+                            <div class="flex flex-wrap gap-3">
+                                <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
+                                       :class="! adaPenginapan ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                    <input type="radio" name="penginapan_ada" value="0" @change="adaPenginapan = false"
+                                           :checked="! adaPenginapan" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                    Tidak ada
+                                </label>
+                                <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
+                                       :class="adaPenginapan ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                    <input type="radio" name="penginapan_ada" value="1" @change="adaPenginapan = true"
+                                           :checked="adaPenginapan" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                    Ada
+                                </label>
+                            </div>
+                            <p x-show="! adaPenginapan" x-cloak class="mt-2 text-xs text-slate-500 leading-relaxed">
+                                Tanpa biaya penginapan, bill hotel dan kuitansinya tidak perlu diunggah, dan uang penginapan
+                                tidak masuk rincian biaya.
+                                @if (filled($dokumen?->bill_hotel))
+                                    <strong class="text-amber-700">Bill hotel yang sudah tersimpan dilepas begitu disimpan.</strong>
+                                @endif
+                            </p>
+                        </div>
+                        @endif
+
+                        <div x-show="adaPenginapan" class="space-y-5">
                         @if ($minta(\App\Enums\BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan())
                         <p class="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 leading-relaxed" data-tanpa-bill-hotel>
                             Penginapan sudah termasuk biaya penyelenggaraan (bagian 5), jadi bill hotel tidak perlu diunggah
@@ -583,6 +620,7 @@
                             :terkunci="$terkunci"
                             :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->kwintasi) ? null : 'cekBerkas.mengunci(\'kwintasi\')'" />
                         @endif
+                        </div>
 
                         @unless ($terkunci)
                             <button type="submit" class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold rounded-xl transition">

@@ -228,6 +228,17 @@ class DokService
         // Penginapan yang sudah termasuk biaya penyelenggaraan tidak berbill hotel.
         $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
 
+        // Luar kota dalam satu provinsi ditanya dulu ada atau tidaknya biaya
+        // penginapan; bila tidak ada, bill hotel dan kuitansinya tidak ditagih.
+        // Tanpa jawaban dianggap ada, seperti sebelum pertanyaan ini dibuat.
+        if ($usulan->tanyaPenginapan() && ! $tanpaBillHotel) {
+            $request->validate(['penginapan_ada' => ['nullable', 'in:0,1']]);
+
+            if ((string) $request->input('penginapan_ada') === '0') {
+                return $this->simpanTanpaPenginapan($usulan, $dokumen);
+            }
+        }
+
         // Nomor transaksi hotel yang sama dengan milik rekan: bill hotel dan
         // kuitansinya yang sudah diunggah dipakai, dan unggahannya terkunci
         // kecuali bagi pengunggah aslinya. Nominal tetap masing-masing.
@@ -261,12 +272,42 @@ class DokService
         $this->simpanBerkas($request, $usulan, $kolomUnggah, collect($salinan)
             ->map(fn (string $asal, string $kolom) => $this->pustaka->salin($asal, 'dokumen/'.$kolom))
             ->filter()
-            ->all() + [
+            ->all() + array_filter([
+                'penginapan_ada' => $usulan->tanyaPenginapan() && ! $tanpaBillHotel ? true : null,
+            ], fn ($nilai) => $nilai !== null) + [
                 'bill_hotel_no_transaksi' => $request->input('bill_hotel_no_transaksi') ?: null,
                 'bill_hotel_nominal' => ! $nominalDariKeuangan && $request->filled('bill_hotel_nominal')
                     ? (float) $request->input('bill_hotel_nominal')
                     : null,
             ]);
+
+        return true;
+    }
+
+    /**
+     * Tanpa biaya penginapan, bill hotel beserta nomor transaksi dan
+     * nominalnya dikosongkan supaya tidak ada uang penginapan lama yang
+     * diam-diam ikut ke rincian biaya. Kuitansi dibiarkan: bisa jadi
+     * kuitansi penyelenggara yang masih berguna.
+     */
+    private function simpanTanpaPenginapan(Usulan $usulan, ?Dokumen $dokumen): bool
+    {
+        $this->hapusBerkasLama($dokumen?->bill_hotel);
+
+        $data = [
+            'penginapan_ada' => false,
+            'bill_hotel' => null,
+            'bill_hotel_no_transaksi' => null,
+            'bill_hotel_nominal' => null,
+        ];
+
+        if ($dokumen) {
+            $dokumen->update($data);
+        } else {
+            Dokumen::create(['id_usulan' => $usulan->id] + $data);
+        }
+
+        $this->rampungkan($usulan);
 
         return true;
     }

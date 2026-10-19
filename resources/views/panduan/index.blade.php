@@ -463,7 +463,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota dalam satu provinsi</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Bill hotel beserta nomor transaksi & nominal — bila ada biaya penginapan', 'Kuitansi penyelenggara / hotel — bila ada biaya penginapan', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
