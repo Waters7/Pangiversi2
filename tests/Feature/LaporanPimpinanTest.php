@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ArahTiket;
+use App\Enums\JenisPerjadin;
 use App\Enums\StatusLaporanPerjadin;
 use App\Enums\StatusTindakLanjut;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
+use App\Models\Dokumen;
 use App\Models\Keuangan;
 use App\Models\LaporanPerjadin;
 use App\Models\StatusHasil;
+use App\Models\TiketPerjadin;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\FormatLaporanPerjadin;
@@ -283,6 +287,35 @@ class LaporanPimpinanTest extends TestCase
     }
 
     // ── Konfirmasi ──
+
+    public function test_pimpinan_memeriksa_dokumen_yang_diunggah_bersama_laporannya(): void
+    {
+        $this->usulan->update(['jenis_perjadin' => JenisPerjadin::LuarKota->value]);
+        $this->laporanDikirim()->update(['berkas_laporan' => 'dokumen/laporan/laporan-lengkap.pdf']);
+
+        Dokumen::create([
+            'id_usulan' => $this->usulan->id,
+            'surat_tugas' => 'dokumen/surat-tugas/st.pdf',
+            'bill_hotel' => 'dokumen/bill/bill.pdf',
+            'bill_hotel_no_transaksi' => 'TRX-88192',
+        ]);
+        TiketPerjadin::create([
+            'id_usulan' => $this->usulan->id,
+            'arah' => ArahTiket::Pergi->value,
+            'boarding_pass' => 'dokumen/tiket/boarding-pass.pdf',
+        ]);
+
+        $this->actingAs($this->pimpinan)
+            ->get(route('laporan-perjadin.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('Dokumen yang Diunggah')
+            ->assertSee(route('berkas.lihat', 'dokumen/surat-tugas/st.pdf'))
+            ->assertSee(route('berkas.lihat', 'dokumen/tiket/boarding-pass.pdf'))
+            ->assertSee(route('berkas.lihat', 'dokumen/bill/bill.pdf'))
+            ->assertSee(route('berkas.lihat', 'dokumen/laporan/laporan-lengkap.pdf'))
+            // SPPD bertanda tangan belum diunggah.
+            ->assertSee('Belum diunggah');
+    }
 
     public function test_pimpinan_mengonfirmasi_dan_menerbitkan_kode_pimpinan(): void
     {

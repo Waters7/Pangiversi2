@@ -49,6 +49,47 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-2 space-y-5">
             @include('dokumen.partials.isi-laporan')
+
+            {{-- Berkas pertanggungjawaban pelaksana, diperiksa bersama
+                 laporannya sebelum dikonfirmasi. --}}
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" data-dokumen-terunggah>
+                <div class="px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800 text-sm">Dokumen yang Diunggah</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Berkas pertanggungjawaban pelaksana — tiap berkas terbuka di tab baru.</p>
+                </div>
+                <ul class="divide-y divide-slate-100">
+                    @foreach ($berkasLpj as $baris)
+                        <li class="px-6 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 {{ $baris['terpenuhi'] ? 'bg-teal-500' : 'bg-amber-400' }}"></span>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-slate-700">{{ $baris['label'] }}</p>
+                                    @if ($baris['catatan'])
+                                        <p class="text-[11px] text-slate-400">{{ $baris['catatan'] }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                @forelse ($baris['berkas'] as $berkas)
+                                    <a href="{{ route('berkas.lihat', $berkas['path']) }}" target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-50 hover:border-teal-300 text-slate-600 hover:text-teal-700 text-[11px] font-bold rounded-lg transition">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                                        </svg>
+                                        {{ $berkas['label'] }}
+                                    </a>
+                                @empty
+                                    {{-- Baris yang terpenuhi tanpa berkas — misalnya tanpa
+                                         transport lokal — cukup dijelaskan catatannya. --}}
+                                    @unless ($baris['terpenuhi'])
+                                        <span class="text-xs font-semibold text-amber-600">Belum diunggah</span>
+                                    @endunless
+                                @endforelse
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
 
         <div class="space-y-5">

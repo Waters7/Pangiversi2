@@ -12,6 +12,7 @@ use App\Models\TindakLanjut;
 use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\NotifikasiService;
+use App\Services\PenagihDokumen;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -106,12 +107,40 @@ class LaporanPimpinanController extends Controller
     /**
      * Isi laporan beserta tombol keputusannya.
      */
-    public function show(Usulan $usulan): View
+    public function show(Usulan $usulan, PenagihDokumen $penagih): View
     {
         $laporan = $this->laporan($usulan)->load('kegiatan', 'tindakLanjut', 'statusHasil', 'pimpinan');
-        $usulan->load('user.unit', 'kegiatan', 'kategoriPerjadin', 'keuangan');
+        $usulan->load('user.unit', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen');
 
-        return view('laporan-pimpinan.lihat', compact('usulan', 'laporan'));
+        // Berkas yang diunggah pelaksana diperiksa bersama laporannya: surat
+        // tugas lebih dulu, lalu baris checklist yang sama dengan milik tim
+        // keuangan supaya keduanya tidak pernah berbeda. Baris laporannya
+        // sendiri dilewati — isinya sedang dibaca di halaman ini — dan
+        // diganti berkas laporan pelaksana bila ia mengunggahnya.
+        $suratTugas = $usulan->dokumen->last()?->surat_tugas;
+        $berkasLpj = [
+            [
+                'label' => 'Surat Tugas',
+                'terpenuhi' => filled($suratTugas),
+                'berkas' => filled($suratTugas) ? [['label' => 'Surat tugas', 'path' => $suratTugas]] : [],
+                'catatan' => $usulan->no_tugas,
+            ],
+            ...array_filter(
+                $penagih->checklist($usulan),
+                fn (array $baris) => $baris['label'] !== PenagihDokumen::LABEL_LAPORAN,
+            ),
+        ];
+
+        if (filled($laporan->berkas_laporan)) {
+            $berkasLpj[] = [
+                'label' => 'Berkas Laporan Pelaksana',
+                'terpenuhi' => true,
+                'berkas' => [['label' => 'Berkas laporan', 'path' => $laporan->berkas_laporan]],
+                'catatan' => 'Diunggah pelaksana melengkapi isian laporan',
+            ];
+        }
+
+        return view('laporan-pimpinan.lihat', compact('usulan', 'laporan', 'berkasLpj'));
     }
 
     /**

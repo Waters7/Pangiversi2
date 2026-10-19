@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.43',
+                'tanggal' => '19 Oktober 2026',
+                'butir' => [
+                    'Halaman periksa Laporan Perjadin pimpinan memuat kartu Dokumen yang Diunggah: surat tugas, SPPD, tiket, nota, bill hotel, kuitansi, bukti biaya penyelenggaraan, dan berkas laporan pelaksana — masing-masing terbuka di tab baru, yang belum diunggah ditandai.',
+                ],
+            ],
+            [
                 'versi' => '2.5.42',
                 'tanggal' => '15 Oktober 2026',
                 'butir' => [

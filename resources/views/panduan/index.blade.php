@@ -906,7 +906,11 @@
             <x-panduan-langkah nomor="2" judul="Periksa isinya">
                 Tekan <strong>Periksa</strong>. Halaman keputusan memuat dasar pelaksanaan, uraian
                 kegiatan per hari, rencana tindak lanjut, dan kesimpulan — persis yang tercetak
-                pada dokumennya, yang juga dapat diunduh dari sana.
+                pada dokumennya, yang juga dapat diunduh dari sana. Di bawahnya, kartu
+                <strong>Dokumen yang Diunggah</strong> memuat berkas pertanggungjawaban pelaksana —
+                surat tugas, SPPD, tiket, nota, bill hotel, kuitansi, bukti biaya penyelenggaraan,
+                dan berkas laporan bila ada — masing-masing terbuka di tab baru; yang belum
+                diunggah ditandai.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Konfirmasi &amp; tanda tangan, atau kembalikan">

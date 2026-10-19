@@ -36,6 +36,9 @@ class PenagihDokumen
         'bill_hotel' => 'Bill hotel',
     ];
 
+    /** Baris checklist laporan perjadin — diisi di aplikasi, bukan diunggah. */
+    public const LABEL_LAPORAN = 'Laporan Perjalanan Dinas';
+
     /**
      * Kelengkapan pertanggungjawaban yang belum dipenuhi sebuah usulan.
      *
@@ -215,7 +218,7 @@ class PenagihDokumen
             $laporan = $usulan->laporan;
 
             $baris[] = [
-                'label' => 'Laporan Perjalanan Dinas',
+                'label' => self::LABEL_LAPORAN,
                 'terpenuhi' => $laporan?->sudahSelesai() === true,
                 'berkas' => [],
                 'catatan' => $laporan
