@@ -8,8 +8,11 @@ namespace App\Enums;
  * Susunannya mengikuti daftar jenis pangkat yang berlaku: Golongan IV
  * (Pembina), III (Penata), II (Pengatur), dan I (Juru), ditambah golongan
  * Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) I sampai XVII — yang
- * tidak berpangkat dan tidak beruang. Dipakai untuk menyusun kolom
- * "Pangkat dan Golongan" pada Surat Perjalanan Dinas.
+ * tidak berpangkat dan tidak beruang.
+ *
+ * Pilihan yang ditawarkan kini master data PangkatGolongan, yang dapat
+ * ditambah sendiri — misalnya tenaga outsourcing. Enum ini tetap dipakai
+ * membaca tulisan golongan PNS dan PPPK yang beragam, seperti pada impor.
  */
 enum Golongan: string
 {

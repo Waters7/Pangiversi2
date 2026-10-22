@@ -71,7 +71,7 @@ enum MenuAplikasi: string
             self::Pembayaran => 'Uang muka, pelunasan, transport lokal, dan bukti bayar.',
             self::Keuangan => 'Rincian biaya per usulan beserta validasinya.',
             self::LaporanArsip => 'Rekap anggaran, arsip daftar riil, rincian lengkap, dan daftar nominatif.',
-            self::MasterData => 'Unit kerja, lokasi, kategori, komponen biaya, tahun anggaran, dan jenis kegiatan.',
+            self::MasterData => 'Unit kerja, lokasi, kategori, komponen biaya, pangkat dan golongan, tahun anggaran, dan jenis kegiatan.',
             self::JejakAudit => 'Riwayat setiap tindakan pengguna.',
             self::AdministrasiSistem => 'Akun pengguna, impor & ekspor, pengaturan sistem, peran dan hak akses, tampilan dokumen cetak, berkas pertanggungjawaban, serta format pesan WhatsApp.',
         };

@@ -304,7 +304,7 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Pangkat dan Golongan</label>
                     <select name="golongan" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                         <option value="">— Belum ditentukan —</option>
-                        @foreach (\App\Enums\Golongan::terkelompok() as $kelompok => $pilihan)
+                        @foreach ($daftarGolongan as $kelompok => $pilihan)
                             <optgroup label="{{ $kelompok }}">
                                 @foreach ($pilihan as $nilai => $lengkap)
                                     <option value="{{ $nilai }}">{{ $lengkap }}</option>
@@ -410,7 +410,7 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Pangkat dan Golongan</label>
                     <select name="golongan" x-model="editUser.golongan" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
                         <option value="">— Belum ditentukan —</option>
-                        @foreach (\App\Enums\Golongan::terkelompok() as $kelompok => $pilihan)
+                        @foreach ($daftarGolongan as $kelompok => $pilihan)
                             <optgroup label="{{ $kelompok }}">
                                 @foreach ($pilihan as $nilai => $lengkap)
                                     <option value="{{ $nilai }}">{{ $lengkap }}</option>

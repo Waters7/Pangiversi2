@@ -32,6 +32,7 @@ use App\Http\Controllers\NewsFeedEksekutifController;
 use App\Http\Controllers\NomorSuratController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\PanduanController;
+use App\Http\Controllers\PangkatGolonganController;
 use App\Http\Controllers\PemantauanServerController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PengaturanDokumenController;
@@ -408,6 +409,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/akun-pembiayaan', [AkunPembiayaanController::class, 'store'])->name('akun-pembiayaan.store');
         Route::put('/akun-pembiayaan/{akunPembiayaan}', [AkunPembiayaanController::class, 'update'])->name('akun-pembiayaan.update');
         Route::delete('/akun-pembiayaan/{akunPembiayaan}', [AkunPembiayaanController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('akun-pembiayaan.destroy');
+
+        Route::get('/pangkat-golongan', [PangkatGolonganController::class, 'index'])->name('pangkat-golongan');
+        Route::post('/pangkat-golongan', [PangkatGolonganController::class, 'store'])->name('pangkat-golongan.store');
+        Route::put('/pangkat-golongan/{pangkatGolongan}', [PangkatGolonganController::class, 'update'])->name('pangkat-golongan.update');
+        Route::delete('/pangkat-golongan/{pangkatGolongan}', [PangkatGolonganController::class, 'destroy'])->middleware('can:menghapus-master-data')->name('pangkat-golongan.destroy');
 
         Route::get('/status-hasil', [StatusHasilController::class, 'index'])->name('status-hasil');
         Route::post('/status-hasil', [StatusHasilController::class, 'store'])->name('status-hasil.store');

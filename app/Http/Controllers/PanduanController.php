@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.46',
+                'tanggal' => '22 Oktober 2026',
+                'butir' => [
+                    'Pangkat dan golongan kini master data (Master Data → Pangkat & Golongan): daftar PNS dan PPPK sudah terisi, Outsourcing ditambahkan, dan pilihan lain — misalnya tenaga honorer — dapat ditambah sendiri. Pilihannya langsung ditawarkan pada formulir pengguna dan kolom Pangkat dan Golongan SPD.',
+                ],
+            ],
+            [
                 'versi' => '2.5.45',
                 'tanggal' => '22 Oktober 2026',
                 'butir' => [

@@ -1009,8 +1009,9 @@
                 Menu <strong>Administrasi Sistem → Pengguna</strong> memuat seluruh pengguna beserta
                 peran, unit kerja, dan atasannya. Saat menambah atau menyunting pengguna, nomor
                 handphone (WhatsApp) dapat diisi langsung — nomor itulah yang dipakai tim keuangan
-                menagih berkas. <strong>Pangkat dan Golongan</strong> dipilih dari golongan PNS (I/a sampai
-                IV/e) atau golongan PPPK (I sampai XVII), dan mengisi sendiri kolom pangkat pada SPD.
+                menagih berkas. <strong>Pangkat dan Golongan</strong> dipilih dari master data
+                <strong>Pangkat &amp; Golongan</strong> — golongan PNS (I/a sampai IV/e), PPPK (I sampai XVII),
+                Outsourcing, atau pilihan yang ditambahkan sendiri — dan mengisi sendiri kolom pangkat pada SPD.
                 Kolom login terakhir memperlihatkan siapa yang belum
                 pernah masuk sama sekali. Submenu <strong>Impor &amp; Ekspor</strong> memuat data
                 pengguna massal lewat CSV.

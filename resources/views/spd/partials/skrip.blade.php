@@ -22,7 +22,7 @@
             'nip' => $pengguna->nip,
             // Golongan pegawai tercatat sejak berkas DUK dimuat, jadi
             // pangkatnya terisi sendiri.
-            'pangkat_golongan' => \App\Enums\Golongan::dari($pengguna->golongan)?->lengkap() ?? '',
+            'pangkat_golongan' => \App\Models\PangkatGolongan::tulisanUntuk($pengguna->golongan) ?? '',
             'jabatan_instansi' => $pengguna->jabatan ?? '',
             'tingkat_biaya' => '',
         ]];
@@ -61,8 +61,8 @@
                 if (i > 0) this.pelaksana.splice(i, 1);
             },
 
-            // Nama pangkat per golongan, sumbernya enum Golongan.
-            pangkat: @js(collect(\App\Enums\Golongan::cases())->mapWithKeys(fn ($g) => [$g->value => $g->lengkap()])),
+            // Tulisan pangkat per kode golongan, sumbernya master data Pangkat & Golongan.
+            pangkat: @js(\App\Models\PangkatGolongan::pluck('tulisan', 'kode')),
 
             isiDariPegawai(i, id) {
                 const p = this.pegawai[id];

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Golongan;
 use App\Enums\PeranPengguna;
 use App\Models\AuditLog;
+use App\Models\PangkatGolongan;
 use App\Models\Pengaturan;
 use App\Models\UnitKerja;
 use App\Models\User;
@@ -88,6 +88,7 @@ class AdministrasiController extends Controller
             'sesiTersedia' => $sesi->tersedia(),
             'belumPernahMasuk' => User::whereNull('login_terakhir_at')->count(),
             'menitAktif' => SesiPengguna::MENIT_AKTIF,
+            'daftarGolongan' => PangkatGolongan::terkelompok(),
         ]);
     }
 
@@ -495,9 +496,10 @@ class AdministrasiController extends Controller
             'nip' => ['required', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($user?->id)],
             'role' => ['required', Rule::in(array_keys(User::roleOptions()))],
             'jabatan' => ['nullable', 'string', 'max:255'],
-            // Golongan PNS (III/a) maupun PPPK (IX) — dasar kolom Pangkat dan
-            // Golongan pada SPD.
-            'golongan' => ['nullable', Rule::enum(Golongan::class)],
+            // Kode dari master data Pangkat & Golongan — PNS (III/a), PPPK
+            // (IX), outsourcing, atau pilihan tambahan — dasar kolom Pangkat
+            // dan Golongan pada SPD.
+            'golongan' => ['nullable', Rule::exists('pangkat_golongan', 'kode')],
             // Nomor WhatsApp dipakai tim keuangan menagih berkas; aturannya
             // sama dengan isian di halaman Profil.
             'no_hp' => ['nullable', 'string', 'max:25', 'regex:/^[0-9+\-\s]+$/'],

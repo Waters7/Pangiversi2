@@ -7,6 +7,7 @@
         ['route' => 'master.kategori-perjadin', 'label' => 'Kategori Perjadin', 'aktif' => 'master.kategori-perjadin'],
         ['route' => 'master.komponen-biaya', 'label' => 'Komponen Biaya', 'aktif' => 'master.komponen-biaya'],
         ['route' => 'master.status-hasil', 'label' => 'Status Hasil', 'aktif' => 'master.status-hasil'],
+        ['route' => 'master.pangkat-golongan', 'label' => 'Pangkat & Golongan', 'aktif' => 'master.pangkat-golongan'],
         ['route' => 'master.kategori-pembiayaan', 'label' => 'Kategori Pembiayaan', 'aktif' => 'master.kategori-pembiayaan'],
         ['route' => 'master.akun-pembiayaan', 'label' => 'Akun Pembiayaan', 'aktif' => 'master.akun-pembiayaan'],
         ['route' => 'master.tahun-anggaran', 'label' => 'Tahun Anggaran', 'aktif' => 'master.tahun-anggaran*'],

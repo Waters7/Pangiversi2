@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Enums\Golongan;
 use App\Enums\PeranPengguna;
+use App\Models\PangkatGolongan;
 use App\Models\UnitKerja;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -94,9 +94,10 @@ class ImporPengguna
             'email' => $email,
             'no_hp' => $data['no_hp'] ?? null,
             'jabatan' => $data['jabatan'],
-            // Golongan dibakukan lewat enum, sehingga "iii/a" maupun
-            // "Penata Muda (III/a)" tersimpan seragam sebagai III/a.
-            'golongan' => Golongan::dari($data['golongan'] ?? null)?->value,
+            // Golongan dibakukan lewat master data Pangkat & Golongan, sehingga
+            // "iii/a" maupun "Penata Muda (III/a)" tersimpan seragam sebagai
+            // III/a, dan "Outsourcing" sebagai kodenya.
+            'golongan' => PangkatGolongan::dari($data['golongan'] ?? null)?->kode,
             'id_unit' => $data['unit_kode'] ? $unit->get($data['unit_kode']) : null,
             'id_atasan' => $data['atasan_nip'] ? $idPerNip->get($data['atasan_nip']) : null,
             'nama_bank' => $data['nama_bank'],

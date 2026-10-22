@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DokumenCetak;
-use App\Enums\Golongan;
 use App\Enums\Kemampuan;
 use App\Models\AuditLog;
 use App\Models\LokasiTujuan;
 use App\Models\Notifikasi;
+use App\Models\PangkatGolongan;
 use App\Models\SpdPelaksana;
 use App\Models\SuratPerjalananDinas;
 use App\Models\User;
@@ -567,7 +567,7 @@ class SuratPerjalananDinasController extends Controller
             // berjalan: SPD lama yang disunting tidak boleh berpindah tahun.
             'tahunSurat' => $spd?->tanggal_surat?->year ?? now()->year,
             'alatAngkut' => SuratPerjalananDinas::alatAngkutOptions(),
-            'daftarGolongan' => Golongan::terkelompok(),
+            'daftarGolongan' => PangkatGolongan::terkelompok(),
             // Lokasi diambil dari data referensi yang sama dengan formulir
             // usulan perjadin, supaya penulisan kotanya seragam.
             'lokasiTujuan' => LokasiTujuan::aktif()->orderBy('nama')->get(),

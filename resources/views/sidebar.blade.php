@@ -650,6 +650,7 @@
                 ['route' => 'master.kategori-perjadin', 'aktif' => 'master.kategori-perjadin', 'label' => 'Kategori Perjadin'],
                 ['route' => 'master.komponen-biaya', 'aktif' => 'master.komponen-biaya', 'label' => 'Komponen Biaya'],
                 ['route' => 'master.status-hasil', 'aktif' => 'master.status-hasil', 'label' => 'Status Hasil'],
+                ['route' => 'master.pangkat-golongan', 'aktif' => 'master.pangkat-golongan', 'label' => 'Pangkat & Golongan'],
                 ['route' => 'master.kategori-pembiayaan', 'aktif' => 'master.kategori-pembiayaan', 'label' => 'Kategori Pembiayaan'],
                 ['route' => 'master.akun-pembiayaan', 'aktif' => 'master.akun-pembiayaan', 'label' => 'Akun Pembiayaan'],
                 ['route' => 'master.tahun-anggaran', 'aktif' => 'master.tahun-anggaran', 'label' => 'Tahun Anggaran'],
