@@ -24,7 +24,7 @@ class NewsFeedEksekutifController extends Controller
             ? $request->input('jenis')
             : null;
 
-        $kabar = $this->kabar->kabar($hari, $jenis);
+        $kabar = $this->kabar->denganInteraksi($this->kabar->kabar($hari, $jenis), $request->user());
 
         return view('dashboard-eksekutif.news-feed', [
             // Urutan kelompok mengikuti urutan kabar: lewat tenggat, hari ini, besok, dst.

@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardEksekutifController;
 use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\FormatWhatsappController;
 use App\Http\Controllers\IntegrasiDataController;
+use App\Http\Controllers\InteraksiKabarController;
 use App\Http\Controllers\JadwalPerjalananController;
 use App\Http\Controllers\JalurUsulanController;
 use App\Http\Controllers\KategoriPembiayaanController;
@@ -88,6 +89,14 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:melihat-dashboard-eksekutif')->group(function () {
         Route::get('/dashboard-eksekutif', DashboardEksekutifController::class)->name('dashboard-eksekutif');
         Route::get('/dashboard-eksekutif/news-feed', NewsFeedEksekutifController::class)->name('dashboard-eksekutif.news-feed');
+
+        // Komentar dan reaksi pada kartu news feed.
+        Route::post('/dashboard-eksekutif/news-feed/{jenis}/{id}/komentar', [InteraksiKabarController::class, 'komentar'])
+            ->whereNumber('id')->name('dashboard-eksekutif.news-feed.komentar');
+        Route::delete('/dashboard-eksekutif/news-feed/komentar/{komentar}', [InteraksiKabarController::class, 'hapusKomentar'])
+            ->name('dashboard-eksekutif.news-feed.komentar.hapus');
+        Route::post('/dashboard-eksekutif/news-feed/{jenis}/{id}/reaksi', [InteraksiKabarController::class, 'reaksi'])
+            ->whereNumber('id')->name('dashboard-eksekutif.news-feed.reaksi');
 
         // Fitur AI: wawasan otomatis dan agen tanya-jawab, keduanya baca-saja.
         Route::get('/asisten-ai/wawasan', [AsistenAiController::class, 'wawasan'])->name('asisten-ai.wawasan');

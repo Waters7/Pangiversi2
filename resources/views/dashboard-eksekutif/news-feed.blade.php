@@ -17,6 +17,10 @@
 
     <x-flash />
 
+    @error('isi')
+        <div class="mb-5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">{{ $message }}</div>
+    @enderror
+
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-800">News Feed</h1>
         <p class="text-xs text-slate-400 mt-0.5">Kabar siapa saja yang akan dan sedang melakukan perjalanan dinas, serta tindak lanjut yang dijadwalkan</p>
@@ -51,8 +55,8 @@
                 <div class="mb-6">
                     <div class="sticky top-0 z-10 -mx-1 px-1 py-2 bg-slate-50/90 backdrop-blur">
                         <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide
-                                     {{ $kunci === KabarPerjalanan::KELOMPOK_TERLAMBAT ? 'text-red-600' : 'text-slate-500' }}">
-                            <span class="w-2 h-2 rounded-full {{ $kunci === KabarPerjalanan::KELOMPOK_TERLAMBAT ? 'bg-red-500' : 'bg-teal-500' }}"></span>
+                                     text-slate-500">
+                            <span class="w-2 h-2 rounded-full bg-teal-500"></span>
                             {{ KabarPerjalanan::labelKelompok($kunci) }}
                         </span>
                     </div>
@@ -61,7 +65,8 @@
                         @foreach ($daftar as $item)
                             @php $usulan = $item['usulan']; @endphp
 
-                            <article class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                            <article id="{{ \App\Http\Controllers\InteraksiKabarController::jangkar($item['jenis'], $item['id']) }}"
+                                     class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden scroll-mt-16">
                                 <header class="px-5 pt-4 flex items-start gap-3">
                                     <x-avatar :nama="$item['penulis']['nama']" :foto="$item['penulis']['foto']" />
                                     <div class="flex-1 min-w-0">
@@ -163,10 +168,9 @@
 
                                     <p class="px-5 pt-3 text-sm text-slate-700 leading-relaxed">{{ $tindak->uraian }}</p>
 
-                                    <div class="mx-5 mt-3 rounded-xl border p-4 flex items-center gap-4
-                                                {{ $item['terlambat'] ? 'border-red-100 bg-red-50/60' : 'border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white' }}">
-                                        <div class="w-14 shrink-0 rounded-xl bg-white border text-center overflow-hidden {{ $item['terlambat'] ? 'border-red-200' : 'border-indigo-200' }}">
-                                            <p class="text-[10px] font-bold uppercase py-0.5 text-white {{ $item['terlambat'] ? 'bg-red-500' : 'bg-indigo-500' }}">{{ $item['target']->translatedFormat('M') }}</p>
+                                    <div class="mx-5 mt-3 rounded-xl border p-4 flex items-center gap-4 border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white">
+                                        <div class="w-14 shrink-0 rounded-xl bg-white border text-center overflow-hidden border-indigo-200">
+                                            <p class="text-[10px] font-bold uppercase py-0.5 text-white bg-indigo-500">{{ $item['target']->translatedFormat('M') }}</p>
                                             <p class="text-xl font-bold text-slate-800 leading-tight py-1">{{ $item['target']->format('d') }}</p>
                                         </div>
                                         <div class="min-w-0">
@@ -182,9 +186,11 @@
                                         <span class="text-xs text-slate-500 truncate">
                                             Perjalanan {{ $usulan->no_usulan }} · {{ \Carbon\Carbon::parse($usulan->tanggal_mulai)->translatedFormat('d M Y') }}
                                         </span>
-                                        <span class="text-xs font-bold shrink-0 {{ $item['terlambat'] ? 'text-red-600' : 'text-indigo-600' }}">{{ $item['waktu'] }}</span>
+                                        <span class="text-xs font-bold shrink-0 text-indigo-600">{{ $item['waktu'] }}</span>
                                     </footer>
                                 @endif
+
+                                @include('dashboard-eksekutif.partials.interaksi-kabar', ['item' => $item])
                             </article>
                         @endforeach
                     </div>
@@ -216,9 +222,8 @@
                             ['label' => 'Sedang bertugas', 'nilai' => $ringkasan['sedang_bertugas'], 'warna' => 'text-teal-600'],
                             ['label' => 'Akan berangkat', 'nilai' => $ringkasan['akan_berangkat'], 'warna' => 'text-slate-800'],
                             ['label' => 'Tindak lanjut jatuh tempo', 'nilai' => $ringkasan['tindak_lanjut'], 'warna' => 'text-indigo-600'],
-                            ['label' => 'Lewat tenggat', 'nilai' => $ringkasan['terlambat'], 'warna' => 'text-red-600'],
                         ] as $angka)
-                            <div class="rounded-xl bg-slate-50 px-3 py-2.5">
+                            <div class="rounded-xl bg-slate-50 px-3 py-2.5 {{ $loop->last ? 'col-span-2' : '' }}">
                                 <p class="text-xl font-bold {{ $angka['warna'] }}">{{ $angka['nilai'] }}</p>
                                 <p class="text-[11px] text-slate-500 leading-tight">{{ $angka['label'] }}</p>
                             </div>

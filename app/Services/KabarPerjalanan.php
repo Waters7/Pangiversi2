@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\JenisReaksi;
 use App\Enums\StatusUsulan;
+use App\Models\KomentarKabar;
 use App\Models\PesertaUsulan;
+use App\Models\ReaksiKabar;
 use App\Models\TindakLanjut;
 use App\Models\User;
 use App\Models\Usulan;
@@ -18,16 +21,14 @@ use Illuminate\Support\Collection;
  *
  * Tiap kabar diberi kunci hari supaya halamannya dapat menyusunnya seperti
  * lini masa — hari ini, besok, lalu tanggal-tanggal berikutnya. Tindak
- * lanjut yang sudah melewati tenggatnya ditaruh paling atas, karena itulah
- * yang paling perlu dilihat pimpinan.
+ * lanjut yang sudah melewati tenggatnya tidak lagi menjadi kabar: lini
+ * masanya hanya memuat yang akan datang.
  */
 class KabarPerjalanan
 {
     public const JENIS_PERJALANAN = 'perjalanan';
 
     public const JENIS_TINDAK_LANJUT = 'tindak-lanjut';
-
-    public const KELOMPOK_TERLAMBAT = 'terlambat';
 
     /** Pilihan rentang hari ke depan yang ditawarkan halaman. */
     public const RENTANG = [7, 30, 90];
@@ -58,10 +59,52 @@ class KabarPerjalanan
     }
 
     /**
+     * Lengkapi tiap kabar dengan komentar dan reaksinya — dibaca sekaligus
+     * untuk seluruh kartu, bukan satu per satu.
+     *
+     * @param  Collection<int, array<string, mixed>>  $kabar
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function denganInteraksi(Collection $kabar, User $pengguna): Collection
+    {
+        $idPerJenis = $kabar->groupBy('jenis')->map(fn (Collection $daftar) => $daftar->pluck('id')->all());
+
+        $saring = function ($query) use ($idPerJenis): void {
+            $query->where(function ($atau) use ($idPerJenis): void {
+                foreach ($idPerJenis as $jenis => $id) {
+                    $atau->orWhere(fn ($q) => $q->where('jenis', $jenis)->whereIn('id_kabar', $id));
+                }
+            });
+        };
+
+        if ($idPerJenis->isEmpty()) {
+            return $kabar;
+        }
+
+        $komentar = KomentarKabar::with('user')->tap($saring)->oldest()->get()
+            ->groupBy(fn (KomentarKabar $k) => $k->jenis.'-'.$k->id_kabar);
+        $reaksi = ReaksiKabar::query()->tap($saring)->get()
+            ->groupBy(fn (ReaksiKabar $r) => $r->jenis.'-'.$r->id_kabar);
+
+        return $kabar->map(function (array $item) use ($komentar, $reaksi, $pengguna): array {
+            $kunci = $item['jenis'].'-'.$item['id'];
+            $milik = $reaksi->get($kunci, collect());
+
+            return $item + [
+                'komentar' => $komentar->get($kunci, collect()),
+                // Jumlah per reaksi, urut seperti pilihan pada kartu.
+                'reaksi' => collect(JenisReaksi::cases())
+                    ->mapWithKeys(fn (JenisReaksi $jenis) => [$jenis->value => $milik->where('reaksi', $jenis)->count()]),
+                'reaksiSaya' => $milik->firstWhere('id_user', $pengguna->id)?->reaksi,
+            ];
+        });
+    }
+
+    /**
      * Angka ringkas untuk panel samping. Tidak terpengaruh saringan jenis,
      * supaya pimpinan tetap melihat gambaran utuhnya.
      *
-     * @return array{sedang_bertugas: int, akan_berangkat: int, tindak_lanjut: int, terlambat: int, tujuan: Collection<string, int>}
+     * @return array{sedang_bertugas: int, akan_berangkat: int, tindak_lanjut: int, tujuan: Collection<string, int>}
      */
     public function ringkasan(int $hari): array
     {
@@ -78,8 +121,7 @@ class KabarPerjalanan
         return [
             'sedang_bertugas' => $orang($berlangsung),
             'akan_berangkat' => $orang($mendatang),
-            'tindak_lanjut' => $this->queryTindakLanjut($hari)->whereDate('target_selesai', '>=', today())->count(),
-            'terlambat' => $this->queryTindakLanjut($hari)->whereDate('target_selesai', '<', today())->count(),
+            'tindak_lanjut' => $this->queryTindakLanjut($hari)->count(),
             'tujuan' => $perjalanan->pluck('lokasi')->filter()->countBy()->sortDesc()->take(5),
         ];
     }
@@ -89,10 +131,6 @@ class KabarPerjalanan
      */
     public static function labelKelompok(string $kelompok): string
     {
-        if ($kelompok === self::KELOMPOK_TERLAMBAT) {
-            return 'Lewat tenggat';
-        }
-
         $tanggal = Carbon::parse($kelompok)->startOfDay();
 
         return match (true) {
@@ -117,7 +155,7 @@ class KabarPerjalanan
     }
 
     /**
-     * Tindak lanjut bertenggat yang belum selesai, termasuk yang sudah lewat.
+     * Tindak lanjut bertenggat yang belum selesai dan tenggatnya belum lewat.
      *
      * @return Builder<TindakLanjut>
      */
@@ -126,6 +164,7 @@ class KabarPerjalanan
         return TindakLanjut::query()
             ->belumSelesai()
             ->whereNotNull('target_selesai')
+            ->whereDate('target_selesai', '>=', today())
             ->whereDate('target_selesai', '<=', today()->addDays($hari))
             ->whereHas('laporan.usulan');
     }
@@ -151,6 +190,7 @@ class KabarPerjalanan
 
                 return [
                     'jenis' => self::JENIS_PERJALANAN,
+                    'id' => $usulan->id,
                     'kelompok' => ($berlangsung ? today() : $mulai)->toDateString(),
                     'urut' => ($berlangsung ? today() : $mulai)->format('Ymd').'-1-'.$mulai->format('Ymd').'-'.$usulan->id,
                     'usulan' => $usulan,
@@ -184,20 +224,18 @@ class KabarPerjalanan
             ->map(function (TindakLanjut $tindak): array {
                 $usulan = $tindak->laporan->usulan;
                 $target = $tindak->target_selesai->copy()->startOfDay();
-                $terlambat = $target->lt(today());
                 $selisih = (int) today()->diffInDays($target, true);
 
                 return [
                     'jenis' => self::JENIS_TINDAK_LANJUT,
-                    'kelompok' => $terlambat ? self::KELOMPOK_TERLAMBAT : $target->toDateString(),
-                    'urut' => ($terlambat ? '00000000' : $target->format('Ymd')).'-2-'.$target->format('Ymd').'-'.$tindak->id,
+                    'id' => $tindak->id,
+                    'kelompok' => $target->toDateString(),
+                    'urut' => $target->format('Ymd').'-2-'.$target->format('Ymd').'-'.$tindak->id,
                     'tindak' => $tindak,
                     'usulan' => $usulan,
                     'penulis' => $this->penulis($this->urutkanPeserta($usulan)->first(), $usulan->user),
                     'target' => $target,
-                    'terlambat' => $terlambat,
                     'waktu' => match (true) {
-                        $terlambat => "Terlambat {$selisih} hari",
                         $selisih === 0 => 'Jatuh tempo hari ini',
                         $selisih === 1 => 'Jatuh tempo besok',
                         default => "Jatuh tempo {$selisih} hari lagi",

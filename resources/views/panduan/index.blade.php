@@ -949,8 +949,10 @@
                 dan rekap per sumber dana (RM dan BLU). Submenu
                 <strong>News Feed</strong> menyajikan kabarnya seperti lini masa media sosial: siapa
                 yang akan dan sedang melakukan perjalanan dinas, ke mana, bersama siapa, serta tindak
-                lanjut hasil perjalanan yang dijadwalkan — yang melewati tenggat ditaruh paling atas.
-                Saring menurut jenis kabar dan rentang 7, 30, atau 90 hari ke depan.
+                lanjut hasil perjalanan yang dijadwalkan; tindak lanjut yang sudah lewat tenggat tidak
+                ditampilkan. Saring menurut jenis kabar dan rentang 7, 30, atau 90 hari ke depan. Tiap kartu
+                dapat diberi reaksi — Suka, Apresiasi, Semangat, Doakan, atau Selamat; memilih yang sama
+                sekali lagi mencabutnya — dan komentar, yang dapat dihapus penulisnya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Rekap Perjadin">

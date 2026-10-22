@@ -77,9 +77,10 @@ class NewsFeedEksekutifTest extends TestCase
             ->assertDontSee('Pegawai Draf');
     }
 
-    public function test_tindak_lanjut_terjadwal_tampil_dan_yang_lewat_tenggat_didahulukan(): void
+    public function test_tindak_lanjut_terjadwal_tampil_sedangkan_yang_lewat_tenggat_tidak(): void
     {
         $this->tindakLanjut('Menyusun draf revisi kurikulum', 5);
+        $this->tindakLanjut('Mengirim notulen ke jurusan', 0);
         $this->tindakLanjut('Melaporkan hasil rapat ke jurusan', -2, 'berjalan');
         $this->tindakLanjut('Tindak lanjut yang sudah tuntas', 1, 'selesai');
 
@@ -87,11 +88,14 @@ class NewsFeedEksekutifTest extends TestCase
             ->get(route('dashboard-eksekutif.news-feed'))
             ->assertOk()
             ->assertSeeInOrder([
-                'Lewat tenggat', 'Melaporkan hasil rapat ke jurusan', 'Terlambat 2 hari',
+                'Hari ini', 'Mengirim notulen ke jurusan', 'Jatuh tempo hari ini',
                 'Menyusun draf revisi kurikulum', 'Jatuh tempo 5 hari lagi',
             ])
             ->assertSee('menjadwalkan tindak lanjut')
             ->assertSee('Prodi Kebidanan')
+            ->assertDontSee('Melaporkan hasil rapat ke jurusan')
+            ->assertDontSee('Lewat tenggat')
+            ->assertDontSee('Terlambat')
             ->assertDontSee('Tindak lanjut yang sudah tuntas');
     }
 

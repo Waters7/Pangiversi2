@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.48',
+                'tanggal' => '22 Oktober 2026',
+                'butir' => [
+                    'News Feed dashboard eksekutif tidak lagi menampilkan tindak lanjut yang sudah lewat tenggat.',
+                    'Tiap kartu News Feed dapat diberi reaksi (Suka, Apresiasi, Semangat, Doakan, Selamat) dan komentar; komentar dapat dihapus penulisnya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.47',
                 'tanggal' => '22 Oktober 2026',
                 'butir' => [
