@@ -88,7 +88,7 @@ enum MenuAplikasi: string
             self::PerjalananDinasSendiri => [Kemampuan::MengajukanUsulan],
             self::DashboardEksekutif => [Kemampuan::MelihatDashboardEksekutif],
             self::BuatSpd => [Kemampuan::MelihatSemuaSpd, Kemampuan::MengubahTanggalSpd, Kemampuan::MengisiPengikutSpd],
-            self::UsulanPerjadin => [Kemampuan::MelihatSemuaUsulan, Kemampuan::MemvalidasiUsulan],
+            self::UsulanPerjadin => [Kemampuan::MelihatSemuaUsulan, Kemampuan::MemvalidasiUsulan, Kemampuan::MengubahJalurPerjadin],
             self::LaporanPerjadin => [Kemampuan::MengonfirmasiLaporanPerjadin],
             self::Persetujuan => [Kemampuan::MelihatPersetujuan, Kemampuan::MenandatanganiDaftarRiil],
             self::Dokumen => [Kemampuan::MelihatSemuaDokumen, Kemampuan::MembantuUnggahDokumen],

@@ -32,6 +32,13 @@ enum Kemampuan: string
 
     case MemvalidasiUsulan = 'memvalidasi-usulan';
 
+    /**
+     * Memindahkan usulan ke jalur pengajuan lain — misalnya yang terlanjur
+     * diajukan lewat jalur dalam satu provinsi padahal lintas pulau. Jalur
+     * menentukan berkas pertanggungjawaban yang ditagih.
+     */
+    case MengubahJalurPerjadin = 'mengubah-jalur-perjadin';
+
     case MelihatKeuangan = 'melihat-keuangan';
 
     case MengelolaBiaya = 'mengelola-biaya';
@@ -156,6 +163,7 @@ enum Kemampuan: string
             self::MelihatSemuaDokumen => 'Melihat dokumen seluruh perjalanan dinas',
             self::MembantuUnggahDokumen => 'Membantu mengunggah dokumen pertanggungjawaban',
             self::MemvalidasiUsulan => 'Memvalidasi usulan',
+            self::MengubahJalurPerjadin => 'Mengubah jalur perjalanan dinas',
             self::MelihatKeuangan => 'Melihat data keuangan',
             self::MengelolaBiaya => 'Menginput rincian biaya',
             self::MemvalidasiBiaya => 'Memvalidasi nominal biaya',

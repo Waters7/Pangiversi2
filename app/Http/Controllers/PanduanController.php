@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.45',
+                'tanggal' => '22 Oktober 2026',
+                'butir' => [
+                    'Hak akses baru Mengubah jalur perjalanan dinas (Usulan Perjadin → Ubah; bawaannya super administrator): tombol Ubah Jalur Perjadin pada detail usulan memindahkan usulan yang salah jalur beserta kategorinya, dengan alasan yang tercatat pada jejak audit dan dikabarkan kepada pelaksana. Detail usulan kini menampilkan jalur pengajuannya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.44',
                 'tanggal' => '19 Oktober 2026',
                 'butir' => [

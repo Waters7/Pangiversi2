@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\JenisPerjadin;
+use App\Enums\Kemampuan;
 use App\Enums\StatusUsulan;
 use App\Models\AuditLog;
 use App\Models\Dokumen;
@@ -427,7 +428,16 @@ class UsulanController extends Controller
             ->orderBy('nama')
             ->get(['id', 'nama', 'nip', 'jabatan']);
 
-        return view('usulan.detail-usulan', compact('usulan', 'calonPeserta'));
+        return view('usulan.detail-usulan', compact('usulan', 'calonPeserta') + [
+            // Kategori sah per jalur, untuk formulir Ubah Jalur.
+            'kategoriPerJalur' => request()->user()->punyaKemampuan(Kemampuan::MengubahJalurPerjadin)
+                ? collect(JenisPerjadin::cases())->mapWithKeys(fn (JenisPerjadin $jalur) => [
+                    $jalur->value => $jalur->kategori()->flatten()
+                        ->map(fn (KategoriPerjadin $kategori) => ['id' => $kategori->id, 'nama' => $kategori->nama, 'grup' => $kategori->grup])
+                        ->values(),
+                ])
+                : null,
+        ]);
     }
 
     public function edit(Usulan $usulan)

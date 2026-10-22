@@ -16,6 +16,7 @@ use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\FormatWhatsappController;
 use App\Http\Controllers\IntegrasiDataController;
 use App\Http\Controllers\JadwalPerjalananController;
+use App\Http\Controllers\JalurUsulanController;
 use App\Http\Controllers\KategoriPembiayaanController;
 use App\Http\Controllers\KategoriPerjadinController;
 use App\Http\Controllers\KegiatanController;
@@ -136,6 +137,11 @@ Route::middleware('auth')->group(function () {
 
     // Mengirim usulan draf untuk diverifikasi PPK
     Route::put('/usulan/{usulan:no_usulan}/ajukan', [UsulanController::class, 'ajukan'])->name('usulan.ajukan');
+
+    // Memindahkan usulan ke jalur pengajuan lain — hak peran tertentu.
+    Route::put('/usulan/{usulan:no_usulan}/jalur', [JalurUsulanController::class, 'update'])
+        ->middleware('can:mengubah-jalur-perjadin')
+        ->name('usulan.jalur');
 
     // Konfirmasi kesediaan atas usulan yang dibuatkan orang lain
     Route::put('/usulan/{usulan:no_usulan}/konfirmasi', [UsulanController::class, 'konfirmasi'])->name('usulan.konfirmasi');

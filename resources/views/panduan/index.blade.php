@@ -1044,7 +1044,11 @@
                     Perjadin semua pegawai dalam mode lihat saja, sedangkan hak <strong>Membantu mengunggah
                     dokumen pertanggungjawaban</strong> (Dokumen → Ubah) membolehkan mengunggah berkas atas
                     nama pelaksana — pelaksana menerima notifikasi dan jejak audit mencatat nama
-                    pengunggahnya; laporan perjalanan dinas tetap disusun pelaksananya. Tombol
+                    pengunggahnya; laporan perjalanan dinas tetap disusun pelaksananya. Hak <strong>Mengubah
+                    jalur perjalanan dinas</strong> (Usulan Perjadin → Ubah) memunculkan tombol <strong>Ubah Jalur
+                    Perjadin</strong> pada detail usulan untuk memindahkan usulan yang salah jalur — misalnya
+                    lintas pulau yang terlanjur diajukan lewat jalur dalam satu provinsi — beserta kategorinya;
+                    alasannya wajib, tercatat pada jejak audit, dan dikabarkan kepada pelaksana. Tombol
                     <strong>Tambah Peran</strong> membuat peran baru (kodenya dibuat dari nama) yang
                     langsung dapat dipilih pada formulir pengguna; peran buatan dapat dihapus selama
                     tidak ada pengguna yang memakainya. Super Administrator selalu memegang seluruh

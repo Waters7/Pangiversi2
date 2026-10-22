@@ -25,6 +25,18 @@
         </div>
     </div>
 
+    <x-flash />
+
+    @if ($errors->any())
+        <div class="mb-5 bg-red-50 border border-red-200 rounded-xl px-5 py-3">
+            <ul class="text-xs text-red-700 list-disc list-inside space-y-0.5">
+                @foreach ($errors->all() as $pesan)
+                    <li>{{ $pesan }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {{-- Kiri: Informasi Utama --}}
@@ -60,6 +72,11 @@
                                 <dd class="text-sm text-slate-800">{{ $usulan->kegiatan->nama }}</dd>
                             </div>
                         @endif
+
+                        <div>
+                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Jalur Pengajuan</dt>
+                            <dd class="text-sm text-slate-800" data-jalur-usulan>{{ $usulan->jalur()->label() }}</dd>
+                        </div>
 
                         <div>
                             <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Kategori Perjadin</dt>
@@ -645,6 +662,72 @@
                         Edit Usulan
                     </a>
                 @endif
+
+                {{-- Usulan yang salah jalur ditagih berkas yang keliru; peran yang
+                     berwenang memindahkannya, dengan alasan yang tercatat. --}}
+                @can('mengubah-jalur-perjadin')
+                    <div x-data="{
+                             buka: {{ $errors->hasAny(['jalur', 'id_kategori_perjadin', 'alasan']) ? 'true' : 'false' }},
+                             jalur: @js(old('jalur', $usulan->jalur()->value)),
+                             kategori: @js((string) old('id_kategori_perjadin', $usulan->id_kategori_perjadin)),
+                             pilihan: @js($kategoriPerJalur),
+                             get daftar() { return this.pilihan[this.jalur] ?? []; },
+                             gantiJalur() {
+                                 if (! this.daftar.some((k) => String(k.id) === this.kategori)) {
+                                     this.kategori = this.daftar.length ? String(this.daftar[0].id) : '';
+                                 }
+                             },
+                         }" data-ubah-jalur>
+                        <button type="button" @click="buka = ! buka"
+                                class="w-full flex items-center justify-center gap-2 px-5 py-2.5 border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold rounded-xl hover:bg-amber-100 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                            </svg>
+                            Ubah Jalur Perjadin
+                        </button>
+
+                        <form x-show="buka" x-cloak x-transition method="POST" action="{{ route('usulan.jalur', $usulan) }}"
+                              class="mt-3 p-4 rounded-xl border border-amber-200 bg-white space-y-3"
+                              onsubmit="return confirm('Ubah jalur usulan ini? Berkas pertanggungjawaban yang ditagih ikut berubah.')">
+                            @csrf
+                            @method('PUT')
+                            <div>
+                                <label for="jalur" class="block text-xs font-semibold text-slate-700 mb-1">Jalur baru</label>
+                                <select name="jalur" id="jalur" x-model="jalur" @change="gantiJalur()"
+                                        class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-300 focus:border-transparent">
+                                    @foreach (\App\Enums\JenisPerjadin::cases() as $pilihanJalur)
+                                        <option value="{{ $pilihanJalur->value }}">{{ $pilihanJalur->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="id_kategori_perjadin" class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
+                                <select name="id_kategori_perjadin" id="id_kategori_perjadin" x-model="kategori"
+                                        class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-300 focus:border-transparent">
+                                    <template x-for="k in daftar" :key="k.id">
+                                        <option :value="String(k.id)" x-text="k.nama + ' — ' + k.grup" :selected="String(k.id) === kategori"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="alasan-jalur" class="block text-xs font-semibold text-slate-700 mb-1">
+                                    Alasan <span class="text-red-500">*</span>
+                                </label>
+                                <textarea name="alasan" id="alasan-jalur" rows="2" maxlength="500" required
+                                          class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                                          placeholder="cth: tujuan lintas pulau, terlanjur diajukan lewat jalur dalam provinsi">{{ old('alasan') }}</textarea>
+                            </div>
+                            <p class="text-[11px] text-slate-500 leading-relaxed">
+                                Berkas pertanggungjawaban yang ditagih mengikuti jalur baru. Perubahan tercatat pada
+                                jejak audit dan dikabarkan kepada pelaksana.
+                            </p>
+                            <button type="submit"
+                                    class="w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition">
+                                Simpan Jalur
+                            </button>
+                        </form>
+                    </div>
+                @endcan
 
                 <a href="{{ route(auth()->user()->ruteDaftarUsulan()) }}"
                    class="w-full flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition">
