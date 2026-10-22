@@ -65,13 +65,14 @@ enum PeranPengguna: string
     /**
      * Modul untuk peran ini sudah dapat dipakai.
      *
-     * Pegawai eksternal, mahasiswa, dan outsourcing akan dilayani modul
-     * tersendiri yang masih dikembangkan; sampai siap, setelah masuk mereka
-     * hanya melihat halaman pemberitahuan.
+     * Pegawai eksternal dan mahasiswa akan dilayani modul tersendiri yang
+     * masih dikembangkan; sampai siap, setelah masuk mereka hanya melihat
+     * halaman pemberitahuan. Outsourcing sementara memakai modul yang
+     * sekarang — sama dengan Dosen / Tendik — sampai modulnya sendiri siap.
      */
     public function modulTersedia(): bool
     {
-        return ! in_array($this, [self::PegawaiEksternal, self::Mahasiswa, self::Outsourcing], true);
+        return ! in_array($this, [self::PegawaiEksternal, self::Mahasiswa], true);
     }
 
     /**

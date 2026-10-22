@@ -323,10 +323,7 @@ class HakAksesPeranTest extends TestCase
                 ->assertOk();
         }
 
-        // Outsourcing tidak diuji di sini: modulnya masih dikembangkan sehingga
-        // ia ditahan lebih dulu pada halaman pemberitahuan (lihat
-        // ModulDalamPengembanganTest), belum sampai ke pemeriksaan hak akses.
-        foreach ([PeranPengguna::DosenTendik, PeranPengguna::TimSdm] as $peran) {
+        foreach ([PeranPengguna::DosenTendik, PeranPengguna::Outsourcing, PeranPengguna::TimSdm] as $peran) {
             $this->actingAs($this->pengguna($peran))
                 ->get(route('dashboard-eksekutif'))
                 ->assertForbidden();

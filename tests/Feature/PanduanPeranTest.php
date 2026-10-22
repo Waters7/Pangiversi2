@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.47')
+            ->assertSee('Pengguna berperan Outsourcing sementara memakai modul perjalanan dinas yang sekarang')
             ->assertSee('Versi 2.5.46')
             ->assertSee('Pangkat dan golongan kini master data')
             ->assertSee('Versi 2.5.45')

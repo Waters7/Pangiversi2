@@ -8,9 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Pegawai eksternal, mahasiswa, dan outsourcing akan dilayani modul tersendiri
- * yang masih dikembangkan. Sampai siap, setelah masuk mereka hanya melihat
- * halaman pemberitahuan dan tombol keluar.
+ * Pegawai eksternal dan mahasiswa akan dilayani modul tersendiri yang masih
+ * dikembangkan. Sampai siap, setelah masuk mereka hanya melihat halaman
+ * pemberitahuan dan tombol keluar. Outsourcing sementara memakai modul yang
+ * sekarang.
  */
 class ModulDalamPengembanganTest extends TestCase
 {
@@ -21,10 +22,10 @@ class ModulDalamPengembanganTest extends TestCase
         return User::factory()->create(['role' => $peran->value]);
     }
 
-    public function test_hanya_pegawai_eksternal_mahasiswa_dan_outsourcing_yang_modulnya_belum_tersedia(): void
+    public function test_hanya_pegawai_eksternal_dan_mahasiswa_yang_modulnya_belum_tersedia(): void
     {
         foreach (PeranPengguna::cases() as $peran) {
-            $ditahan = in_array($peran, [PeranPengguna::PegawaiEksternal, PeranPengguna::Mahasiswa, PeranPengguna::Outsourcing], true);
+            $ditahan = in_array($peran, [PeranPengguna::PegawaiEksternal, PeranPengguna::Mahasiswa], true);
 
             $this->assertSame(! $ditahan, $peran->modulTersedia(), "Peran {$peran->value}");
         }
@@ -47,7 +48,7 @@ class ModulDalamPengembanganTest extends TestCase
 
     public function test_seluruh_halaman_lain_dialihkan_ke_pemberitahuan(): void
     {
-        foreach ([PeranPengguna::PegawaiEksternal, PeranPengguna::Mahasiswa, PeranPengguna::Outsourcing] as $peran) {
+        foreach ([PeranPengguna::PegawaiEksternal, PeranPengguna::Mahasiswa] as $peran) {
             $pengguna = $this->pengguna($peran);
 
             foreach ([route('dashboard'), route('usulan.create'), route('profil.index'), route('spd.index')] as $tujuan) {
@@ -71,6 +72,22 @@ class ModulDalamPengembanganTest extends TestCase
             ->assertRedirect(route('login'));
 
         $this->assertGuest();
+    }
+
+    /** Outsourcing sementara memakai modul pelaksana yang sekarang. */
+    public function test_outsourcing_memakai_modul_yang_sekarang(): void
+    {
+        $pengguna = $this->pengguna(PeranPengguna::Outsourcing);
+
+        $this->actingAs($pengguna)->get(route('dashboard'))->assertOk();
+        $this->actingAs($pengguna)->get(route('usulan.create'))->assertOk();
+        $this->actingAs($pengguna)->get(route('spd.index'))->assertOk();
+        $this->actingAs($pengguna)
+            ->get(route('modul.dalam-pengembangan'))
+            ->assertRedirect(route('dashboard'));
+
+        // Kewenangannya tetap kewenangan pengusul biasa.
+        $this->actingAs($pengguna)->get(route('dashboard-eksekutif'))->assertForbidden();
     }
 
     public function test_peran_lain_tidak_terpengaruh(): void

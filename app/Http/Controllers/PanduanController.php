@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.47',
+                'tanggal' => '22 Oktober 2026',
+                'butir' => [
+                    'Pengguna berperan Outsourcing sementara memakai modul perjalanan dinas yang sekarang — sama dengan Dosen / Tendik — dan tidak lagi tertahan di halaman pemberitahuan "fitur masih dikembangkan". Pegawai Kemenkes Eksternal dan mahasiswa masih menunggu modulnya sendiri.',
+                ],
+            ],
+            [
                 'versi' => '2.5.46',
                 'tanggal' => '22 Oktober 2026',
                 'butir' => [

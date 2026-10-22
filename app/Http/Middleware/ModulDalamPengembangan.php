@@ -9,10 +9,10 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Menahan peran yang modulnya belum tersedia pada halaman pemberitahuan.
  *
- * Pegawai eksternal, mahasiswa, dan outsourcing akan dilayani modul
- * tersendiri yang masih dikembangkan. Sampai modul itu siap, setelah masuk
- * mereka hanya melihat halaman pemberitahuan dan tombol keluar — tidak ada
- * menu lain yang bisa dibuka.
+ * Pegawai eksternal dan mahasiswa akan dilayani modul tersendiri yang
+ * masih dikembangkan. Sampai modul itu siap, setelah masuk mereka hanya
+ * melihat halaman pemberitahuan dan tombol keluar — tidak ada menu lain
+ * yang bisa dibuka. Outsourcing sementara memakai modul yang sekarang.
  */
 class ModulDalamPengembangan
 {
