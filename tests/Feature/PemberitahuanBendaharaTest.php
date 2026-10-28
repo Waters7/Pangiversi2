@@ -13,7 +13,6 @@ use App\Models\StatusHasil;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\SinkronBiayaDokumen;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -91,11 +90,13 @@ class PemberitahuanBendaharaTest extends TestCase
     {
         $this->actingAs($this->pelaksana)
             ->put(route('dokumen.laporan.update', $this->usulan), [
+                'tentang' => 'Rapat koordinasi',
                 'id_status_hasil' => StatusHasil::first()->id,
-                'kegiatan' => [
-                    Carbon::parse($this->usulan->tanggal_mulai)->toDateString() => 'Mengikuti rapat koordinasi.',
+                'bagian' => [
+                    'kegiatan' => 'Mengikuti rapat koordinasi.',
+                    'hasil' => 'Tersusun rencana kerja.',
+                    'simpulan' => 'Perlu laporan internal.',
                 ],
-                'tindak_lanjut' => [['uraian' => 'Menyusun laporan internal.']],
             ]);
 
         $this->actingAs($this->pelaksana)

@@ -495,9 +495,16 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Susun laporan perjalanan dinas">
-                Menu <strong>Dokumen → List Laporan Perjadin</strong> memuat formulir laporannya:
-                tempat dan uraian kegiatan tiap hari, hasil yang dicapai, kesimpulan, dan rencana
-                tindak lanjut. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
+                Menu <strong>Dokumen → List Laporan Perjadin</strong> memuat formulir laporannya, mengikuti
+                format laporan Kemenkes: judul <strong>Tentang</strong> (nama kegiatan menurut surat tugas,
+                terisi dari usulan dan dapat diubah), <strong>A. Pendahuluan</strong> — 1 Umum, 2 Maksud dan
+                Tujuan, 3 Ruang Lingkup, 4 Dasar — lalu <strong>B. Kegiatan yang Dilaksanakan</strong>,
+                <strong>C. Hasil yang Dicapai</strong> beserta status hasilnya, <strong>D. Simpulan dan
+                Saran</strong> (boleh dilengkapi rencana tindak lanjut), dan <strong>E. Penutup</strong>. Tiap
+                bagian berupa uraian panjang dan boleh diberi satu foto dokumentasi (JPG atau PNG, maks. 2 MB);
+                seluruh foto tercetak pada halaman <strong>lampiran</strong> dokumen. Yang wajib sebelum dikirim:
+                Tentang, B, C, D, dan status hasil. Laporan yang sudah diisi dengan format lama tetap memakai
+                format lamanya. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
                 laporan boleh dicicil. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
                 Bila Anda sudah menyusun laporan lengkap — misalnya berfoto — unggah pada kolom
                 <strong>Berkas laporan</strong> (opsional; PDF, Word, JPG, atau PNG, maks. 10 MB). Isian di

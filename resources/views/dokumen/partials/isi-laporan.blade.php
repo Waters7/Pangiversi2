@@ -1,5 +1,10 @@
 {{-- Isi laporan perjalanan dinas: dipakai halaman lihat pelaksana dan meja
      pimpinan, supaya keduanya membaca dokumen yang sama persis. --}}
+{{-- Laporan baru memakai format Kemenkes; yang diisi dengan format lama
+     tetap dibaca dengan susunan lamanya di bawah. --}}
+@if ($laporan->formatKemenkes())
+    @include('dokumen.partials.isi-laporan-kemenkes')
+@else
 {{-- Dasar pelaksanaan diturunkan dari surat tugas dan maksud
      perjalanan, jadi tidak pernah berbeda dari yang tercatat. --}}
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -63,4 +68,5 @@
         <h3 class="font-bold text-slate-800 text-sm mb-2">Kesimpulan dan Saran</h3>
         <p class="text-sm text-slate-600 leading-relaxed">{{ $laporan->kesimpulan }}</p>
     </div>
+@endif
 @endif

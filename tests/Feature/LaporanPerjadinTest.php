@@ -46,6 +46,10 @@ class LaporanPerjadinTest extends TestCase
 
         Keuangan::factory()->belumBayar()->create(['id_usulan' => $this->usulan->id]);
 
+        // Alur format lama: laporan yang sudah diisi sebelum format Kemenkes
+        // berlaku tetap memakai susunan lamanya (lihat LaporanFormatKemenkesTest).
+        LaporanPerjadin::create(['id_usulan' => $this->usulan->id, 'versi_format' => LaporanPerjadin::FORMAT_LAMA]);
+
         User::factory()->create([
             'role' => User::ROLE_PIMPINAN,
             'nama' => 'Dr. Hanung Prasetya',

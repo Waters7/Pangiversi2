@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.51')
+            ->assertSee('Laporan perjalanan dinas kini mengikuti format laporan Kemenkes')
             ->assertSee('Versi 2.5.50')
             ->assertSee('Logo PANGI terbaru kini juga dipakai pada layar pemuat dan panel samping')
             ->assertSee('Versi 2.5.49')

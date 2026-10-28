@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BagianLaporan;
 use App\Enums\StatusLaporanPerjadin;
 use App\Services\FormatLaporanPerjadin;
 use App\Services\TautanVerifikasi;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -23,10 +25,23 @@ class LaporanPerjadin extends Model
 {
     protected $table = 'laporan_perjadin';
 
+    /** Format lama: uraian per hari dan rencana tindak lanjut dalam satu tabel. */
+    public const FORMAT_LAMA = 1;
+
+    /** Format Kemenkes: Pendahuluan, kegiatan, hasil, simpulan, penutup, dan lampiran dokumentasi. */
+    public const FORMAT_KEMENKES = 2;
+
     protected $fillable = [
         'id_usulan',
+        'versi_format',
+        'tentang',
+        'umum',
+        'maksud_tujuan',
+        'ruang_lingkup',
         'dasar',
+        'kegiatan_dilaksanakan',
         'hasil',
+        'penutup',
         'id_status_hasil',
         'kesimpulan',
         'berkas_laporan',
@@ -46,6 +61,7 @@ class LaporanPerjadin extends Model
     protected function casts(): array
     {
         return [
+            'versi_format' => 'integer',
             'diselesaikan_at' => 'datetime',
             'dikirim_at' => 'datetime',
             'dikonfirmasi_at' => 'datetime',
@@ -94,11 +110,100 @@ class LaporanPerjadin extends Model
     }
 
     /**
-     * Laporan layak diselesaikan bila sudah memuat sedikitnya satu uraian
+     * @return HasMany<LaporanDokumentasi, $this>
+     */
+    public function dokumentasi(): HasMany
+    {
+        return $this->hasMany(LaporanDokumentasi::class, 'id_laporan');
+    }
+
+    /**
+     * Laporan ini memakai format Kemenkes. Laporan yang sudah diisi dengan
+     * format lama sebelum format ini berlaku tetap pada format lamanya.
+     */
+    public function formatKemenkes(): bool
+    {
+        return (int) ($this->versi_format ?? self::FORMAT_KEMENKES) >= self::FORMAT_KEMENKES;
+    }
+
+    /** Isi satu bagian laporan format Kemenkes. */
+    public function isiBagian(BagianLaporan $bagian): ?string
+    {
+        $isi = $this->{$bagian->kolom()};
+
+        return filled($isi) ? (string) $isi : null;
+    }
+
+    /** Foto dokumentasi satu bagian, bila ada. */
+    public function dokumentasiBagian(BagianLaporan $bagian): ?LaporanDokumentasi
+    {
+        return $this->dokumentasi->first(fn (LaporanDokumentasi $foto) => $foto->bagian === $bagian);
+    }
+
+    /**
+     * Foto dokumentasi untuk halaman lampiran, urut menurut bagian laporan
+     * dan disematkan sebagai data URI supaya terbaca oleh pembuat PDF.
+     *
+     * @return list<array{nomor: int, bagian: BagianLaporan, gambar: string}>
+     */
+    public function lampiranDokumentasi(): array
+    {
+        $disk = Storage::disk('public');
+        $lampiran = [];
+
+        foreach (BagianLaporan::cases() as $bagian) {
+            $foto = $this->dokumentasiBagian($bagian);
+
+            if (! $foto || ! $disk->exists($foto->berkas)) {
+                continue;
+            }
+
+            $jenis = strtolower(pathinfo($foto->berkas, PATHINFO_EXTENSION)) === 'png' ? 'image/png' : 'image/jpeg';
+
+            $lampiran[] = [
+                'nomor' => count($lampiran) + 1,
+                'bagian' => $bagian,
+                'gambar' => 'data:'.$jenis.';base64,'.base64_encode($disk->get($foto->berkas)),
+            ];
+        }
+
+        return $lampiran;
+    }
+
+    /**
+     * Bagian wajib format Kemenkes yang belum diisi, beserta judulnya.
+     *
+     * @return list<string>
+     */
+    public function bagianWajibKosong(): array
+    {
+        $kosong = blank($this->tentang) ? ['Tentang (nama kegiatan)'] : [];
+
+        foreach (BagianLaporan::cases() as $bagian) {
+            if ($bagian->wajib() && $this->isiBagian($bagian) === null) {
+                $kosong[] = $bagian->label();
+            }
+        }
+
+        if ($this->id_status_hasil === null) {
+            $kosong[] = 'Status hasil yang dicapai';
+        }
+
+        return $kosong;
+    }
+
+    /**
+     * Laporan layak diselesaikan. Format lama: sedikitnya satu uraian
      * kegiatan, satu rencana tindak lanjut, dan status hasilnya dipilih.
+     * Format Kemenkes: judul "tentang", kegiatan yang dilaksanakan, hasil
+     * yang dicapai, simpulan dan saran, serta status hasilnya terisi.
      */
     public function layakDiselesaikan(): bool
     {
+        if ($this->formatKemenkes()) {
+            return $this->bagianWajibKosong() === [];
+        }
+
         return $this->kegiatan()->exists()
             && $this->tindakLanjut()->exists()
             && $this->id_status_hasil !== null;

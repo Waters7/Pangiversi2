@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BagianLaporan;
 use App\Enums\Kemampuan;
 use App\Enums\PeranPengguna;
 use App\Enums\StatusTindakLanjut;
 use App\Enums\StatusUsulan;
 use App\Models\AuditLog;
+use App\Models\LaporanDokumentasi;
 use App\Models\LaporanPerjadin;
 use App\Models\Notifikasi;
 use App\Models\StatusHasil;
@@ -106,6 +108,18 @@ class LaporanPerjadinController extends Controller
         $laporan = $this->laporan($usulan);
         $usulan->load('user.unit', 'kegiatan', 'kategoriPerjadin');
 
+        // Laporan baru memakai format Kemenkes; yang sudah diisi dengan
+        // format lama tetap dibuka dengan formulir lamanya.
+        if ($laporan->formatKemenkes()) {
+            return view('dokumen.laporan-kemenkes', [
+                'usulan' => $usulan,
+                'laporan' => $laporan->load('tindakLanjut', 'dokumentasi'),
+                'statusTindakLanjut' => StatusTindakLanjut::options(),
+                'statusHasil' => StatusHasil::pilihan(),
+                'awal' => $this->isianAwal($usulan),
+            ]);
+        }
+
         return view('dokumen.laporan', [
             'usulan' => $usulan,
             'laporan' => $laporan->load('kegiatan', 'tindakLanjut'),
@@ -124,6 +138,10 @@ class LaporanPerjadinController extends Controller
     {
         $this->pastikanBoleh($request, $usulan);
         $this->pastikanMasihBolehDisunting($usulan);
+
+        if ($this->laporan($usulan)->formatKemenkes()) {
+            return $this->simpanFormatKemenkes($request, $usulan);
+        }
 
         $data = $request->validate([
             'id_status_hasil' => ['nullable', 'exists:status_hasil,id'],
@@ -180,20 +198,7 @@ class LaporanPerjadinController extends Controller
                 ]);
             }
 
-            $urutan = 0;
-            foreach ($data['tindak_lanjut'] ?? [] as $baris) {
-                if (blank($baris['uraian'] ?? null)) {
-                    continue;
-                }
-
-                $laporan->tindakLanjut()->create([
-                    'urutan' => ++$urutan,
-                    'uraian' => trim($baris['uraian']),
-                    'penanggung_jawab' => $baris['penanggung_jawab'] ?? null,
-                    'target_selesai' => $baris['target_selesai'] ?? null,
-                    'status' => $baris['status'] ?? StatusTindakLanjut::Rencana->value,
-                ]);
-            }
+            $this->tulisTindakLanjut($laporan, $data['tindak_lanjut'] ?? []);
         });
 
         // Menyimpan dan mengirim adalah satu langkah bagi pelaksana: isinya
@@ -205,6 +210,132 @@ class LaporanPerjadinController extends Controller
         return redirect()
             ->route('dokumen.laporan.edit', $usulan->no_usulan)
             ->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
+    }
+
+    /**
+     * Simpan laporan format Kemenkes: judul "tentang", uraian tiap bagian,
+     * status hasil, rencana tindak lanjut (opsional), dan satu foto
+     * dokumentasi per bagian (opsional, paling besar 2 MB).
+     */
+    private function simpanFormatKemenkes(Request $request, Usulan $usulan): RedirectResponse
+    {
+        $aturan = [
+            'tentang' => ['nullable', 'string', 'max:500'],
+            'id_status_hasil' => ['nullable', 'exists:status_hasil,id'],
+            'tindak_lanjut' => ['array'],
+            'tindak_lanjut.*.uraian' => ['nullable', 'string', 'max:2000'],
+            'tindak_lanjut.*.penanggung_jawab' => ['nullable', 'string', 'max:255'],
+            'tindak_lanjut.*.target_selesai' => ['nullable', 'date'],
+            'tindak_lanjut.*.status' => ['nullable', Rule::in(array_keys(StatusTindakLanjut::options()))],
+            'berkas_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240'],
+            'hapus_berkas_laporan' => ['nullable', 'boolean'],
+        ];
+
+        foreach (BagianLaporan::cases() as $bagian) {
+            $aturan["bagian.{$bagian->value}"] = ['nullable', 'string', 'max:10000'];
+            $aturan["dokumentasi.{$bagian->value}"] = ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'];
+            $aturan["hapus_dokumentasi.{$bagian->value}"] = ['nullable', 'boolean'];
+        }
+
+        $data = $request->validate($aturan, [
+            'dokumentasi.*.mimes' => 'Dokumentasi berupa foto JPG atau PNG.',
+            'dokumentasi.*.max' => 'Ukuran foto dokumentasi paling besar 2 MB.',
+            'berkas_laporan.mimes' => 'Berkas laporan harus berupa PDF, Word, JPG, atau PNG.',
+            'berkas_laporan.max' => 'Ukuran berkas laporan paling besar 10 MB.',
+        ]);
+
+        $laporan = $this->laporan($usulan);
+        $this->simpanBerkasLaporan($request, $laporan);
+
+        $isian = ['tentang' => filled($data['tentang'] ?? null) ? trim($data['tentang']) : null];
+
+        foreach (BagianLaporan::cases() as $bagian) {
+            $teks = $data['bagian'][$bagian->value] ?? null;
+            $isian[$bagian->kolom()] = filled($teks) ? trim($teks) : null;
+        }
+
+        DB::transaction(function () use ($laporan, $data, $isian): void {
+            $laporan->update($isian + ['id_status_hasil' => $data['id_status_hasil'] ?? null]);
+
+            $laporan->tindakLanjut()->delete();
+            $this->tulisTindakLanjut($laporan, $data['tindak_lanjut'] ?? []);
+        });
+
+        $this->simpanDokumentasi($request, $laporan);
+
+        if ($request->input('action') === 'kirim') {
+            return $this->selesaikanDanKirim($request, $usulan, $laporan->fresh());
+        }
+
+        return redirect()
+            ->route('dokumen.laporan.edit', $usulan->no_usulan)
+            ->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
+    }
+
+    /**
+     * Foto dokumentasi per bagian: yang diunggah menggantikan foto lama
+     * bagian itu, centang hapus melepasnya.
+     */
+    private function simpanDokumentasi(Request $request, LaporanPerjadin $laporan): void
+    {
+        $tersimpan = $laporan->dokumentasi()->get()->keyBy(fn (LaporanDokumentasi $foto) => $foto->bagian->value);
+
+        foreach (BagianLaporan::cases() as $bagian) {
+            $lama = $tersimpan->get($bagian->value);
+
+            if ($request->hasFile("dokumentasi.{$bagian->value}")) {
+                $berkas = $request->file("dokumentasi.{$bagian->value}")->store('dokumen/laporan-dokumentasi', 'public');
+
+                $laporan->dokumentasi()->updateOrCreate(['bagian' => $bagian->value], ['berkas' => $berkas]);
+            } elseif ($lama && $request->boolean("hapus_dokumentasi.{$bagian->value}")) {
+                $lama->delete();
+            } else {
+                continue;
+            }
+
+            if ($lama) {
+                Storage::disk('public')->delete($lama->berkas);
+            }
+        }
+    }
+
+    /**
+     * Baris rencana tindak lanjut ditulis ulang seluruhnya; yang uraiannya
+     * kosong dilewati.
+     *
+     * @param  array<int, array<string, mixed>>  $baris
+     */
+    private function tulisTindakLanjut(LaporanPerjadin $laporan, array $baris): void
+    {
+        $urutan = 0;
+
+        foreach ($baris as $isi) {
+            if (blank($isi['uraian'] ?? null)) {
+                continue;
+            }
+
+            $laporan->tindakLanjut()->create([
+                'urutan' => ++$urutan,
+                'uraian' => trim($isi['uraian']),
+                'penanggung_jawab' => $isi['penanggung_jawab'] ?? null,
+                'target_selesai' => $isi['target_selesai'] ?? null,
+                'status' => $isi['status'] ?? StatusTindakLanjut::Rencana->value,
+            ]);
+        }
+    }
+
+    /**
+     * Isian awal laporan format Kemenkes yang belum diisi: judulnya dari
+     * nama kegiatan pada surat tugas, dasarnya dari nomor surat tugas.
+     *
+     * @return array<string, string>
+     */
+    private function isianAwal(Usulan $usulan): array
+    {
+        return [
+            'tentang' => app(FormatLaporanPerjadin::class)->maksud($usulan),
+            BagianLaporan::Dasar->value => filled($usulan->no_tugas) ? 'Surat Tugas Nomor '.$usulan->no_tugas : '',
+        ];
     }
 
     /**
@@ -253,7 +384,9 @@ class LaporanPerjadinController extends Controller
         }
 
         if (! $laporan->layakDiselesaikan()) {
-            return back()->with('error', 'Isi dulu sedikitnya satu uraian kegiatan, satu rencana tindak lanjut, dan pilih status hasil yang dicapai.');
+            return back()->with('error', $laporan->formatKemenkes()
+                ? 'Lengkapi dulu: '.implode(', ', $laporan->bagianWajibKosong()).'.'
+                : 'Isi dulu sedikitnya satu uraian kegiatan, satu rencana tindak lanjut, dan pilih status hasil yang dicapai.');
         }
 
         if (! $laporan->sudahSelesai()) {
@@ -357,7 +490,7 @@ class LaporanPerjadinController extends Controller
     {
         $this->pastikanBolehMelihat($request, $usulan);
 
-        $laporan = $this->laporan($usulan)->load('kegiatan', 'tindakLanjut', 'pimpinan');
+        $laporan = $this->laporan($usulan)->load('kegiatan', 'tindakLanjut', 'pimpinan', 'dokumentasi');
 
         abort_unless(
             $laporan->sudahSelesai(),
@@ -367,7 +500,8 @@ class LaporanPerjadinController extends Controller
 
         // QR hanya terbit bila kodenya ada: pelaksana sejak laporan dikirim,
         // pimpinan sejak dikonfirmasi. Sebelum itu ruang tanda tangannya kosong.
-        $pdf = Pdf::loadView('dokumen.laporan-cetak', $format->data($usulan) + [
+        $pdf = Pdf::loadView($laporan->formatKemenkes() ? 'dokumen.laporan-cetak-kemenkes' : 'dokumen.laporan-cetak', $format->data($usulan) + [
+            'lampiran' => $laporan->formatKemenkes() ? $laporan->lampiranDokumentasi() : [],
             'laporan' => $laporan,
             'qrPelaksana' => $laporan->urlKonfirmasiPelaksana()
                 ? $this->qrCode->dataUri($laporan->urlKonfirmasiPelaksana())

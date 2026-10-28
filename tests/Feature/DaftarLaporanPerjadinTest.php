@@ -43,6 +43,10 @@ class DaftarLaporanPerjadinTest extends TestCase
         ]);
 
         Keuangan::factory()->belumBayar()->create(['id_usulan' => $this->usulan->id]);
+
+        // Alur format lama: laporan yang sudah diisi sebelum format Kemenkes
+        // berlaku tetap memakai susunan lamanya (lihat LaporanFormatKemenkesTest).
+        LaporanPerjadin::create(['id_usulan' => $this->usulan->id, 'versi_format' => LaporanPerjadin::FORMAT_LAMA]);
     }
 
     private function hari(int $ke): string
@@ -376,6 +380,8 @@ class DaftarLaporanPerjadinTest extends TestCase
 
     public function test_detail_keuangan_tanpa_laporan_tidak_membuatkannya(): void
     {
+        LaporanPerjadin::where('id_usulan', $this->usulan->id)->delete();
+
         $this->actingAs(User::factory()->create(['role' => User::ROLE_TIM_KEUANGAN]))
             ->get(route('keuangan.detail', $this->usulan))
             ->assertSee('Pelaksana belum mulai menyusun laporannya.');

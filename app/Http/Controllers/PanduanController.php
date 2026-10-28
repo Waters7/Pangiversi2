@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.51',
+                'tanggal' => '29 Oktober 2026',
+                'butir' => [
+                    'Laporan perjalanan dinas kini mengikuti format laporan Kemenkes: judul Tentang (nama kegiatan menurut surat tugas), A. Pendahuluan (Umum, Maksud dan Tujuan, Ruang Lingkup, Dasar), B. Kegiatan yang Dilaksanakan, C. Hasil yang Dicapai, D. Simpulan dan Saran, dan E. Penutup, ditandatangani pelaksana serta Direktur seperti sebelumnya.',
+                    'Tiap bagian laporan boleh diberi satu foto dokumentasi (JPG atau PNG, maks. 2 MB); seluruh foto tercetak pada halaman lampiran dokumen. Laporan yang sudah diisi dengan format lama tetap tersimpan dalam format lamanya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.50',
                 'tanggal' => '28 Oktober 2026',
                 'butir' => [

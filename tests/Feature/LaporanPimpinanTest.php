@@ -73,6 +73,10 @@ class LaporanPimpinanTest extends TestCase
         ]);
 
         Keuangan::factory()->uangMuka()->create(['id_usulan' => $this->usulan->id]);
+
+        // Alur format lama: laporan yang sudah diisi sebelum format Kemenkes
+        // berlaku tetap memakai susunan lamanya (lihat LaporanFormatKemenkesTest).
+        LaporanPerjadin::create(['id_usulan' => $this->usulan->id, 'versi_format' => LaporanPerjadin::FORMAT_LAMA]);
     }
 
     /** Isi laporan tersimpan sebagai draf, belum dikirim. */
