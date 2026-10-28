@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ArahTiket;
+use App\Enums\JenisPerjadin;
 use App\Enums\KategoriBiaya;
 use App\Enums\RuasTransport;
 use App\Enums\StatusUsulan;
@@ -12,6 +13,7 @@ use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\PenagihDokumen;
+use App\Services\PengaturanBerkasLpj;
 use App\Services\SinkronBiayaDokumen;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -207,6 +209,47 @@ class PertanggungjawabanPerjadinTest extends TestCase
 
         $this->assertSame('TRX-88192', $dokumen->bill_hotel_no_transaksi);
         $this->assertSame(1_200_000.0, $dokumen->bill_hotel_nominal);
+    }
+
+    /** Bill hotel dan kuitansi hotel satu berkas; kuitansi lama yang terpisah tetap dihitung. */
+    public function test_kuitansi_lama_yang_terpisah_memenuhi_berkas_akomodasi(): void
+    {
+        $this->usulan->update(['jenis_perjadin' => JenisPerjadin::LuarKota->value]);
+        $this->usulan->dokumen()->create([
+            'kwintasi' => 'dokumen/kwintasi/lama.pdf',
+            'bill_hotel_no_transaksi' => 'TRX-1',
+            'bill_hotel_nominal' => 900_000,
+        ]);
+
+        $usulan = $this->usulan->fresh();
+        $baris = collect(app(PenagihDokumen::class)->checklist($usulan))->firstWhere('label', PenagihDokumen::BARIS_AKOMODASI);
+
+        $this->assertNotContains('Bill hotel / kuitansi hotel', app(PenagihDokumen::class)->berkasKurang($usulan));
+        $this->assertTrue($baris['terpenuhi']);
+        $this->assertSame('dokumen/kwintasi/lama.pdf', $baris['berkas'][0]['path']);
+    }
+
+    // ── Status pada daftar Dokumen Perdin ──
+
+    public function test_daftar_dokumen_perdin_menyebut_berkas_yang_belum_diunggah(): void
+    {
+        $this->usulan->update(['jenis_perjadin' => JenisPerjadin::LuarKota->value]);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen'))
+            ->assertOk()
+            ->assertSee('data-status-dokumen', false)
+            ->assertSee('Belum lengkap')
+            ->assertSee('SPPD bertanda tangan');
+
+        // Jalur yang tidak menagih berkas apa pun langsung lengkap.
+        app(PengaturanBerkasLpj::class)->simpan(JenisPerjadin::LuarKota, []);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen'))
+            ->assertOk()
+            ->assertSee('Dokumen lengkap')
+            ->assertDontSee('Belum lengkap');
     }
 
     // ── Sinkronisasi ke rincian biaya ──

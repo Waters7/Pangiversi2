@@ -50,7 +50,7 @@
                             @endif
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Kegiatan / Tujuan</th>
                             <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Periode</th>
-                            <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Status</th>
+                            <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Status Dokumen</th>
                             <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Aksi</th>
                         </tr>
                     </thead>
@@ -105,10 +105,30 @@
                                     <p class="text-xs text-slate-400">{{ $item->durasi }} hari</p>
                                 </td>
 
-                                <td class="px-4 py-4">
-                                    <div class="flex items-center justify-center">
-                                        <x-status-badge :usulan="$item" />
-                                    </div>
+                                {{-- Kelengkapan berkas: apa saja yang belum diunggah, atau lengkap. --}}
+                                <td class="px-4 py-4 align-top" data-status-dokumen>
+                                    @php $kurang = $berkasKurang[$item->id] ?? []; @endphp
+                                    @if ($kurang === [])
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold whitespace-nowrap">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                            Dokumen lengkap
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold whitespace-nowrap">
+                                            Belum lengkap · {{ count($kurang) }}
+                                        </span>
+                                        <ul class="mt-1.5 space-y-0.5 text-[11px] text-slate-500 leading-snug max-w-[16rem]">
+                                            @foreach (array_slice($kurang, 0, 3) as $berkas)
+                                                <li class="flex items-start gap-1.5"><span class="w-1 h-1 rounded-full bg-amber-400 shrink-0 mt-1.5"></span>{{ $berkas }}</li>
+                                            @endforeach
+                                            @if (count($kurang) > 3)
+                                                <li class="pl-2.5 text-slate-400">+{{ count($kurang) - 3 }} lainnya</li>
+                                            @endif
+                                        </ul>
+                                    @endif
+                                    @if ($item->status === 'selesai')
+                                        <p class="mt-1 text-[11px] font-semibold text-purple-600">Usulan selesai</p>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-4">

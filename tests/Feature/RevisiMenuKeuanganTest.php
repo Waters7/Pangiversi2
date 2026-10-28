@@ -218,6 +218,39 @@ class RevisiMenuKeuanganTest extends TestCase
         $this->assertSame([$lain->id, $this->usulan->id], $urutan('nomor'));
     }
 
+    public function test_daftar_input_rincian_biaya_disaring_menurut_pelaksana_tujuan_periode_dan_pembayaran(): void
+    {
+        $maya = User::factory()->create(['nama' => 'Maya Sari Wulandari']);
+        $cocok = Usulan::factory()->create([
+            'id_user' => $maya->id,
+            'status' => StatusUsulan::Disetujui->value,
+            'lokasi' => 'Ternate',
+            'tanggal_mulai' => '2026-05-10',
+            'tanggal_selesai' => '2026-05-12',
+        ]);
+        Keuangan::factory()->uangMuka()->create(['id_usulan' => $cocok->id]);
+
+        $id = fn (array $saring) => $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan', $saring))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->all();
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan'))
+            ->assertSee('Daftar Input Rincian Biaya')
+            ->assertSee('data-saringan-keuangan', false);
+
+        $this->assertSame([$cocok->id], $id(['pelaksana' => 'maya sari']));
+        $this->assertSame([$cocok->id], $id(['tujuan' => 'terna']));
+        $this->assertSame([$cocok->id], $id(['dari' => '2026-05-11', 'sampai' => '2026-05-31']));
+        $this->assertNotContains($cocok->id, $id(['dari' => '2026-06-01']));
+        $this->assertSame([$cocok->id], $id(['pembayaran' => 'sebagian']));
+        $this->assertSame([$this->usulan->id], $id(['pembayaran' => 'belum']));
+        $this->assertSame([], $id(['pembayaran' => 'lunas']));
+    }
+
     // ── Laporan rincian biaya lengkap tanda tangan ──
 
     /** Berkas dengan kedua tanda tangan PPK dan nominatif yang sudah dikirim. */

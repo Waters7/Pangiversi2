@@ -17,7 +17,7 @@
                 </svg>
             </a>
             <div>
-                <h1 class="text-xl font-bold text-slate-800">Keuangan & LPJ</h1>
+                <h1 class="text-xl font-bold text-slate-800">{{ auth()->user()->bisaMengelolaBiaya() ? 'Input Rincian Biaya' : 'Rincian Biaya Usulan' }}</h1>
                 <p class="text-xs text-slate-400 mt-0.5">Rincian biaya, pembayaran, verifikasi bukti, dan daftar nominatif</p>
             </div>
         </div>

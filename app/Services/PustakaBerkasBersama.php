@@ -143,13 +143,23 @@ class PustakaBerkasBersama
                     'kode_booking' => (string) $sumber->kode_booking,
                 ],
             ],
+            // Bill hotel dan kuitansi hotel satu berkas; kuitansi lama yang
+            // diunggah terpisah dipakai bila bill hotelnya tidak ada, dan ikut
+            // ditampilkan bila keduanya pernah diunggah.
             self::JENIS_HOTEL => [
                 'ditemukan' => true,
-                'pesan' => 'Bill hotel atau kuitansi bernomor transaksi ini sudah diunggah'.$oleh.$rujukan.'. Berkasnya dipakai otomatis; '
-                    .'nominal tetap diisi masing-masing.',
+                'pesan' => 'Bill hotel / kuitansi bernomor transaksi ini sudah diunggah'.$oleh.$rujukan.'. Nominal tetap diisi masing-masing.',
                 'berkas' => array_values(array_filter([
-                    $this->ada($sumber->bill_hotel) ? ['kolom' => 'bill_hotel', 'label' => 'Bill hotel', 'tautan' => route('berkas.lihat', $sumber->bill_hotel)] : null,
-                    $this->ada($sumber->kwintasi) ? ['kolom' => 'kwintasi', 'label' => 'Kuitansi penyelenggara / hotel', 'tautan' => route('berkas.lihat', $sumber->kwintasi)] : null,
+                    [
+                        'kolom' => 'bill_hotel',
+                        'label' => 'Bill hotel / kuitansi',
+                        'tautan' => route('berkas.lihat', $this->berkasHotel($sumber)),
+                    ],
+                    $this->kuitansiTerpisah($sumber) ? [
+                        'kolom' => 'kwintasi',
+                        'label' => 'Kuitansi (diunggah terpisah)',
+                        'tautan' => route('berkas.lihat', $sumber->kwintasi),
+                    ] : null,
                 ])),
             ],
             self::JENIS_PENYELENGGARAAN => [
@@ -186,6 +196,18 @@ class PustakaBerkasBersama
             // Berkas asli lebih dulu, baru salinannya.
             ->sortBy(fn (Dokumen $dokumen) => [self::salinan($dokumen->{$kolomBerkas[0]}) ? 1 : 0, $dokumen->id])
             ->first(fn (Dokumen $dokumen) => collect($kolomBerkas)->contains(fn (string $kolom) => $this->ada($dokumen->{$kolom})));
+    }
+
+    /** Berkas akomodasi sebuah dokumen: bill hotel, atau kuitansi lamanya. */
+    public function berkasHotel(?Dokumen $dokumen): ?string
+    {
+        return collect([$dokumen?->bill_hotel, $dokumen?->kwintasi])->first(fn (?string $berkas) => $this->ada($berkas));
+    }
+
+    /** Kuitansi lama yang diunggah terpisah di samping bill hotelnya. */
+    public function kuitansiTerpisah(?Dokumen $dokumen): bool
+    {
+        return $this->ada($dokumen?->bill_hotel) && $this->ada($dokumen?->kwintasi);
     }
 
     public function ada(?string $berkas): bool

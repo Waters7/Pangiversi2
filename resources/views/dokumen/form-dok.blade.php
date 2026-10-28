@@ -517,6 +517,7 @@
             <form action="{{ route('dokumen.store', $usulan->no_usulan) }}" method="POST" enctype="multipart/form-data"
                   x-data="{
                       adaPenginapan: {{ ! $tanyaPenginapan || $adaPenginapan ? 'true' : 'false' }},
+                      sendiri: {{ old('bill_hotel_sendiri') ? 'true' : 'false' }},
                       cekBerkas: cekBerkasBersama({{ Js::from(route('berkas-bersama.cek')) }}, {{ Js::from(['jenis' => 'hotel', 'usulan' => $usulan->no_usulan]) }}),
                   }">
                 @csrf
@@ -529,7 +530,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm">4. Akomodasi & Bukti Biaya</h3>
-                            <p class="text-xs text-slate-400">Bill hotel dan kuitansi penyelenggara / hotel</p>
+                            <p class="text-xs text-slate-400">Bill hotel / kuitansi hotel — cukup satu berkas</p>
                         </div>
                     </div>
 
@@ -562,23 +563,13 @@
                         @endif
 
                         <div x-show="adaPenginapan" class="space-y-5">
-                        @if ($minta(\App\Enums\BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan())
+                        @if ($dokumen?->penginapanTermasukPenyelenggaraan())
                         <p class="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 leading-relaxed" data-tanpa-bill-hotel>
-                            Penginapan sudah termasuk biaya penyelenggaraan (bagian 5), jadi bill hotel tidak perlu diunggah
-                            dan uang penginapan tidak dibayarkan terpisah.
+                            Penginapan sudah termasuk biaya penyelenggaraan (bagian 5), jadi bill hotel / kuitansi tidak perlu
+                            diunggah dan uang penginapan tidak dibayarkan terpisah.
                         </p>
-                        @elseif ($minta(\App\Enums\BerkasLpj::BillHotel))
-                        <x-unggah-berkas
-                            nama="bill_hotel"
-                            label="Bill hotel"
-                            :berkas="$dokumen?->bill_hotel"
-                            terima=".pdf,.jpg,.jpeg,.png"
-                            keterangan="PDF, JPG, atau PNG — maks. 2 MB."
-                            :terkunci="$terkunci"
-                            :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->bill_hotel) ? null : 'cekBerkas.mengunci(\'bill_hotel\')'" />
-                        <p class="-mt-3 text-[11px] text-slate-500">
-                            Penginapan dibayar lewat biaya penyelenggaraan? Nyatakan pada bagian 5 — bill hotel lalu tidak perlu diunggah.
-                        </p>
+                        @else
+                        @php $berkasHotelSendiri = \App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->bill_hotel); @endphp
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -589,7 +580,7 @@
                                 {{-- Nomor transaksi yang sama dengan milik rekan memakai bill
                                      hotel dan kuitansinya; nominal tetap diisi masing-masing. --}}
                                 @unless ($terkunci)
-                                    @include('partials.cek-berkas-bersama', ['ref' => 'noTransaksi', 'tombol' => 'Cek Nomor Transaksi'])
+                                    @include('partials.cek-berkas-bersama', ['ref' => 'noTransaksi', 'tombol' => 'Cek Nomor Transaksi', 'pilihan' => ! $berkasHotelSendiri])
                                 @endunless
                             </div>
                             <div>
@@ -608,17 +599,47 @@
                             </div>
                         </div>
 
-                        @endif
+                        {{-- Nomor transaksi milik rekan: pelaksana memilih memakai berkas
+                             yang sama, atau mengunggah bill hotel / kuitansinya sendiri. --}}
+                        @unless ($berkasHotelSendiri || $terkunci)
+                            <div x-show="cekBerkas.mengunci('bill_hotel')" x-cloak data-pilihan-berkas-hotel
+                                 class="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+                                <p class="text-sm font-semibold text-slate-700 mb-2">Bill hotel / kuitansinya sama dengan milik rekan tersebut?</p>
+                                <div class="flex flex-wrap gap-3">
+                                    <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition bg-white"
+                                           :class="! sendiri ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                        <input type="radio" value="0" @change="sendiri = false" :checked="! sendiri" class="text-teal-500 focus:ring-teal-400">
+                                        Ya, pakai berkas yang sama
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition bg-white"
+                                           :class="sendiri ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
+                                        <input type="radio" value="1" @change="sendiri = true" :checked="sendiri" class="text-teal-500 focus:ring-teal-400">
+                                        Tidak, unggah berkas sendiri
+                                    </label>
+                                </div>
+                                <input type="hidden" name="bill_hotel_sendiri" :value="sendiri && cekBerkas.mengunci('bill_hotel') ? 1 : 0">
+                            </div>
+                        @endunless
 
-                        @if ($minta(\App\Enums\BerkasLpj::Kuitansi))
                         <x-unggah-berkas
-                            nama="kwintasi"
-                            label="Kuitansi penyelenggara / hotel"
-                            :berkas="$dokumen?->kwintasi"
+                            nama="bill_hotel"
+                            label="Bill hotel / kuitansi hotel"
+                            :berkas="$dokumen?->bill_hotel ?: $dokumen?->kwintasi"
                             terima=".pdf,.jpg,.jpeg,.png"
-                            keterangan="Kuitansi resmi dari penyelenggara kegiatan atau dari hotel tempat menginap — PDF, JPG, atau PNG, maks. 2 MB."
+                            keterangan="Cukup satu berkas: bill hotel atau kuitansi dari hotel — PDF, JPG, atau PNG, maks. 2 MB."
                             :terkunci="$terkunci"
-                            :kunci="\App\Services\PustakaBerkasBersama::bolehDiganti($dokumen?->kwintasi) ? null : 'cekBerkas.mengunci(\'kwintasi\')'" />
+                            :kunci="$berkasHotelSendiri ? null : 'cekBerkas.mengunci(\'bill_hotel\') && ! sendiri'" />
+                        {{-- Kuitansi yang dulu diunggah terpisah tetap tersimpan dan dapat dibuka. --}}
+                        @if (filled($dokumen?->bill_hotel) && filled($dokumen?->kwintasi))
+                            <p class="-mt-3 text-[11px] text-slate-500" data-kuitansi-lama>
+                                Kuitansi yang dulu diunggah terpisah tetap tersimpan —
+                                <a href="{{ route('berkas.lihat', $dokumen->kwintasi) }}" target="_blank" rel="noopener"
+                                   class="font-semibold text-teal-600 hover:underline">lihat kuitansi</a>.
+                            </p>
+                        @endif
+                        <p class="-mt-3 text-[11px] text-slate-500">
+                            Penginapan dibayar lewat biaya penyelenggaraan? Nyatakan pada bagian 5 — bill hotel lalu tidak perlu diunggah.
+                        </p>
                         @endif
                         </div>
 

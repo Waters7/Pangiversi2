@@ -98,17 +98,17 @@ class BerkasLpjPerJalurTest extends TestCase
         $luar = $this->labelChecklist($this->usulan('LK-NFB', 'luar-kota'));
         $this->assertContains('Tiket Pergi', $luar);
         $this->assertContains('Nota Transportasi Lokal', $luar);
-        $this->assertContains('Bill Hotel', $luar);
-        $this->assertContains('Kuitansi penyelenggara / hotel', $luar);
+        $this->assertContains('Bill Hotel / Kuitansi', $luar);
+        $this->assertNotContains('Kuitansi penyelenggara / hotel', $luar);
 
         $dalam = $this->labelChecklist($this->usulan('DK-FD', 'dalam-kota'));
         $this->assertNotContains('SPPD Bertanda Tangan', $dalam);
         $this->assertNotContains('Tiket Pergi', $dalam);
-        $this->assertNotContains('Bill Hotel', $dalam);
+        $this->assertNotContains('Bill Hotel / Kuitansi', $dalam);
         $this->assertNotContains('Nota Transportasi Lokal', $dalam);
 
         $provinsi = $this->labelChecklist($this->usulan('LK-NFB', 'luar-kota-provinsi'));
-        $this->assertContains('Bill Hotel', $provinsi);
+        $this->assertContains('Bill Hotel / Kuitansi', $provinsi);
         $this->assertNotContains('Nota Transportasi Lokal', $provinsi);
 
         // Supervisi ke luar kota menerbitkan SPD, jadi SPPD-nya ikut ditagih.
@@ -150,8 +150,9 @@ class BerkasLpjPerJalurTest extends TestCase
             ->assertSee('Berkas Pertanggungjawaban')
             ->assertSee('Perjalanan Dalam Kota')
             ->assertSee('Supervisi Kerja Praktek / Magang')
-            ->assertSee('Bill hotel')
-            ->assertSee('Kuitansi penyelenggara / hotel');
+            ->assertSee('Bill hotel / kuitansi hotel')
+            // Kuitansi digabung dengan bill hotel, jadi tidak ditawarkan tersendiri.
+            ->assertDontSee('Kuitansi penyelenggara / hotel');
 
         $this->actingAs(User::factory()->create(['role' => PeranPengguna::TimSdm->value]))
             ->get(route('administrasi.berkas-lpj'))
@@ -170,7 +171,7 @@ class BerkasLpjPerJalurTest extends TestCase
     public function test_berkas_yang_dicabut_tidak_lagi_ditagih(): void
     {
         $usulan = $this->usulan('LK-NFB', 'luar-kota');
-        $this->assertContains('Bill Hotel', $this->labelChecklist($usulan));
+        $this->assertContains('Bill Hotel / Kuitansi', $this->labelChecklist($usulan));
 
         $this->actingAs($this->admin)
             ->put(route('administrasi.berkas-lpj.simpan', JenisPerjadin::LuarKota->value), [
@@ -183,18 +184,18 @@ class BerkasLpjPerJalurTest extends TestCase
 
         $label = $this->labelChecklist($usulan->fresh());
         $this->assertContains('SPPD Bertanda Tangan', $label);
-        $this->assertNotContains('Bill Hotel', $label);
+        $this->assertNotContains('Bill Hotel / Kuitansi', $label);
         $this->assertNotContains('Tiket Pergi', $label);
         $this->assertNotContains('Kuitansi penyelenggara / hotel', $label);
 
         // Penagihan memakai daftar yang sama dengan checklist.
         $kurang = app(PenagihDokumen::class)->berkasKurang($usulan->fresh());
-        $this->assertNotContains('Bill hotel', $kurang);
+        $this->assertNotContains('Bill hotel / kuitansi hotel', $kurang);
         $this->assertNotContains('Kuitansi penyelenggara / hotel', $kurang);
 
         $this->assertDatabaseHas('audit_logs', [
             'aksi' => 'pengguna',
-            'deskripsi' => 'Berkas pertanggungjawaban jalur "Perjalanan Luar Kota Lintas Pulau" disimpan — tidak lagi ditagih: Tiket pergi dan pulang, Bill hotel, Kuitansi penyelenggara / hotel, Bukti biaya penyelenggaraan.',
+            'deskripsi' => 'Berkas pertanggungjawaban jalur "Perjalanan Luar Kota Lintas Pulau" disimpan — tidak lagi ditagih: Tiket pergi dan pulang, Bill hotel / kuitansi hotel, Kuitansi penyelenggara / hotel, Bukti biaya penyelenggaraan.',
         ]);
 
         // Jalur lain tidak ikut berubah.

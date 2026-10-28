@@ -43,7 +43,7 @@
     {{-- Tahap pembayaran --}}
     <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
         @foreach ($daftarTahap as $kunci => $label)
-            <a href="{{ route('pembayaran', ['tahap' => $kunci, 'search' => $search, 'tahun' => $tahun, 'bulan' => $bulan]) }}"
+            <a href="{{ route('pembayaran', array_filter(array_merge(request()->except(['tahap', 'page']), ['tahap' => $kunci]), fn ($nilai) => filled($nilai))) }}"
                class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition whitespace-nowrap
                       {{ $tahap === $kunci
                             ? 'bg-teal-500 text-white shadow-sm shadow-teal-200'
@@ -63,13 +63,55 @@
         :bulan="$bulan"
         :tahun-tersedia="$tahunTersedia"
         :jumlah-bulan="$jumlahBulan"
-        :ekstra="['tahap' => $tahap, 'search' => $search]" />
+        :ekstra="request()->except(['tahun', 'bulan', 'page'])" />
 
-    {{-- Pencarian --}}
-    <form method="GET" action="{{ route('pembayaran') }}" class="mb-5">
+    {{-- Pencarian, saringan, dan urutan --}}
+    @php $adaSaringan = collect($saring)->filter(fn ($nilai) => filled($nilai))->isNotEmpty() || $search || request('urut'); @endphp
+    <form method="GET" action="{{ route('pembayaran') }}" class="mb-5 bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3" data-saringan-pembayaran>
         <input type="hidden" name="tahap" value="{{ $tahap }}">
         <input type="hidden" name="tahun" value="{{ $tahun }}">
         <input type="hidden" name="bulan" value="{{ $bulan }}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+                <label for="saring-status" class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                <select name="status" id="saring-status"
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    <option value="">Semua status</option>
+                    @foreach ($pilihanStatus as $nilai => $label)
+                        <option value="{{ $nilai }}" @selected($saring['status'] === $nilai)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="saring-pelaksana" class="block text-xs font-semibold text-slate-500 mb-1">Nama pelaksana</label>
+                <input type="text" name="pelaksana" id="saring-pelaksana" value="{{ $saring['pelaksana'] }}" placeholder="cth: Maya"
+                       class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+            </div>
+            <div>
+                <label for="saring-perjalanan" class="block text-xs font-semibold text-slate-500 mb-1">Perjalanan</label>
+                <input type="text" name="perjalanan" id="saring-perjalanan" value="{{ $saring['perjalanan'] }}" placeholder="No. usulan atau tujuan"
+                       class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+            </div>
+            <div>
+                <span class="block text-xs font-semibold text-slate-500 mb-1">Anggaran (Rp)</span>
+                <div class="flex items-center gap-1.5">
+                    <input type="number" name="anggaran_min" min="0" step="1000" value="{{ $saring['anggaran_min'] !== null ? (int) $saring['anggaran_min'] : '' }}" placeholder="min" aria-label="Anggaran minimal"
+                           class="w-full min-w-0 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    <span class="text-slate-400 text-xs">–</span>
+                    <input type="number" name="anggaran_maks" min="0" step="1000" value="{{ $saring['anggaran_maks'] !== null ? (int) $saring['anggaran_maks'] : '' }}" placeholder="maks" aria-label="Anggaran maksimal"
+                           class="w-full min-w-0 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+            </div>
+            <div>
+                <label for="saring-urut" class="block text-xs font-semibold text-slate-500 mb-1">Urutkan</label>
+                <select name="urut" id="saring-urut" onchange="this.form.submit()"
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                    @foreach ($pilihanUrut as $nilai => $label)
+                        <option value="{{ $nilai }}" @selected($urut === $nilai)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
         <div class="flex gap-2">
             <div class="relative flex-1">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -78,8 +120,8 @@
                 <input type="text" name="search" value="{{ $search }}" placeholder="Cari no. usulan, pegawai, atau kota tujuan..."
                        class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
             </div>
-            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Search</button>
-            @if ($search)
+            <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition">Terapkan</button>
+            @if ($adaSaringan)
                 <a href="{{ route('pembayaran', ['tahap' => $tahap, 'tahun' => $tahun, 'bulan' => $bulan]) }}"
                    class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">Reset</a>
             @endif
@@ -101,12 +143,20 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-100">
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-6 py-3.5">Pegawai</th>
-                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Perjalanan</th>
-                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Anggaran</th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-6 py-3.5">
+                            <x-kepala-urut :aksi="route('pembayaran')" :pilihan="['nama-az', 'nama-za']" :terpilih="$urut">Pegawai</x-kepala-urut>
+                        </th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                            <x-kepala-urut :aksi="route('pembayaran')" :pilihan="['berangkat-terlama', 'berangkat-terbaru']" :terpilih="$urut">Perjalanan</x-kepala-urut>
+                        </th>
+                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                            <x-kepala-urut :aksi="route('pembayaran')" :pilihan="['anggaran-besar', 'anggaran-kecil']" :terpilih="$urut" class="justify-end">Anggaran</x-kepala-urut>
+                        </th>
                         <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Uang Muka</th>
                         <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Sisa Bayar</th>
-                        <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+                        <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">
+                            <x-kepala-urut :aksi="route('pembayaran')" :pilihan="['status']" :terpilih="$urut">Status</x-kepala-urut>
+                        </th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wide px-4 py-3.5">Aksi</th>
                     </tr>
                 </thead>
@@ -124,7 +174,8 @@
                             $bulanBaris = $mulai?->format('Y-m');
                         @endphp
 
-                        @if ($bulanBaris !== $bulanBerjalan)
+                        {{-- Judul bulan hanya bermakna bila daftarnya urut tanggal berangkat. --}}
+                        @if (str_starts_with($urut, 'berangkat') && $bulanBaris !== $bulanBerjalan)
                             @php $bulanBerjalan = $bulanBaris; @endphp
                             <tr class="bg-slate-100/70">
                                 <td colspan="7" class="px-6 py-2">

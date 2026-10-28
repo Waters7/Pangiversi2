@@ -23,7 +23,7 @@ class BerkasLpjController extends Controller
     {
         return view('administrasi.berkas-lpj', [
             'jalur' => JenisPerjadin::cases(),
-            'berkas' => BerkasLpj::cases(),
+            'berkas' => BerkasLpj::pilihan(),
             'terpilih' => collect(JenisPerjadin::cases())
                 ->mapWithKeys(fn (JenisPerjadin $jenis) => [$jenis->value => $this->pengaturan->untuk($jenis)])
                 ->all(),

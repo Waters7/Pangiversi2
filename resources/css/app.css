@@ -35,3 +35,179 @@
     --pangi-malam: #141d24;
     --pangi-malam-muda: #1b2730;
 }
+
+/*
+ * ══════════ Tampilan lembut (neumorphism) ══════════
+ *
+ * Permukaan seolah dicetak dari bahan yang sama dengan latarnya: kartu
+ * timbul lewat sepasang bayangan terang-gelap, isian cekung ke dalam.
+ * Diterapkan lewat kelas .tampilan-lembut pada <body> tata letak utama,
+ * sehingga seluruh halaman ikut tanpa menyunting tampilannya satu per satu.
+ * Gaya ini sengaja di luar @layer supaya mengalahkan utilitas Tailwind
+ * seperti bg-white dan shadow-sm pada area konten.
+ */
+:root {
+    --neu-latar: #e7ecf2;
+    --neu-permukaan: #edf1f6;
+    --neu-gelap: rgba(158, 172, 193, 0.55);
+    --neu-terang: rgba(255, 255, 255, 0.95);
+    --neu-timbul: 8px 8px 18px var(--neu-gelap), -8px -8px 18px var(--neu-terang);
+    --neu-timbul-kuat: 12px 12px 26px var(--neu-gelap), -10px -10px 24px var(--neu-terang);
+    --neu-timbul-kecil: 4px 4px 10px var(--neu-gelap), -4px -4px 10px var(--neu-terang);
+    --neu-cekung: inset 3px 3px 7px var(--neu-gelap), inset -3px -3px 7px var(--neu-terang);
+    --neu-fokus: 0 0 0 2px rgba(20, 184, 166, 0.55);
+}
+
+body.tampilan-lembut {
+    background-color: var(--neu-latar);
+}
+
+/* Bilah atas menyatu dengan latar, dipisah bayangan halus. */
+.tampilan-lembut #main-content > header {
+    background-color: rgba(231, 236, 242, 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom-color: transparent;
+    box-shadow: 0 10px 20px -14px var(--neu-gelap);
+}
+
+/* Kartu dan panel. */
+.tampilan-lembut #main-content .bg-white.rounded-2xl,
+.tampilan-lembut #main-content .bg-white.rounded-3xl {
+    background-color: var(--neu-permukaan);
+    border-color: transparent;
+    box-shadow: var(--neu-timbul);
+    transition: box-shadow 0.25s ease;
+}
+
+.tampilan-lembut #main-content .bg-white.rounded-2xl:hover {
+    box-shadow: var(--neu-timbul-kuat);
+}
+
+/* Kotak kecil berlatar putih di dalam kartu: sedikit timbul. */
+.tampilan-lembut #main-content .bg-white.rounded-xl:not(input, select, textarea) {
+    background-color: var(--neu-permukaan);
+    border-color: transparent;
+    box-shadow: var(--neu-timbul-kecil);
+}
+
+/* Tombol dan tautan sekunder berlatar putih. */
+.tampilan-lembut #main-content :is(a, button).bg-white,
+.tampilan-lembut #main-content :is(a, button).bg-slate-100 {
+    background-color: var(--neu-permukaan);
+    border-color: transparent;
+    box-shadow: var(--neu-timbul-kecil);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, color 0.18s ease;
+}
+
+.tampilan-lembut #main-content :is(a, button).bg-white:hover,
+.tampilan-lembut #main-content :is(a, button).bg-slate-100:hover {
+    transform: translateY(-1px);
+}
+
+.tampilan-lembut #main-content :is(a, button).bg-white:active,
+.tampilan-lembut #main-content :is(a, button).bg-slate-100:active {
+    transform: none;
+    box-shadow: var(--neu-cekung);
+}
+
+/* Tombol utama berwarna: tetap berwarna, ikut timbul dan tertekan. */
+.tampilan-lembut #main-content :is(a, button):is(.bg-teal-500, .bg-teal-600, .bg-slate-800, .bg-emerald-600, .bg-violet-500, .bg-amber-500, .bg-red-600, .bg-indigo-600) {
+    box-shadow: 5px 5px 12px var(--neu-gelap), -4px -4px 10px var(--neu-terang);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.tampilan-lembut #main-content :is(a, button):is(.bg-teal-500, .bg-teal-600, .bg-slate-800, .bg-emerald-600, .bg-violet-500, .bg-amber-500, .bg-red-600, .bg-indigo-600):hover {
+    transform: translateY(-2px);
+    box-shadow: 8px 8px 16px var(--neu-gelap), -5px -5px 12px var(--neu-terang);
+}
+
+.tampilan-lembut #main-content :is(a, button):is(.bg-teal-500, .bg-teal-600, .bg-slate-800, .bg-emerald-600, .bg-violet-500, .bg-amber-500, .bg-red-600, .bg-indigo-600):active {
+    transform: translateY(0);
+    box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.22);
+}
+
+/* Isian cekung ke dalam permukaan; cincin fokus tetap terlihat. */
+.tampilan-lembut #main-content :is(input:not([type]), input[type='text'], input[type='number'], input[type='date'], input[type='email'], input[type='password'], input[type='search'], input[type='tel'], input[type='url'], select, textarea):not(.border-0) {
+    background-color: var(--neu-latar);
+    border-color: transparent;
+    box-shadow: var(--neu-cekung);
+}
+
+.tampilan-lembut #main-content :is(input:not([type]), input[type='text'], input[type='number'], input[type='date'], input[type='email'], input[type='password'], input[type='search'], input[type='tel'], input[type='url'], select, textarea):not(.border-0):focus {
+    outline: none;
+    box-shadow: var(--neu-cekung), var(--neu-fokus);
+}
+
+/* Kepala tabel menyatu dengan kartunya. */
+.tampilan-lembut #main-content thead tr.bg-slate-50 {
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Panel tarik-turun di bilah atas. */
+.tampilan-lembut #main-content > header .bg-white.shadow-lg {
+    background-color: var(--neu-permukaan);
+    border-color: transparent;
+    box-shadow: var(--neu-timbul-kuat);
+}
+
+/*
+ * ══════════ Animasi halaman ══════════
+ *
+ * Isi halaman muncul berurutan dari bawah. Memakai fill-mode "backwards"
+ * supaya setelah selesai tidak tersisa transform pada elemen — transform
+ * yang menetap akan membuat modal "fixed" dan judul "sticky" di dalamnya
+ * salah tempat.
+ */
+@keyframes pangi-muncul {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pangi-melayang {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.tampilan-lembut #main-content > :not(header) > * {
+    animation: pangi-muncul 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.tampilan-lembut #main-content > :not(header) > :nth-child(2) { animation-delay: 0.05s; }
+.tampilan-lembut #main-content > :not(header) > :nth-child(3) { animation-delay: 0.1s; }
+.tampilan-lembut #main-content > :not(header) > :nth-child(4) { animation-delay: 0.15s; }
+.tampilan-lembut #main-content > :not(header) > :nth-child(5) { animation-delay: 0.2s; }
+.tampilan-lembut #main-content > :not(header) > :nth-child(6) { animation-delay: 0.25s; }
+.tampilan-lembut #main-content > :not(header) > :nth-child(n + 7) { animation-delay: 0.3s; }
+
+/* Kartu di dalam kisi ikut muncul bergiliran. */
+.tampilan-lembut #main-content .grid > .rounded-2xl {
+    animation: pangi-muncul 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.tampilan-lembut #main-content .grid > .rounded-2xl:nth-child(2) { animation-delay: 0.08s; }
+.tampilan-lembut #main-content .grid > .rounded-2xl:nth-child(3) { animation-delay: 0.16s; }
+.tampilan-lembut #main-content .grid > .rounded-2xl:nth-child(n + 4) { animation-delay: 0.24s; }
+
+/* Baris tabel memudar masuk. */
+.tampilan-lembut #main-content tbody > tr {
+    animation: pangi-muncul 0.4s ease-out backwards;
+}
+
+.tampilan-lembut #main-content tbody > tr:nth-child(n + 2) { animation-delay: 0.04s; }
+.tampilan-lembut #main-content tbody > tr:nth-child(n + 4) { animation-delay: 0.08s; }
+.tampilan-lembut #main-content tbody > tr:nth-child(n + 8) { animation-delay: 0.12s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tampilan-lembut *,
+    .tampilan-lembut *::before,
+    .tampilan-lembut *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}

@@ -60,7 +60,8 @@
   </style>
   @stack('head')
 </head>
-<body class="bg-slate-100 font-sans" x-data="{ sidebarOpen: false }" @keydown.escape="sidebarOpen = false">
+{{-- tampilan-lembut: gaya neumorphism dan animasi halaman, lihat resources/css/app.css. --}}
+<body class="tampilan-lembut bg-slate-100 font-sans" x-data="{ sidebarOpen: false }" @keydown.escape="sidebarOpen = false">
 
 @include('sidebar')
 

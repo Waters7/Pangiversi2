@@ -1,6 +1,6 @@
 @extends('app')
 
-@section('title', 'Keuangan')
+@section('title', auth()->user()->bisaMengelolaBiaya() ? 'Daftar Input Rincian Biaya' : 'Rincian Biaya Usulan')
 
 @section('content')
 
@@ -15,7 +15,7 @@
             </svg>
         </a>
         <div>
-            <h1 class="text-xl font-bold text-slate-800">Keuangan & LPJ</h1>
+            <h1 class="text-xl font-bold text-slate-800">{{ auth()->user()->bisaMengelolaBiaya() ? 'Daftar Input Rincian Biaya' : 'Rincian Biaya Usulan' }}</h1>
             <p class="text-xs text-slate-400 mt-0.5">Rincian biaya, pembayaran, verifikasi bukti, dan daftar nominatif</p>
         </div>
     </div>
@@ -31,10 +31,45 @@
         :tab="['' => ['label' => 'Semua', 'jumlah' => array_sum($jumlahStatus)]]
             + collect($tahap)->map(fn ($isi, $kunci) => $isi + ['jumlah' => $jumlahStatus[$kunci]])->all()" />
 
-    {{-- ── List Pejadin ── --}}
-    <form method="GET" action="{{ route('keuangan') }}">
+    {{-- ── Saringan daftar perjalanan dinas ── --}}
+    @php
+        $adaSaringan = collect($saring)->filter()->isNotEmpty() || request('search') || request('status') || request('urut');
+    @endphp
+    <form method="GET" action="{{ route('keuangan') }}" data-saringan-keuangan>
         <input type="hidden" name="status" value="{{ $status }}">
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                    <label for="saring-pelaksana" class="block text-xs font-semibold text-slate-500 mb-1">Nama pelaksana</label>
+                    <input type="text" name="pelaksana" id="saring-pelaksana" value="{{ $saring['pelaksana'] }}" placeholder="cth: Maya"
+                           class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label for="saring-tujuan" class="block text-xs font-semibold text-slate-500 mb-1">Tujuan</label>
+                    <input type="text" name="tujuan" id="saring-tujuan" value="{{ $saring['tujuan'] }}" placeholder="Kota atau instansi"
+                           class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label for="saring-dari" class="block text-xs font-semibold text-slate-500 mb-1">Periode dari</label>
+                    <input type="date" name="dari" id="saring-dari" value="{{ $saring['dari'] }}"
+                           class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label for="saring-sampai" class="block text-xs font-semibold text-slate-500 mb-1">Periode sampai</label>
+                    <input type="date" name="sampai" id="saring-sampai" value="{{ $saring['sampai'] }}"
+                           class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label for="saring-pembayaran" class="block text-xs font-semibold text-slate-500 mb-1">Tahap pembayaran</label>
+                    <select name="pembayaran" id="saring-pembayaran"
+                            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">Semua</option>
+                        @foreach ($pilihanPembayaran as $nilai => $label)
+                            <option value="{{ $nilai }}" @selected($saring['pembayaran'] === $nilai)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
             <div class="flex flex-col sm:flex-row gap-3">
 
                 <div class="relative flex-1">
@@ -57,7 +92,7 @@
                     Filter
                 </button>
 
-                @if(request('search') || request('status') || request('urut'))
+                @if ($adaSaringan)
                     <a href="{{ route('keuangan') }}"
                         class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition">
                         Reset

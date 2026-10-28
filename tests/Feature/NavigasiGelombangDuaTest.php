@@ -263,7 +263,7 @@ class NavigasiGelombangDuaTest extends TestCase
         ]))->get(route('dashboard'))->assertOk()->getContent();
 
         foreach (['Bayar Transport Lokal', 'Periksa Transport Lokal', 'Daftar Riil Saya',
-            'Arsip Daftar Riil', 'Rincian Biaya Saya', 'Input Rincian Biaya',
+            'Arsip Daftar Riil', 'Rincian Biaya Saya', 'Daftar Input Rincian Biaya',
             'Arsip Rincian Lengkap'] as $nama) {
             $this->assertSame(
                 1,

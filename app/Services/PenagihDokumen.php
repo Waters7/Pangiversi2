@@ -32,9 +32,11 @@ class PenagihDokumen
      */
     private const LABEL = [
         'sppd' => 'SPPD bertanda tangan',
-        'kwintasi' => 'Kuitansi penyelenggara / hotel',
-        'bill_hotel' => 'Bill hotel',
+        'bill_hotel' => 'Bill hotel / kuitansi hotel',
     ];
+
+    /** Baris checklist akomodasi: bill hotel dan kuitansi hotel satu berkas. */
+    public const BARIS_AKOMODASI = 'Bill Hotel / Kuitansi';
 
     /** Baris checklist laporan perjadin — diisi di aplikasi, bukan diunggah. */
     public const LABEL_LAPORAN = 'Laporan Perjalanan Dinas';
@@ -74,16 +76,16 @@ class PenagihDokumen
         $tanpaPenginapan = $this->tanpaPenginapan($usulan, $dokumen);
         $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan() || $tanpaPenginapan;
 
-        if ($diminta(BerkasLpj::BillHotel) && ! $tanpaBillHotel) {
-            if (blank($dokumen?->bill_hotel)) {
+        // Bill hotel dan kuitansi hotel satu berkas; kuitansi lama yang
+        // diunggah terpisah tetap dihitung.
+        if ($this->mintaAkomodasi($diminta) && ! $tanpaBillHotel) {
+            if (! $this->punyaBerkasHotel($dokumen)) {
                 $kurang->push(self::LABEL['bill_hotel']);
             }
 
-            $kurang = $kurang->concat($this->rincianHotelKurang($usulan, $dokumen));
-        }
-
-        if ($diminta(BerkasLpj::Kuitansi) && ! $tanpaPenginapan && blank($dokumen?->kwintasi)) {
-            $kurang->push(self::LABEL['kwintasi']);
+            if ($diminta(BerkasLpj::BillHotel)) {
+                $kurang = $kurang->concat($this->rincianHotelKurang($usulan, $dokumen));
+            }
         }
 
         if ($diminta(BerkasLpj::Penyelenggaraan)) {
@@ -172,45 +174,40 @@ class PenagihDokumen
             ];
         }
 
-        // Seksi 4 — akomodasi dan bukti biaya.
+        // Seksi 4 — akomodasi: bill hotel dan kuitansi hotel satu berkas.
         $tanpaPenginapan = $this->tanpaPenginapan($usulan, $dokumen);
+        $berkasHotel = array_values(array_filter([
+            filled($dokumen?->bill_hotel) ? ['label' => 'Bill hotel / kuitansi', 'path' => $dokumen->bill_hotel] : null,
+            filled($dokumen?->kwintasi) ? ['label' => 'Kuitansi', 'path' => $dokumen->kwintasi] : null,
+        ]));
 
-        if ($diminta(BerkasLpj::BillHotel) && $tanpaPenginapan) {
+        if ($this->mintaAkomodasi($diminta) && $tanpaPenginapan) {
             $baris[] = [
-                'label' => 'Bill Hotel',
+                'label' => self::BARIS_AKOMODASI,
                 'terpenuhi' => true,
                 'berkas' => [],
                 'catatan' => 'Tidak perlu — pelaksana menyatakan tidak ada biaya penginapan',
             ];
-        } elseif ($diminta(BerkasLpj::BillHotel) && $dokumen?->penginapanTermasukPenyelenggaraan()) {
+        } elseif ($this->mintaAkomodasi($diminta) && $dokumen?->penginapanTermasukPenyelenggaraan()) {
             $baris[] = [
-                'label' => 'Bill Hotel',
+                'label' => self::BARIS_AKOMODASI,
                 'terpenuhi' => true,
-                'berkas' => filled($dokumen->bill_hotel) ? [['label' => 'Bill hotel', 'path' => $dokumen->bill_hotel]] : [],
+                'berkas' => $berkasHotel,
                 'catatan' => 'Tidak perlu — penginapan termasuk biaya penyelenggaraan',
             ];
-        } elseif ($diminta(BerkasLpj::BillHotel)) {
+        } elseif ($this->mintaAkomodasi($diminta)) {
             $baris[] = [
-                'label' => 'Bill Hotel',
-                'terpenuhi' => filled($dokumen?->bill_hotel)
-                    && filled($dokumen?->bill_hotel_no_transaksi)
-                    && ($dokumen?->bill_hotel_nominal > 0 || $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan)),
-                'berkas' => filled($dokumen?->bill_hotel) ? [['label' => 'Bill hotel', 'path' => $dokumen->bill_hotel]] : [],
-                'catatan' => $dokumen?->bill_hotel_no_transaksi
-                    ? 'No. transaksi '.$dokumen->bill_hotel_no_transaksi
-                    : 'Nomor transaksi dan nominalnya wajib diisi',
+                'label' => self::BARIS_AKOMODASI,
+                'terpenuhi' => $this->punyaBerkasHotel($dokumen)
+                    && (! $diminta(BerkasLpj::BillHotel) || (filled($dokumen?->bill_hotel_no_transaksi)
+                        && ($dokumen?->bill_hotel_nominal > 0 || $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan)))),
+                'berkas' => $berkasHotel,
+                'catatan' => match (true) {
+                    filled($dokumen?->bill_hotel_no_transaksi) => 'No. transaksi '.$dokumen->bill_hotel_no_transaksi,
+                    $diminta(BerkasLpj::BillHotel) => 'Nomor transaksi dan nominalnya wajib diisi',
+                    default => null,
+                },
             ];
-        }
-
-        if ($diminta(BerkasLpj::Kuitansi) && $tanpaPenginapan) {
-            $baris[] = [
-                'label' => 'Kuitansi penyelenggara / hotel',
-                'terpenuhi' => true,
-                'berkas' => filled($dokumen?->kwintasi) ? [['label' => 'Kuitansi penyelenggara / hotel', 'path' => $dokumen->kwintasi]] : [],
-                'catatan' => 'Tidak perlu — tidak ada biaya penginapan',
-            ];
-        } elseif ($diminta(BerkasLpj::Kuitansi)) {
-            $baris[] = $this->barisChecklist('Kuitansi penyelenggara / hotel', $dokumen?->kwintasi);
         }
 
         // Seksi 5 — biaya penyelenggaraan, hanya bila pelaksana menyatakan ada.
@@ -245,6 +242,23 @@ class PenagihDokumen
         }
 
         return $baris;
+    }
+
+    /**
+     * Akomodasi ditagih bila bill hotel atau kuitansi — yang kini satu
+     * berkas — diminta jalurnya.
+     *
+     * @param  callable(BerkasLpj): bool  $diminta
+     */
+    private function mintaAkomodasi(callable $diminta): bool
+    {
+        return $diminta(BerkasLpj::BillHotel) || $diminta(BerkasLpj::Kuitansi);
+    }
+
+    /** Bill hotel atau kuitansinya sudah diunggah, termasuk kuitansi lama yang terpisah. */
+    private function punyaBerkasHotel(?Dokumen $dokumen): bool
+    {
+        return filled($dokumen?->bill_hotel) || filled($dokumen?->kwintasi);
     }
 
     /**
@@ -381,7 +395,7 @@ class PenagihDokumen
      */
     private function rincianHotelKurang(Usulan $usulan, ?Dokumen $dokumen): array
     {
-        if (! $dokumen || blank($dokumen->bill_hotel)) {
+        if (! $this->punyaBerkasHotel($dokumen)) {
             // Berkasnya sendiri sudah ditagih lewat DOKUMEN_LPJ_WAJIB.
             return [];
         }

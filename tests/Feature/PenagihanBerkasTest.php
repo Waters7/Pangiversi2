@@ -43,7 +43,7 @@ class PenagihanBerkasTest extends TestCase
     {
         Dokumen::factory()->create([
             'id_usulan' => $usulan->id,
-            ...array_fill_keys(Usulan::DOKUMEN_LPJ_WAJIB, null),
+            ...array_fill_keys([...Usulan::DOKUMEN_LPJ_WAJIB, 'kwintasi'], null),
             ...$berkas,
         ]);
 
@@ -153,7 +153,7 @@ class PenagihanBerkasTest extends TestCase
             ->get(route('keuangan'))
             ->assertOk()
             ->assertSee('https://wa.me/6281200002222', false)
-            ->assertSee('Tagih 5 berkas');
+            ->assertSee('Tagih 4 berkas');
     }
 
     public function test_baris_dengan_berkas_lengkap_menampilkan_keterangan_bukan_tombol(): void

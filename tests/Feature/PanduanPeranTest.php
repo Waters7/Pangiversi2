@@ -176,7 +176,7 @@ class PanduanPeranTest extends TestCase
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Dalam kota')
             ->assertSee('Luar kota')
-            ->assertSee('Bill hotel beserta nomor transaksi &amp; nominal', false)
+            ->assertSee('Bill hotel / kuitansi hotel beserta nomor transaksi &amp; nominal', false)
             ->assertSee('Bukti bayar biaya penyelenggaraan');
     }
 
@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.49')
+            ->assertSee('Bill hotel dan kuitansi hotel kini satu berkas pada bagian Akomodasi')
             ->assertSee('Versi 2.5.48')
             ->assertSee('Tiap kartu News Feed dapat diberi reaksi')
             ->assertSee('Versi 2.5.47')

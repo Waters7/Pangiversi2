@@ -40,7 +40,9 @@ class DokumenController extends Controller
         $bantuUnggah = $request->user()->punyaKemampuan(Kemampuan::MembantuUnggahDokumen);
         $cari = $request->input('cari');
 
-        $usulan = Usulan::with('user.unit', 'kegiatan', 'kategoriPerjadin')
+        // Relasi yang dibaca penagih berkas ikut dimuat sekaligus, supaya kolom
+        // kelengkapan tidak menanyai basis data per baris.
+        $usulan = Usulan::with('user.unit', 'kegiatan', 'kategoriPerjadin', 'dokumen', 'tiket', 'notaTransport', 'laporan', 'keuangan.rincianBiaya')
             ->when(! $lihatSemua, fn ($q) => $q->where('id_user', Auth::id()))
             ->whereIn('status', ['disetujui', 'selesai'])
             ->when($cari, fn ($q) => $q->where(fn ($w) => $w
@@ -60,9 +62,12 @@ class DokumenController extends Controller
                 fn (Usulan $item) => Carbon::parse($item->tanggal_mulai)->toDateString()
             ));
 
+        // Berkas yang belum diunggah tiap perjalanan, untuk kolom statusnya.
+        $berkasKurang = $usulan->mapWithKeys(fn (Usulan $item) => [$item->id => $this->penagih->berkasKurang($item)]);
+
         // Peran yang melihat dokumen seluruh perjalanan — super administrator
         // dan yang diberi hak akses menu Dokumen — mendapati pelaksananya.
-        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'lihatSemua', 'bantuUnggah'));
+        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'lihatSemua', 'bantuUnggah', 'berkasKurang'));
     }
 
     public function show(Usulan $usulan)

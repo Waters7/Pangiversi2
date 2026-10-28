@@ -80,17 +80,15 @@ class TanpaPenginapanTest extends TestCase
     public function test_tanpa_penginapan_bill_hotel_dan_kuitansi_tidak_ditagih(): void
     {
         $usulan = $this->usulan(JenisPerjadin::LuarKotaDalamProvinsi);
-        $this->assertContains('Bill hotel', $this->berkasKurang($usulan));
+        $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
 
         $this->simpanAkomodasi($usulan, ['penginapan_ada' => '0'])->assertSessionHasNoErrors();
 
         $this->assertTrue($usulan->fresh('dokumen')->dokumen->last()->tanpaPenginapan());
-        $this->assertNotContains('Bill hotel', $this->berkasKurang($usulan));
-        $this->assertNotContains('Kuitansi penyelenggara / hotel', $this->berkasKurang($usulan));
+        $this->assertNotContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
 
         $baris = collect(app(PenagihDokumen::class)->checklist($usulan->fresh()))->keyBy('label');
-        $this->assertTrue($baris['Bill Hotel']['terpenuhi']);
-        $this->assertTrue($baris['Kuitansi penyelenggara / hotel']['terpenuhi']);
+        $this->assertTrue($baris['Bill Hotel / Kuitansi']['terpenuhi']);
     }
 
     public function test_beralih_ke_tanpa_penginapan_mengosongkan_bill_hotel_dan_uang_penginapannya(): void
@@ -123,7 +121,7 @@ class TanpaPenginapanTest extends TestCase
         $usulan = $this->usulan(JenisPerjadin::LuarKotaDalamProvinsi);
 
         $this->simpanAkomodasi($usulan, [])->assertSessionHasErrors('bill_hotel');
-        $this->assertContains('Bill hotel', $this->berkasKurang($usulan));
+        $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
     }
 
     public function test_luar_kota_lintas_pulau_tetap_wajib_bill_hotel(): void
@@ -131,6 +129,6 @@ class TanpaPenginapanTest extends TestCase
         $usulan = $this->usulan(JenisPerjadin::LuarKota);
 
         $this->simpanAkomodasi($usulan, ['penginapan_ada' => '0'])->assertSessionHasErrors('bill_hotel');
-        $this->assertContains('Bill hotel', $this->berkasKurang($usulan));
+        $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
     }
 }

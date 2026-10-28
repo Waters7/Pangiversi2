@@ -8,6 +8,7 @@ use App\Models\Dokumen;
 use App\Models\Keuangan;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\PustakaBerkasBersama;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -112,9 +113,11 @@ class BerkasBersamaTest extends TestCase
     {
         $this->cek('hotel', 'htl-77')->assertOk()->assertJson([
             'ditemukan' => true,
+            // Bill hotel dan kuitansi hotel kini satu berkas; kuitansi lama yang
+            // diunggah terpisah tetap ditampilkan.
             'berkas' => [
-                ['label' => 'Bill hotel', 'tautan' => route('berkas.lihat', 'dokumen/asal/bill.pdf')],
-                ['label' => 'Kuitansi penyelenggara / hotel', 'tautan' => route('berkas.lihat', 'dokumen/asal/kuitansi.pdf')],
+                ['label' => 'Bill hotel / kuitansi', 'tautan' => route('berkas.lihat', 'dokumen/asal/bill.pdf')],
+                ['label' => 'Kuitansi (diunggah terpisah)', 'tautan' => route('berkas.lihat', 'dokumen/asal/kuitansi.pdf')],
             ],
         ]);
 
@@ -203,7 +206,7 @@ class BerkasBersamaTest extends TestCase
         ])->assertSessionHasErrors('invoice');
     }
 
-    public function test_nomor_transaksi_hotel_sama_memakai_bill_dan_kuitansi_rekan_dengan_nominal_sendiri(): void
+    public function test_nomor_transaksi_hotel_sama_memakai_berkas_rekan_dengan_nominal_sendiri(): void
     {
         $this->simpan(['section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-77', 'bill_hotel_nominal' => 1_200_000])
             ->assertSessionHasNoErrors();
@@ -211,6 +214,7 @@ class BerkasBersamaTest extends TestCase
         $dokumen = $this->usulanRekan->dokumen()->latest('id')->first();
 
         $this->assertSame('%PDF bill rombongan', $this->isiBerkas($dokumen->bill_hotel));
+        // Kuitansi lama rekan yang diunggah terpisah ikut dipanggil.
         $this->assertSame('%PDF kuitansi rombongan', $this->isiBerkas($dokumen->kwintasi));
         $this->assertNotSame('dokumen/asal/bill.pdf', $dokumen->bill_hotel);
         $this->assertSame(1_200_000.0, $dokumen->bill_hotel_nominal);
@@ -222,7 +226,37 @@ class BerkasBersamaTest extends TestCase
     public function test_nomor_transaksi_baru_tetap_wajib_unggah(): void
     {
         $this->simpan(['section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-BARU', 'bill_hotel_nominal' => 1_200_000])
-            ->assertSessionHasErrors(['bill_hotel', 'kwintasi']);
+            ->assertSessionHasErrors('bill_hotel');
+    }
+
+    /** Nomor transaksinya sama, tetapi pelaksana memilih mengunggah berkasnya sendiri. */
+    public function test_pelaksana_dapat_memilih_mengunggah_bill_hotel_sendiri(): void
+    {
+        $isian = ['section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-77', 'bill_hotel_nominal' => 1_200_000, 'bill_hotel_sendiri' => '1'];
+
+        $this->simpan($isian)->assertSessionHasErrors('bill_hotel');
+
+        $this->simpan($isian + ['bill_hotel' => UploadedFile::fake()->createWithContent('bill-saya.pdf', '%PDF bill saya')])
+            ->assertSessionHasNoErrors();
+
+        $dokumen = $this->usulanRekan->dokumen()->latest('id')->first();
+        $this->assertSame('%PDF bill saya', $this->isiBerkas($dokumen->bill_hotel));
+        $this->assertFalse(PustakaBerkasBersama::salinan($dokumen->bill_hotel));
+    }
+
+    /** Salinan berkas rekan yang sudah tersimpan diganti bila pelaksana memilih berkasnya sendiri. */
+    public function test_memilih_berkas_sendiri_mengganti_salinan_rekan(): void
+    {
+        $this->simpan(['section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-77', 'bill_hotel_nominal' => 1_200_000])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue(PustakaBerkasBersama::salinan($this->usulanRekan->dokumen()->latest('id')->first()->bill_hotel));
+
+        $isian = ['section' => 'akomodasi', 'bill_hotel_no_transaksi' => 'HTL-77', 'bill_hotel_nominal' => 1_200_000, 'bill_hotel_sendiri' => '1'];
+        $this->simpan($isian)->assertSessionHasErrors('bill_hotel');
+        $this->simpan($isian + ['bill_hotel' => UploadedFile::fake()->createWithContent('bill-saya.pdf', '%PDF bill saya')])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('%PDF bill saya', $this->isiBerkas($this->usulanRekan->dokumen()->latest('id')->first()->bill_hotel));
     }
 
     public function test_invoice_penyelenggaraan_sama_memakai_bukti_bayar_rekan(): void
@@ -250,7 +284,10 @@ class BerkasBersamaTest extends TestCase
             ->assertSee('Cek Nomor Invoice')
             // Kolom unggah dikunci selama berkas rombongannya ditemukan.
             ->assertSee(':disabled="cekBerkas.mengunci(&#039;invoice&#039;)"', false)
-            ->assertSee(':disabled="cekBerkas.mengunci(&#039;bill_hotel&#039;)"', false)
+            ->assertSee(':disabled="cekBerkas.mengunci(&#039;bill_hotel&#039;) &amp;&amp; ! sendiri"', false)
+            // Bila nomornya milik rekan, pelaksana ditanya: pakai berkas yang sama atau unggah sendiri.
+            ->assertSee('data-pilihan-berkas-hotel', false)
+            ->assertSee('Tidak, unggah berkas sendiri')
             ->assertSee(':disabled="cekBerkas.mengunci(&#039;penyelenggaraan_bukti&#039;)"', false);
 
         // Pengunggah asli tidak dikunci atas berkasnya sendiri: hanya tiket
@@ -263,5 +300,9 @@ class BerkasBersamaTest extends TestCase
             ->assertDontSee('cekBerkas.mengunci(&#039;penyelenggaraan_bukti&#039;)', false)
             ->getContent();
         $this->assertSame(1, substr_count($isi, ':disabled="cekBerkas.mengunci(&#039;invoice&#039;)"'));
+
+        // Kuitansi yang dulu diunggah terpisah tetap tampil dan dapat dibuka.
+        $this->assertStringContainsString('data-kuitansi-lama', $isi);
+        $this->assertStringContainsString(route('berkas.lihat', 'dokumen/asal/kuitansi.pdf'), $isi);
     }
 }

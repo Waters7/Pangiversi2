@@ -204,4 +204,61 @@ class MenuPembayaranTest extends TestCase
 
         $this->buka('disetujui')->assertDontSee('Ternate');
     }
+
+    // ── Saringan dan urutan ──
+
+    public function test_daftar_pembayaran_disaring_menurut_status_pelaksana_perjalanan_dan_anggaran(): void
+    {
+        $maya = User::factory()->create(['nama' => 'Maya Sari Wulandari']);
+        $ternate = $this->perjadin('Ternate', ['id_user' => $maya->id], 'uang-muka');
+        $tidore = $this->perjadin('Tidore', [], 'lunas');
+        Keuangan::where('id_usulan', $tidore->id)->update(['total' => 4_000_000]);
+
+        $id = fn (array $saring) => $this->actingAs($this->bendahara())
+            ->get(route('pembayaran', ['tahap' => 'uang-muka'] + $saring))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->all();
+        $semua = fn (array $saring) => $this->actingAs($this->bendahara())
+            ->get(route('pembayaran', ['tahap' => 'lunas'] + $saring))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->all();
+
+        $this->buka('uang-muka')->assertSee('data-saringan-pembayaran', false);
+
+        $this->assertSame([$ternate->id], $id(['pelaksana' => 'maya']));
+        $this->assertSame([$ternate->id], $id(['perjalanan' => 'terna']));
+        $this->assertSame([$ternate->id], $id(['status' => 'sebagian']));
+        $this->assertSame([], $id(['status' => 'lunas']));
+        $this->assertSame([$tidore->id], $semua(['status' => 'lunas', 'anggaran_maks' => 5_000_000]));
+        $this->assertSame([], $semua(['anggaran_min' => 5_000_000]));
+    }
+
+    public function test_daftar_pembayaran_dapat_diurutkan(): void
+    {
+        $budi = User::factory()->create(['nama' => 'Budi']);
+        $ani = User::factory()->create(['nama' => 'Ani']);
+        $besar = $this->perjadin('Ternate', ['id_user' => $budi->id, 'tanggal_mulai' => today()->addMonths(2), 'tanggal_selesai' => today()->addMonths(2)->addDay()], 'belum');
+        $kecil = $this->perjadin('Tidore', ['id_user' => $ani->id], 'belum');
+        Keuangan::where('id_usulan', $kecil->id)->update(['total' => 1_000_000]);
+
+        $urutan = fn (string $urut) => $this->actingAs($this->bendahara())
+            ->get(route('pembayaran', ['tahap' => 'disetujui', 'urut' => $urut]))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->all();
+
+        $this->assertSame([$kecil->id, $besar->id], $urutan('berangkat-terlama'));
+        $this->assertSame([$besar->id, $kecil->id], $urutan('berangkat-terbaru'));
+        $this->assertSame([$kecil->id, $besar->id], $urutan('nama-az'));
+        $this->assertSame([$besar->id, $kecil->id], $urutan('anggaran-besar'));
+        $this->assertSame([$kecil->id, $besar->id], $urutan('anggaran-kecil'));
+
+        // Judul kolom ikut menjadi tombol urut.
+        $this->buka('disetujui')->assertSee('urut=anggaran-besar', false);
+    }
 }

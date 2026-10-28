@@ -218,27 +218,26 @@ class BiayaPenyelenggaraanTest extends TestCase
         $penagih = app(PenagihDokumen::class);
         $this->simpan()->assertSessionHasNoErrors();
 
-        $this->assertContains('Bill hotel', $penagih->berkasKurang($this->usulan->fresh()));
+        $this->assertContains('Bill hotel / kuitansi hotel', $penagih->berkasKurang($this->usulan->fresh()));
 
         $this->simpan(['penyelenggaraan_termasuk_penginapan' => '1'])->assertSessionHasNoErrors();
 
         $this->assertTrue($this->dokumen()->penginapanTermasukPenyelenggaraan());
-        $this->assertNotContains('Bill hotel', $penagih->berkasKurang($this->usulan->fresh()));
+        $this->assertNotContains('Bill hotel / kuitansi hotel', $penagih->berkasKurang($this->usulan->fresh()));
 
-        $billHotel = collect($penagih->checklist($this->usulan->fresh()))->firstWhere('label', 'Bill Hotel');
+        $billHotel = collect($penagih->checklist($this->usulan->fresh()))->firstWhere('label', 'Bill Hotel / Kuitansi');
         $this->assertTrue($billHotel['terpenuhi']);
         $this->assertStringContainsString('termasuk biaya penyelenggaraan', $billHotel['catatan']);
 
         $this->actingAs($this->pelaksana)
             ->get(route('dokumen.show', $this->usulan->no_usulan))
-            ->assertSee('bill hotel tidak perlu diunggah');
+            ->assertSee('bill hotel / kuitansi tidak perlu');
     }
 
     public function test_akomodasi_tersimpan_tanpa_bill_hotel_bila_termasuk_penyelenggaraan(): void
     {
         $akomodasi = fn () => $this->actingAs($this->pelaksana)->post(route('dokumen.store', $this->usulan), [
             'section' => 'akomodasi',
-            'kwintasi' => UploadedFile::fake()->create('kuitansi.pdf', 10, 'application/pdf'),
         ]);
 
         $akomodasi()->assertSessionHasErrors('bill_hotel');
@@ -246,7 +245,7 @@ class BiayaPenyelenggaraanTest extends TestCase
         $this->simpan(['penyelenggaraan_termasuk_penginapan' => '1']);
 
         $akomodasi()->assertSessionHasNoErrors();
-        $this->assertNotNull($this->dokumen()->kwintasi);
+        $this->assertNull($this->dokumen()->bill_hotel);
     }
 
     /** Hotel yang sama tidak terbayar dua kali: lewat paket dan lewat uang penginapan. */

@@ -49,7 +49,7 @@ class PengingatDokumenTest extends TestCase
 
         Dokumen::factory()->create([
             'id_usulan' => $usulan->id,
-            ...array_fill_keys(Usulan::DOKUMEN_LPJ_WAJIB, null),
+            ...array_fill_keys([...Usulan::DOKUMEN_LPJ_WAJIB, 'kwintasi'], null),
             ...$berkas,
         ]);
 

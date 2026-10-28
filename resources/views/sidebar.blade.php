@@ -530,7 +530,7 @@
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M4 6h16M4 10h16M4 14h10"/>
               </svg>
-              {{ auth()->user()->bisaMengelolaBiaya() ? 'Input Rincian Biaya' : 'Rincian Biaya Usulan' }}
+              {{ auth()->user()->bisaMengelolaBiaya() ? 'Daftar Input Rincian Biaya' : 'Rincian Biaya Usulan' }}
               <x-lencana-antrean :jumlah="$antrean['keuangan'] ?? 0" />
             </a>
 

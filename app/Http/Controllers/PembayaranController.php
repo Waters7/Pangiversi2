@@ -9,6 +9,7 @@ use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\Notifikasi;
 use App\Models\RiwayatPembayaran;
+use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\EkspresiTanggal;
@@ -38,6 +39,33 @@ class PembayaranController extends Controller
         'berjalan' => 'Sedang Berjalan',
         'uang-muka' => 'Uang Muka',
         'lunas' => 'Lunas 100%',
+    ];
+
+    /**
+     * Saringan status pembayaran pada daftar tahap.
+     *
+     * @var array<string, string>
+     */
+    private const STATUS = [
+        'belum' => 'Belum dibayar',
+        'sebagian' => 'Uang muka dibayar',
+        'lunas' => 'Lunas',
+    ];
+
+    /**
+     * Pilihan urutan daftar tahap; bawaannya tanggal berangkat terlama
+     * supaya baris satu bulan berkumpul di bawah judul bulannya.
+     *
+     * @var array<string, string>
+     */
+    private const URUTAN = [
+        'berangkat-terlama' => 'Tanggal berangkat terlama',
+        'berangkat-terbaru' => 'Tanggal berangkat terbaru',
+        'nama-az' => 'Nama pelaksana A–Z',
+        'nama-za' => 'Nama pelaksana Z–A',
+        'anggaran-besar' => 'Anggaran terbesar',
+        'anggaran-kecil' => 'Anggaran terkecil',
+        'status' => 'Status pembayaran',
     ];
 
     /**
@@ -71,7 +99,16 @@ class PembayaranController extends Controller
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
 
-        $usulan = $this->daftar($tahap, $request->input('search'), $tahun, $bulan);
+        $saring = [
+            'status' => array_key_exists((string) $request->input('status'), self::STATUS) ? $request->input('status') : null,
+            'pelaksana' => trim((string) $request->input('pelaksana')),
+            'perjalanan' => trim((string) $request->input('perjalanan')),
+            'anggaran_min' => is_numeric($request->input('anggaran_min')) ? (float) $request->input('anggaran_min') : null,
+            'anggaran_maks' => is_numeric($request->input('anggaran_maks')) ? (float) $request->input('anggaran_maks') : null,
+        ];
+        $urut = array_key_exists((string) $request->input('urut'), self::URUTAN) ? $request->input('urut') : 'berangkat-terlama';
+
+        $usulan = $this->daftar($tahap, $request->input('search'), $tahun, $bulan, $saring, $urut);
 
         // Kelengkapan berkas dihitung di sini agar Blade tidak memeriksanya
         // ulang untuk setiap baris.
@@ -91,6 +128,10 @@ class PembayaranController extends Controller
             'bulan' => $bulan,
             'tahunTersedia' => $this->tahunTersedia($tahap),
             'jumlahBulan' => $this->jumlahBulan($tahap, $tahun),
+            'saring' => $saring,
+            'pilihanStatus' => self::STATUS,
+            'urut' => $urut,
+            'pilihanUrut' => self::URUTAN,
         ]);
     }
 
@@ -345,8 +386,15 @@ class PembayaranController extends Controller
     /**
      * @return LengthAwarePaginator<int, Usulan>
      */
-    private function daftar(string $tahap, ?string $search, ?string $tahun, ?string $bulan): LengthAwarePaginator
+    /**
+     * @param  array{status: ?string, pelaksana: string, perjalanan: string, anggaran_min: ?float, anggaran_maks: ?float}  $saring
+     */
+    private function daftar(string $tahap, ?string $search, ?string $tahun, ?string $bulan, array $saring, string $urut): LengthAwarePaginator
     {
+        $total = Keuangan::select('total')->whereColumn('keuangan.id_usulan', 'usulan.id')->limit(1);
+        $statusBayar = Keuangan::select('status')->whereColumn('keuangan.id_usulan', 'usulan.id')->limit(1);
+        $nama = User::select('nama')->whereColumn('users.id', 'usulan.id_user')->limit(1);
+
         return $this->dasar($tahap)
             ->with('user.unit', 'kegiatan', 'kategoriPerjadin', 'keuangan', 'dokumen')
             ->when($search, function ($query) use ($search) {
@@ -358,9 +406,24 @@ class PembayaranController extends Controller
             })
             ->when($tahun, fn ($q) => $q->whereYear('tanggal_mulai', $tahun))
             ->when($bulan, fn ($q) => $q->whereMonth('tanggal_mulai', $bulan))
-            // Menaik supaya baris satu bulan berkumpul rapi di bawah
-            // judul bulannya pada tampilan.
-            ->orderBy('tanggal_mulai')
+            ->when($saring['pelaksana'] !== '', fn ($q) => $q->whereHas('user', fn ($u) => $u->where('nama', 'like', "%{$saring['pelaksana']}%")))
+            ->when($saring['perjalanan'] !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('no_usulan', 'like', "%{$saring['perjalanan']}%")
+                ->orWhere('lokasi', 'like', "%{$saring['perjalanan']}%")
+                ->orWhere('instansi', 'like', "%{$saring['perjalanan']}%")))
+            ->when($saring['status'] === 'lunas', fn ($q) => $q->whereHas('keuangan', fn ($k) => $k->where('status', Keuangan::STATUS_LUNAS)))
+            ->when($saring['status'] === 'sebagian', fn ($q) => $q->whereHas('keuangan', fn ($k) => $k->where('status', Keuangan::STATUS_SEBAGIAN)))
+            ->when($saring['status'] === 'belum', fn ($q) => $q->whereDoesntHave('keuangan', fn ($k) => $k->whereIn('status', [Keuangan::STATUS_LUNAS, Keuangan::STATUS_SEBAGIAN])))
+            ->when($saring['anggaran_min'] !== null, fn ($q) => $q->whereHas('keuangan', fn ($k) => $k->where('total', '>=', $saring['anggaran_min'])))
+            ->when($saring['anggaran_maks'] !== null, fn ($q) => $q->whereHas('keuangan', fn ($k) => $k->where('total', '<=', $saring['anggaran_maks'])))
+            ->when($urut === 'berangkat-terlama', fn ($q) => $q->orderBy('tanggal_mulai'))
+            ->when($urut === 'berangkat-terbaru', fn ($q) => $q->orderByDesc('tanggal_mulai'))
+            ->when($urut === 'nama-az', fn ($q) => $q->orderBy($nama))
+            ->when($urut === 'nama-za', fn ($q) => $q->orderByDesc($nama))
+            ->when($urut === 'anggaran-besar', fn ($q) => $q->orderByDesc($total))
+            ->when($urut === 'anggaran-kecil', fn ($q) => $q->orderBy($total))
+            ->when($urut === 'status', fn ($q) => $q->orderBy($statusBayar))
+            ->orderBy('usulan.id')
             ->paginate(12)
             ->withQueryString();
     }

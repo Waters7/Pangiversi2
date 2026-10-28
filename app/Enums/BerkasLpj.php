@@ -31,7 +31,7 @@ enum BerkasLpj: string
             self::Sppd => 'SPPD bertanda tangan',
             self::Tiket => 'Tiket pergi dan pulang',
             self::NotaTransport => 'Nota transportasi lokal',
-            self::BillHotel => 'Bill hotel',
+            self::BillHotel => 'Bill hotel / kuitansi hotel',
             self::Kuitansi => 'Kuitansi penyelenggara / hotel',
             self::Penyelenggaraan => 'Bukti biaya penyelenggaraan',
             self::Laporan => 'Laporan perjalanan dinas',
@@ -44,11 +44,24 @@ enum BerkasLpj: string
             self::Sppd => 'Pindaian SPPD yang sudah ditandatangani pejabat di tempat tujuan; dilewati pada perjalanan yang tidak menerbitkan SPD.',
             self::Tiket => 'Boarding pass dan invoice untuk tiap arah, beserta nomor tiket dan kode bookingnya.',
             self::NotaTransport => 'Bukti tiap ruas transport lokal yang bernominal; ruas tanpa biaya tidak ditagih.',
-            self::BillHotel => 'Bill hotel beserta nomor transaksi dan nominalnya.',
-            self::Kuitansi => 'Kuitansi resmi dari penyelenggara kegiatan atau dari hotel tempat menginap.',
+            self::BillHotel => 'Satu berkas — bill hotel atau kuitansi dari hotel — beserta nomor transaksi dan nominalnya.',
+            self::Kuitansi => 'Digabung dengan bill hotel: cukup satu berkas pada bagian akomodasi.',
             self::Penyelenggaraan => 'Bukti bayar kontribusi kegiatan — hanya ditagih bila pelaksana menyatakan ada.',
             self::Laporan => 'Diisi langsung di aplikasi lalu dikonfirmasi Direktur, bukan diunggah.',
         };
+    }
+
+    /**
+     * Berkas yang dapat dipilih pada pengaturan per jalur. Kuitansi tidak
+     * lagi berdiri sendiri — ia digabung dengan bill hotel menjadi satu
+     * berkas — jadi tidak ditawarkan; pengaturan lama yang memuatnya tetap
+     * terbaca sebagai bagian akomodasi.
+     *
+     * @return list<self>
+     */
+    public static function pilihan(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $berkas) => $berkas !== self::Kuitansi));
     }
 
     /** Berkas yang selalu ditagih bersyarat, bukan karena wajib. */

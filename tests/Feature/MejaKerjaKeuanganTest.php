@@ -173,7 +173,7 @@ class MejaKerjaKeuanganTest extends TestCase
 
     public function test_berkas_yang_belum_diunggah_tidak_bertombol_lihat(): void
     {
-        Dokumen::where('id_usulan', $this->usulan->id)->update(['bill_hotel' => null]);
+        Dokumen::where('id_usulan', $this->usulan->id)->update(['bill_hotel' => null, 'kwintasi' => null]);
 
         $isi = $this->buka()->getContent();
 

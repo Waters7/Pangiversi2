@@ -75,6 +75,17 @@ class KeuanganController extends Controller
     ];
 
     /**
+     * Saringan status pembayaran pada Daftar Input Rincian Biaya.
+     *
+     * @var array<string, string>
+     */
+    private const PEMBAYARAN = [
+        'belum' => 'Belum dibayar',
+        'sebagian' => 'Uang muka dibayar',
+        'lunas' => 'Lunas',
+    ];
+
+    /**
      * Pilihan urutan daftar perjadin.
      *
      * @var array<string, string>
@@ -93,6 +104,16 @@ class KeuanganController extends Controller
         $status = array_key_exists((string) $request->input('status'), self::TAHAP) ? $request->input('status') : null;
         $urut = array_key_exists((string) $request->input('urut'), self::URUTAN) ? $request->input('urut') : 'terbaru';
 
+        // Saringan rinci: nama pelaksana, tujuan, periode perjalanan, dan
+        // status pembayarannya. Ikut memengaruhi angka pada tab tahap.
+        $saring = [
+            'pelaksana' => trim((string) $request->input('pelaksana')),
+            'tujuan' => trim((string) $request->input('tujuan')),
+            'dari' => $this->tanggalSah($request->input('dari')),
+            'sampai' => $this->tanggalSah($request->input('sampai')),
+            'pembayaran' => array_key_exists((string) $request->input('pembayaran'), self::PEMBAYARAN) ? $request->input('pembayaran') : null,
+        ];
+
         // Perjadin yang sudah selesai tetap dibuka di sini: tim keuangan
         // masih membutuhkannya untuk menelusuri berkas dan mencetak ulang
         // dokumennya. Tabnya membuat keduanya terjangkau sekali klik.
@@ -104,7 +125,15 @@ class KeuanganController extends Controller
                     ->orWhere('instansi', 'like', "%{$search}%")
                     ->orWhereHas('kegiatan', fn ($k) => $k->where('nama', 'like', "%{$search}%"))
                     ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$search}%"));
-            }));
+            }))
+            ->when($saring['pelaksana'] !== '', fn ($q) => $q->whereHas('user', fn ($u) => $u->where('nama', 'like', "%{$saring['pelaksana']}%")))
+            ->when($saring['tujuan'] !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('lokasi', 'like', "%{$saring['tujuan']}%")
+                ->orWhere('instansi', 'like', "%{$saring['tujuan']}%")))
+            // Perjalanan yang bersinggungan dengan periode yang dipilih.
+            ->when($saring['dari'], fn ($q) => $q->whereDate('tanggal_selesai', '>=', $saring['dari']))
+            ->when($saring['sampai'], fn ($q) => $q->whereDate('tanggal_mulai', '<=', $saring['sampai']))
+            ->when($saring['pembayaran'], fn ($q) => $this->saringPembayaran($q, $saring['pembayaran']));
 
         $jumlahStatus = collect(self::TAHAP)
             ->map(fn (array $tahap, string $kunci) => $this->saringTahap($dasar(), $kunci)->count())
@@ -137,7 +166,35 @@ class KeuanganController extends Controller
             'pilihanUrut' => self::URUTAN,
             'tahap' => self::TAHAP,
             'jumlahStatus' => $jumlahStatus,
+            'saring' => $saring,
+            'pilihanPembayaran' => self::PEMBAYARAN,
         ]);
+    }
+
+    /**
+     * Saring menurut status pembayaran. Perjadin yang belum punya baris
+     * keuangan dihitung belum dibayar.
+     *
+     * @param  Builder<Usulan>  $query
+     * @return Builder<Usulan>
+     */
+    private function saringPembayaran(Builder $query, string $pembayaran): Builder
+    {
+        return match ($pembayaran) {
+            'lunas' => $query->whereHas('keuangan', fn (Builder $k) => $k->where('status', Keuangan::STATUS_LUNAS)),
+            'sebagian' => $query->whereHas('keuangan', fn (Builder $k) => $k->where('status', Keuangan::STATUS_SEBAGIAN)),
+            default => $query->whereDoesntHave('keuangan', fn (Builder $k) => $k->whereIn('status', [Keuangan::STATUS_LUNAS, Keuangan::STATUS_SEBAGIAN])),
+        };
+    }
+
+    /** Tanggal Y-m-d yang sah, atau null. */
+    private function tanggalSah(mixed $nilai): ?string
+    {
+        if (! is_string($nilai) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $nilai)) {
+            return null;
+        }
+
+        return strtotime($nilai) !== false ? $nilai : null;
     }
 
     /**

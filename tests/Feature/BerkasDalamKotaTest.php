@@ -140,7 +140,7 @@ class BerkasDalamKotaTest extends TestCase
         $usulan = $this->usulan(dalamKota: true);
         $kurang = $this->penagih()->berkasKurang($usulan);
 
-        foreach (['Tiket Pergi', 'Tiket Pulang', 'Bill hotel', 'Kuitansi penyelenggara / hotel'] as $seharusnyaTidakAda) {
+        foreach (['Tiket Pergi', 'Tiket Pulang', 'Bill hotel / kuitansi hotel', 'Kuitansi penyelenggara / hotel'] as $seharusnyaTidakAda) {
             $this->assertNotContains($seharusnyaTidakAda, $kurang);
         }
     }
@@ -193,8 +193,7 @@ class BerkasDalamKotaTest extends TestCase
         $kurang = $this->penagih()->berkasKurang($usulan->fresh());
 
         $this->assertNotEmpty($kurang, 'Luar kota seharusnya masih menagih tiket dan penginapan.');
-        $this->assertContains('Bill hotel', $kurang);
-        $this->assertContains('Kuitansi penyelenggara / hotel', $kurang);
+        $this->assertContains('Bill hotel / kuitansi hotel', $kurang);
     }
 
     // ── Checklist ──
@@ -215,8 +214,7 @@ class BerkasDalamKotaTest extends TestCase
         $label = collect($this->penagih()->checklist($usulan))->pluck('label');
 
         $this->assertContains('Tiket Pergi', $label);
-        $this->assertContains('Bill Hotel', $label);
-        $this->assertContains('Kuitansi penyelenggara / hotel', $label);
+        $this->assertContains('Bill Hotel / Kuitansi', $label);
     }
 
     // ── Formulir dokumen ──

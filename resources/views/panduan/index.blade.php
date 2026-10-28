@@ -420,8 +420,10 @@
             <x-panduan-langkah nomor="1" judul="Buka menu Dokumen → Dokumen Perdin">
                 Pilih usulan yang perjalanannya sudah selesai. Halaman formulirnya sudah
                 menyesuaikan diri: bagian yang tidak berlaku bagi perjalanan Anda tidak
-                ditampilkan sama sekali. Petugas yang diberi hak membantu mengunggah dapat
-                mengunggahkan berkas Anda; setiap kali itu terjadi Anda menerima notifikasi.
+                ditampilkan sama sekali. Kolom <strong>Status Dokumen</strong> pada daftarnya menyebut berkas
+                yang belum diunggah, atau <strong>Dokumen lengkap</strong> bila semuanya sudah ada. Petugas yang
+                diberi hak membantu mengunggah dapat mengunggahkan berkas Anda; setiap kali itu terjadi Anda
+                menerima notifikasi.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Unggah berkas sesuai wilayah perjalanan">
@@ -436,9 +438,13 @@
                 <span class="block mb-3">
                     Berkas rombongan cukup diunggah sekali: ketik nomor tiket, nomor transaksi hotel, atau nomor
                     invoice biaya penyelenggaraan lalu tekan tombol <strong>Cek</strong>. Bila rekan sudah
-                    mengunggahnya, invoice tiket — beserta kota asal, kota tujuan, dan kode booking — bill hotel
-                    dan kuitansinya, atau bukti bayar penyelenggaraan dipakai otomatis. Harga tiket, nominal, dan
-                    boarding pass tetap diisi masing-masing; bila nomornya belum ada, unggah berkasnya seperti biasa.
+                    mengunggahnya, invoice tiket — beserta kota asal, kota tujuan, dan kode booking — atau bukti
+                    bayar penyelenggaraan dipakai otomatis. Bill hotel dan kuitansi hotel kini <strong>satu
+                    berkas</strong>; bila nomor transaksinya ditemukan, Anda ditanya apakah berkasnya sama dengan
+                    milik rekan — pilih <strong>Ya, pakai berkas yang sama</strong>, atau <strong>Tidak, unggah berkas
+                    sendiri</strong> untuk membuka kolom unggahnya. Kuitansi yang dulu diunggah terpisah tetap tampil
+                    dan ikut dipanggil bersama bill hotelnya. Harga tiket, nominal, dan boarding pass tetap
+                    diisi masing-masing; bila nomornya belum ada, unggah berkasnya seperti biasa.
                     Begitu berkasnya ditemukan, kolom unggahnya <strong>dikunci</strong> supaya berkas rombongan tidak
                     tertimpa berkas lain — kecuali bagi pengunggah aslinya, yang tetap dapat membetulkan berkasnya sendiri.
                 </span>
@@ -463,7 +469,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota dalam satu provinsi</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Bill hotel beserta nomor transaksi & nominal — bila ada biaya penginapan', 'Kuitansi penyelenggara / hotel — bila ada biaya penginapan', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal — bila ada biaya penginapan', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -477,7 +483,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota lintas pulau</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel beserta nomor transaksi & nominal', 'Kuitansi penyelenggara / hotel', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -664,11 +670,13 @@
                 menu Keuangan menghitung hal yang sama.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="2" judul="Buka Keuangan → Input Rincian Biaya">
+            <x-panduan-langkah nomor="2" judul="Buka Keuangan → Daftar Input Rincian Biaya">
                 Tab <strong>Sedang Diproses</strong>, <strong>Dikirim ke Pelaksana</strong>,
                 <strong>Proses Pembayaran</strong>, dan <strong>Selesai</strong> memilah perjadin menurut
-                tahapnya, dan pilihan urutan di samping kotak cari mengurutkannya menurut tanggal usulan,
-                tanggal berangkat, atau nomor usulan. Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
+                tahapnya. Saringan di atas daftar mempersempitnya menurut <strong>nama pelaksana</strong>,
+                <strong>tujuan</strong>, <strong>periode</strong> perjalanan, dan <strong>tahap pembayaran</strong>
+                (belum dibayar, uang muka dibayar, lunas); pilihan urutan di samping kotak cari mengurutkannya
+                menurut tanggal usulan, tanggal berangkat, atau nomor usulan. Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
                 dan pada kotak keterangan di halaman rinciannya — membuka surat tugas pelaksana sebagai acuan
                 lama perjalanan dan komponen yang dibiayai. Nominal dari dokumen yang diunggah
                 pelaksana sudah diselaraskan lebih dulu, jadi Anda memeriksa dan menyesuaikan —
@@ -836,7 +844,10 @@
             <x-panduan-langkah nomor="1" judul="Buka Pembayaran → Daftar Pembayaran">
                 Tab bawaannya <strong>Menunggu Pembayaran</strong>: perjalanan yang sudah berlaku
                 tetapi uang mukanya belum ditransfer. Tab lain memuat yang sedang berjalan, yang
-                sudah menerima uang muka, dan yang sudah lunas.
+                sudah menerima uang muka, dan yang sudah lunas. Saring daftarnya menurut
+                <strong>status</strong> pembayaran, <strong>nama pelaksana</strong>, <strong>perjalanan</strong>
+                (nomor usulan atau tujuan), dan rentang <strong>anggaran</strong>; urutkan lewat pilihan
+                <strong>Urutkan</strong> atau dengan mengklik judul kolom Pegawai, Perjalanan, Anggaran, dan Status.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Catat uang muka">

@@ -246,7 +246,7 @@ class ValidasiTransportLokalTest extends TestCase
 
         $checklist = collect(app(PenagihDokumen::class)->checklist($this->usulan->fresh()));
 
-        $this->assertFalse($checklist->firstWhere('label', 'Bill Hotel')['terpenuhi']);
+        $this->assertFalse($checklist->firstWhere('label', 'Bill Hotel / Kuitansi')['terpenuhi']);
     }
 
     /**

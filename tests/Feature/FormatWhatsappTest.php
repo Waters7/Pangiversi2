@@ -90,7 +90,7 @@ class FormatWhatsappTest extends TestCase
 
         // Ganti baris CRLF dari formulir tersimpan sebagai LF.
         $this->assertStringStartsWith("Halo *Sri Handayani*,\nberkas ", $pesan);
-        $this->assertStringContainsString('ke Jakarta kurang 6:', $pesan);
+        $this->assertStringContainsString('ke Jakarta kurang 5:', $pesan);
         $this->assertStringContainsString('1. SPPD bertanda tangan', $pesan);
         $this->assertStringNotContainsString('Mohon diunggah melalui aplikasi PANGI', $pesan);
     }

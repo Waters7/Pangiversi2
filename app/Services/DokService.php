@@ -239,25 +239,34 @@ class DokService
             }
         }
 
-        // Nomor transaksi hotel yang sama dengan milik rekan: bill hotel dan
-        // kuitansinya yang sudah diunggah dipakai, dan unggahannya terkunci
-        // kecuali bagi pengunggah aslinya. Nominal tetap masing-masing.
+        // Bill hotel dan kuitansi hotel kini satu berkas. Nomor transaksi
+        // yang sama dengan milik rekan memakai berkasnya — kecuali pelaksana
+        // memilih mengunggah berkas sendiri, atau ia pengunggah aslinya.
+        // Nominal tetap masing-masing.
         $hotelRekan = $this->pustaka->hotel($request->input('bill_hotel_no_transaksi'), $usulan->id);
-        $terkunci = fn (string $kolom): bool => $this->pustaka->ada($hotelRekan?->{$kolom})
-            && ! PustakaBerkasBersama::bolehDiganti($dokumen?->{$kolom});
+        $berkasRekan = $this->pustaka->berkasHotel($hotelRekan);
+        $unggahSendiri = $request->boolean('bill_hotel_sendiri');
+        $pakaiRekan = ! $tanpaBillHotel && $berkasRekan !== null && ! $unggahSendiri
+            && ! PustakaBerkasBersama::bolehDiganti($dokumen?->bill_hotel);
+        $punyaBerkas = filled($dokumen?->bill_hotel) || filled($dokumen?->kwintasi);
+
+        // Memilih mengunggah sendiri berarti salinan milik rekan diganti.
+        $wajibUnggah = ! $tanpaBillHotel && ! $pakaiRekan
+            && (! $punyaBerkas || ($unggahSendiri && PustakaBerkasBersama::salinan($dokumen?->bill_hotel)));
+
+        // Kuitansi lama rekan yang diunggah terpisah ikut dipanggil.
         $salinan = array_filter([
-            'bill_hotel' => ! $tanpaBillHotel && $terkunci('bill_hotel') && blank($dokumen?->bill_hotel) ? $hotelRekan->bill_hotel : null,
-            'kwintasi' => $terkunci('kwintasi') && blank($dokumen?->kwintasi) ? $hotelRekan->kwintasi : null,
+            'bill_hotel' => $pakaiRekan && blank($dokumen?->bill_hotel) ? $berkasRekan : null,
+            'kwintasi' => $pakaiRekan && blank($dokumen?->kwintasi) && $this->pustaka->kuitansiTerpisah($hotelRekan) ? $hotelRekan->kwintasi : null,
         ]);
 
         $request->validate([
-            'bill_hotel' => [$tanpaBillHotel || $terkunci('bill_hotel') ? 'nullable' : $this->aturanBerkas($dokumen, 'bill_hotel'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'bill_hotel' => [$wajibUnggah ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'bill_hotel_no_transaksi' => ['nullable', 'string', 'max:100'],
             'bill_hotel_nominal' => ['nullable', 'numeric', 'min:0'],
-            'kwintasi' => [$terkunci('kwintasi') ? 'nullable' : $this->aturanBerkas($dokumen, 'kwintasi'), 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'bill_hotel_sendiri' => ['nullable', 'boolean'],
         ], [
-            'bill_hotel.required' => 'Unggah bill hotel.',
-            'kwintasi.required' => 'Unggah kuitansi penyelenggara atau hotel.',
+            'bill_hotel.required' => 'Unggah bill hotel / kuitansi hotel.',
         ]);
 
         // Faktur sengaja tidak ditagih: satuan kerja tidak menerbitkannya dan
@@ -267,7 +276,7 @@ class DokService
         // Nominal penginapan yang ditetapkan tim keuangan mengunci kolom ini.
         $nominalDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::Penginapan);
 
-        $kolomUnggah = array_values(array_filter(['bill_hotel', 'kwintasi'], fn (string $kolom) => ! $terkunci($kolom)));
+        $kolomUnggah = $pakaiRekan ? [] : ['bill_hotel'];
 
         $this->simpanBerkas($request, $usulan, $kolomUnggah, collect($salinan)
             ->map(fn (string $asal, string $kolom) => $this->pustaka->salin($asal, 'dokumen/'.$kolom))

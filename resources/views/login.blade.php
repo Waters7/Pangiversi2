@@ -39,6 +39,17 @@
            di atas terang. */
         .panel-merek { background: #ffffff; }
 
+        /* Lambang muncul lalu melayang pelan; isi panel menyusul bergiliran. */
+        .lambang-masuk { animation: pangi-muncul .8s cubic-bezier(.2,.7,.2,1) backwards; }
+        .lambang-masuk img { animation: pangi-melayang 6s ease-in-out 1s infinite; filter: drop-shadow(0 18px 28px rgba(0, 120, 110, .16)); }
+        .muncul-bergilir > * { animation: pangi-muncul .7s cubic-bezier(.2,.7,.2,1) backwards; }
+        .muncul-bergilir > :nth-child(2) { animation-delay: .15s; }
+        .muncul-bergilir > :nth-child(3) { animation-delay: .25s; }
+        .muncul-bergilir > :nth-child(4) { animation-delay: .35s; }
+        @media (prefers-reduced-motion: reduce) {
+            .lambang-masuk, .lambang-masuk img, .muncul-bergilir > * { animation: none; }
+        }
+
         /* Bulatan cahaya berwarna merek, sangat samar di atas putih. */
         .cahaya {
             position: absolute;
@@ -146,12 +157,15 @@
             <span class="cahaya" style="width:360px;height:360px;background:rgba(0,180,216,.12);bottom:-130px;left:20%"></span>
             <span class="cahaya" style="width:280px;height:280px;background:rgba(210,223,35,.16);top:12%;right:-80px"></span>
 
-            <div class="relative w-full max-w-lg text-center lg:text-left">
+            <div class="relative w-full max-w-lg text-center lg:text-left muncul-bergilir">
 
-                <img src="{{ asset('images/pangi-logo.png') }}"
-                     alt="PANGI — Perjadin Aman, Nggak drama, Inovatif"
-                     class="w-full max-w-sm mx-auto lg:mx-0 mb-8 select-none"
-                     draggable="false">
+                <div class="lambang-masuk mb-8">
+                    <img src="{{ asset('images/pangi-logo-login.webp') }}"
+                         alt="PANGI — Perjadin Aman, Nggak drama, Inovatif"
+                         width="960" height="450"
+                         class="w-full max-w-md mx-auto lg:mx-0 select-none"
+                         draggable="false">
+                </div>
 
                 <h2 class="text-2xl sm:text-3xl font-bold leading-snug" style="color: var(--tinta)">
                     Administrasi perjalanan dinas,<br class="hidden sm:block">

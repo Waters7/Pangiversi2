@@ -137,6 +137,17 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.49',
+                'tanggal' => '28 Oktober 2026',
+                'butir' => [
+                    'Bill hotel dan kuitansi hotel kini satu berkas pada bagian Akomodasi. Bila nomor transaksinya sudah dipakai rekan, pelaksana ditanya: pakai berkas yang sama, atau unggah berkas sendiri. Kuitansi atau bill hotel yang sudah pernah diunggah tetap tampil dan dapat dipanggil.',
+                    'Daftar Dokumen Perdin menampilkan status dokumen tiap perjalanan: berkas apa saja yang belum diunggah, atau Dokumen lengkap.',
+                    'Keuangan → Input Rincian Biaya kini bernama Daftar Input Rincian Biaya, dengan saringan nama pelaksana, tujuan, periode, dan tahap pembayaran.',
+                    'Daftar Pembayaran dapat disaring menurut status, nama pelaksana, perjalanan, dan anggaran, serta diurutkan lewat pilihan Urutkan atau judul kolom.',
+                    'Tampilan baru bergaya neumorphism — permukaan lembut dengan bayangan timbul dan isian cekung — beserta animasi masuk pada tiap halaman, dan logo baru di halaman masuk.',
+                ],
+            ],
+            [
                 'versi' => '2.5.48',
                 'tanggal' => '22 Oktober 2026',
                 'butir' => [

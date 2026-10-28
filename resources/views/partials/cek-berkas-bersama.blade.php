@@ -3,7 +3,8 @@
      "cekBerkas" — lihat window.cekBerkasBersama di bawah — dan input nomor
      bertanda x-ref sesuai $ref.
 
-     Variabel: $ref (x-ref input nomor), $tombol (teks tombol). --}}
+     Variabel: $ref (x-ref input nomor), $tombol (teks tombol), dan $pilihan
+     (opsional) bila pelaksana boleh memilih mengunggah berkasnya sendiri. --}}
 {{-- Nomor yang sudah terisi saat halaman dibuka diperiksa sendiri, supaya
      kunci unggahan tetap berlaku sesudah disimpan. --}}
 <div class="mt-2 flex flex-wrap items-center gap-2"
@@ -28,7 +29,11 @@
             </li>
         </template>
     </ul>
-    <p class="mt-1 text-emerald-700">Kolom unggahnya dikunci supaya berkas rombongan tidak tertimpa berkas lain — kecuali bagi pengunggah aslinya. Ubah nomornya bila berkas Anda memang berbeda.</p>
+    @if ($pilihan ?? false)
+        <p class="mt-1 text-emerald-700">Pilih di bawah: pakai berkas yang sama, atau unggah berkas Anda sendiri bila berbeda.</p>
+    @else
+        <p class="mt-1 text-emerald-700">Kolom unggahnya dikunci supaya berkas rombongan tidak tertimpa berkas lain — kecuali bagi pengunggah aslinya. Ubah nomornya bila berkas Anda memang berbeda.</p>
+    @endif
 </div>
 
 <div x-show="cekBerkas.status === 'belum'" x-cloak

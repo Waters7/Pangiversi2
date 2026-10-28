@@ -58,11 +58,10 @@ class Usulan extends Model
      *
      * Surat tugas tidak termasuk: nomornya terkunci dari SPD, tidak
      * diunggah ulang. Faktur juga tidak — satuan kerja tidak
-     * menerbitkannya.
+     * menerbitkannya. Kuitansi hotel kini satu berkas dengan bill hotel.
      */
     public const DOKUMEN_LPJ_WAJIB = [
         'sppd',
-        'kwintasi',
         'bill_hotel',
     ];
 

@@ -77,7 +77,7 @@ class PemberitahuanBendaharaTest extends TestCase
 
         Dokumen::factory()->create([
             'id_usulan' => $this->usulan->id,
-            ...array_fill_keys(Usulan::DOKUMEN_LPJ_WAJIB, null),
+            ...array_fill_keys([...Usulan::DOKUMEN_LPJ_WAJIB, 'kwintasi'], null),
             ...$berkas,
         ]);
     }
@@ -288,7 +288,7 @@ class PemberitahuanBendaharaTest extends TestCase
         $this->actingAs($this->bendahara)
             ->get(route('pembayaran', ['tahap' => 'uang-muka']))
             ->assertOk()
-            ->assertSee('Kurang 5 berkas')
+            ->assertSee('Kurang 4 berkas')
             ->assertDontSee('Dokumen lengkap');
     }
 }
