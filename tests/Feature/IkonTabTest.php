@@ -35,6 +35,18 @@ class IkonTabTest extends TestCase
             ->assertSee('apple-touch-icon', false);
     }
 
+    /** Logo terbaru pada halaman masuk dan layar pemuatnya; sidebar diuji TampilanProfilTest. */
+    public function test_logo_terbaru_dipakai_halaman_masuk_dan_layar_pemuat(): void
+    {
+        $masuk = $this->get(route('login'))->assertOk()->getContent();
+
+        // Logo panel merek dan kedua layar pemuat — sambutan dan saat masuk.
+        $this->assertSame(3, substr_count($masuk, 'images/pangi-logo-login.webp'));
+
+        $this->assertFileExists(public_path('images/pangi-logo-login.webp'));
+        $this->assertFileExists(public_path('images/pangi-logo-gelap.webp'));
+    }
+
     public function test_halaman_verifikasi_publik_memuat_ikon(): void
     {
         $this->get(route('verifikasi.tampil', 'PPK-TIDAKADA99'))

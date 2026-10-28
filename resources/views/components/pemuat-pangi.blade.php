@@ -22,8 +22,9 @@
         {{-- Cahaya lembut di belakang lambang --}}
         <span class="pangi-pemuat__aura" aria-hidden="true"></span>
 
-        <img src="{{ asset('images/pangi-logo.png') }}"
+        <img src="{{ asset('images/pangi-logo-login.webp') }}"
              alt="PANGI — Perjadin Aman, Nggak drama, Inovatif"
+             width="960" height="450"
              class="pangi-pemuat__logo">
 
         <p class="pangi-pemuat__pesan">{{ $pesan }}</p>

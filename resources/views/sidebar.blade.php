@@ -11,10 +11,10 @@
 
     <!-- Logo -->
     <a href="{{ route('dashboard') }}" class="block px-5 py-4 border-b border-white/10 group">
-      {{-- Logo sudah transparan, jadi menempel langsung pada latar sidebar. --}}
-      <img src="{{ asset('images/pangi-logo.png') }}" alt="PANGI"
-           class="mx-auto w-full max-w-[176px] h-auto block transition group-hover:brightness-110"
-           width="900" height="405">
+      {{-- Varian latar gelap: tulisan semboyannya dicerahkan agar terbaca di sidebar. --}}
+      <img src="{{ asset('images/pangi-logo-gelap.webp') }}" alt="PANGI — Perjadin Aman, Nggak drama, Inovatif"
+           class="mx-auto w-full max-w-[188px] h-auto block transition group-hover:brightness-110"
+           width="960" height="450">
       <p class="text-slate-500 text-[10px] text-center mt-1 tracking-wide">Poltekkes Kemenkes Manado</p>
     </a>
 

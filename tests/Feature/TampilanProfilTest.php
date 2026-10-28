@@ -69,7 +69,8 @@ class TampilanProfilTest extends TestCase
         $this->actingAs($this->pengguna())
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('images/pangi-logo.png')
+            // Varian latar gelap logo terbaru.
+            ->assertSee('images/pangi-logo-gelap.webp')
             ->assertDontSee('>PG<', false);
     }
 

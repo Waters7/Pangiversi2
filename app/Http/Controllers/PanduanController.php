@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.50',
+                'tanggal' => '28 Oktober 2026',
+                'butir' => [
+                    'Logo PANGI terbaru kini juga dipakai pada layar pemuat dan panel samping (sidebar); di sidebar dipakai varian latar gelap dengan semboyan yang dicerahkan agar tetap terbaca.',
+                ],
+            ],
+            [
                 'versi' => '2.5.49',
                 'tanggal' => '28 Oktober 2026',
                 'butir' => [
