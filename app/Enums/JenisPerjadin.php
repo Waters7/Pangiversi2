@@ -45,6 +45,17 @@ enum JenisPerjadin: string
         };
     }
 
+    /** Nama pendek untuk kolom tabel dan saringan yang sempit. */
+    public function labelSingkat(): string
+    {
+        return match ($this) {
+            self::DalamKota => 'Dalam Kota',
+            self::LuarKotaDalamProvinsi => 'Luar Kota Dalam Provinsi',
+            self::LuarKota => 'Luar Kota Lintas Pulau',
+            self::Supervisi => 'Supervisi KP / Magang',
+        };
+    }
+
     public function keterangan(): string
     {
         return match ($this) {

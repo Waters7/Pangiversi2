@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\CaraBayarBiaya;
 use App\Enums\DokumenCetak;
 use App\Enums\IsianBiaya;
+use App\Enums\JenisPerjadin;
 use App\Enums\KategoriBiaya;
 use App\Models\AuditLog;
 use App\Models\DaftarRiil;
@@ -104,9 +105,11 @@ class KeuanganController extends Controller
         $status = array_key_exists((string) $request->input('status'), self::TAHAP) ? $request->input('status') : null;
         $urut = array_key_exists((string) $request->input('urut'), self::URUTAN) ? $request->input('urut') : 'terbaru';
 
-        // Saringan rinci: nama pelaksana, tujuan, periode perjalanan, dan
-        // status pembayarannya. Ikut memengaruhi angka pada tab tahap.
+        // Saringan rinci: jalur perjadin, nama pelaksana, tujuan, periode
+        // perjalanan, dan status pembayarannya. Ikut memengaruhi angka pada
+        // tab tahap.
         $saring = [
+            'jalur' => JenisPerjadin::dari($request->input('jalur')),
             'pelaksana' => trim((string) $request->input('pelaksana')),
             'tujuan' => trim((string) $request->input('tujuan')),
             'dari' => $this->tanggalSah($request->input('dari')),
@@ -126,6 +129,8 @@ class KeuanganController extends Controller
                     ->orWhereHas('kegiatan', fn ($k) => $k->where('nama', 'like', "%{$search}%"))
                     ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$search}%"));
             }))
+            // Usulan lama yang belum menyimpan jalurnya disimpulkan dari kategorinya.
+            ->when($saring['jalur'], fn ($q) => $q->padaJalur($saring['jalur']))
             ->when($saring['pelaksana'] !== '', fn ($q) => $q->whereHas('user', fn ($u) => $u->where('nama', 'like', "%{$saring['pelaksana']}%")))
             ->when($saring['tujuan'] !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('lokasi', 'like', "%{$saring['tujuan']}%")
@@ -168,6 +173,7 @@ class KeuanganController extends Controller
             'jumlahStatus' => $jumlahStatus,
             'saring' => $saring,
             'pilihanPembayaran' => self::PEMBAYARAN,
+            'pilihanJalur' => JenisPerjadin::cases(),
         ]);
     }
 

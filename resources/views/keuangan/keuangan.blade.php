@@ -38,7 +38,17 @@
     <form method="GET" action="{{ route('keuangan') }}" data-saringan-keuangan>
         <input type="hidden" name="status" value="{{ $status }}">
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                <div>
+                    <label for="saring-jalur" class="block text-xs font-semibold text-slate-500 mb-1">Jalur perjadin</label>
+                    <select name="jalur" id="saring-jalur"
+                            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                        <option value="">Semua jalur</option>
+                        @foreach ($pilihanJalur as $pilihan)
+                            <option value="{{ $pilihan->value }}" title="{{ $pilihan->label() }}" @selected($saring['jalur'] === $pilihan)>{{ $pilihan->labelSingkat() }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div>
                     <label for="saring-pelaksana" class="block text-xs font-semibold text-slate-500 mb-1">Nama pelaksana</label>
                     <input type="text" name="pelaksana" id="saring-pelaksana" value="{{ $saring['pelaksana'] }}" placeholder="cth: Maya"
@@ -122,6 +132,7 @@
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-6 py-3.5">Usulan</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Pemohon</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Tujuan</th>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Jalur Perjadin</th>
                         <th class="text-left text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Periode</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Tahap & Pembayaran</th>
                         <th class="text-center text-xs font-bold text-slate-500 uppercase px-4 py-3.5">Aksi</th>
@@ -153,6 +164,13 @@
                             <td class="px-4 py-4">
                                 <p class="text-sm text-slate-700">{{ $item->kategoriPerjadin?->nama ?? $item->kegiatan?->nama ?? '—' }}</p>
                                 <p class="text-xs text-slate-400">{{ $item->lokasi }}</p>
+                            </td>
+
+                            <td class="px-4 py-4" data-kolom-jalur>
+                                <span title="{{ $item->jalur()->label() }}"
+                                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 whitespace-nowrap">
+                                    {{ $item->jalur()->labelSingkat() }}
+                                </span>
                             </td>
 
                             <td class="px-4 py-4 whitespace-nowrap">

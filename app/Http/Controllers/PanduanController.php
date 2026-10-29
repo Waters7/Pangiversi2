@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.52',
+                'tanggal' => '29 Oktober 2026',
+                'butir' => [
+                    'Daftar Input Rincian Biaya dapat disaring menurut jalur perjadin — dalam kota, luar kota dalam provinsi, luar kota lintas pulau, atau supervisi — dan tabelnya kini memuat kolom Jalur Perjadin.',
+                ],
+            ],
+            [
                 'versi' => '2.5.51',
                 'tanggal' => '29 Oktober 2026',
                 'butir' => [

@@ -680,10 +680,12 @@
             <x-panduan-langkah nomor="2" judul="Buka Keuangan → Daftar Input Rincian Biaya">
                 Tab <strong>Sedang Diproses</strong>, <strong>Dikirim ke Pelaksana</strong>,
                 <strong>Proses Pembayaran</strong>, dan <strong>Selesai</strong> memilah perjadin menurut
-                tahapnya. Saringan di atas daftar mempersempitnya menurut <strong>nama pelaksana</strong>,
-                <strong>tujuan</strong>, <strong>periode</strong> perjalanan, dan <strong>tahap pembayaran</strong>
+                tahapnya. Saringan di atas daftar mempersempitnya menurut <strong>jalur perjadin</strong>
+                (dalam kota, luar kota dalam provinsi, luar kota lintas pulau, atau supervisi), <strong>nama
+                pelaksana</strong>, <strong>tujuan</strong>, <strong>periode</strong> perjalanan, dan <strong>tahap pembayaran</strong>
                 (belum dibayar, uang muka dibayar, lunas); pilihan urutan di samping kotak cari mengurutkannya
-                menurut tanggal usulan, tanggal berangkat, atau nomor usulan. Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
+                menurut tanggal usulan, tanggal berangkat, atau nomor usulan. Kolom <strong>Jalur Perjadin</strong>
+                menunjukkan jalur tiap perjalanan. Pilih usulan yang berkasnya sudah lengkap. Tautan <strong>Surat tugas</strong> pada daftarnya —
                 dan pada kotak keterangan di halaman rinciannya — membuka surat tugas pelaksana sebagai acuan
                 lama perjalanan dan komponen yang dibiayai. Nominal dari dokumen yang diunggah
                 pelaksana sudah diselaraskan lebih dulu, jadi Anda memeriksa dan menyesuaikan —

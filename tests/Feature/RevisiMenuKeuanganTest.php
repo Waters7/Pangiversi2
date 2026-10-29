@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisPerjadin;
 use App\Enums\PeranPengguna;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
@@ -220,6 +221,14 @@ class RevisiMenuKeuanganTest extends TestCase
 
     public function test_daftar_input_rincian_biaya_disaring_menurut_pelaksana_tujuan_periode_dan_pembayaran(): void
     {
+        // Usulan bawaan dipatok di luar tujuan dan periode yang dicari; isian
+        // acak factory sesekali jatuh pada Mei 2026 atau memuat "terna".
+        $this->usulan->update([
+            'lokasi' => 'Manado',
+            'instansi' => 'Dinas Kesehatan Provinsi',
+            'tanggal_mulai' => '2026-08-03',
+            'tanggal_selesai' => '2026-08-05',
+        ]);
         $maya = User::factory()->create(['nama' => 'Maya Sari Wulandari']);
         $cocok = Usulan::factory()->create([
             'id_user' => $maya->id,
@@ -249,6 +258,41 @@ class RevisiMenuKeuanganTest extends TestCase
         $this->assertSame([$cocok->id], $id(['pembayaran' => 'sebagian']));
         $this->assertSame([$this->usulan->id], $id(['pembayaran' => 'belum']));
         $this->assertSame([], $id(['pembayaran' => 'lunas']));
+    }
+
+    public function test_daftar_input_rincian_biaya_disaring_menurut_jalur_dan_menampilkan_kolom_jalur(): void
+    {
+        $this->usulan->update(['jenis_perjadin' => JenisPerjadin::DalamKota->value]);
+        $provinsi = Usulan::factory()->create([
+            'status' => StatusUsulan::Disetujui->value,
+            'jenis_perjadin' => JenisPerjadin::LuarKotaDalamProvinsi->value,
+        ]);
+        $lintasPulau = Usulan::factory()->create([
+            'status' => StatusUsulan::Disetujui->value,
+            'jenis_perjadin' => JenisPerjadin::LuarKota->value,
+        ]);
+
+        $id = fn (array $saring) => $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan', $saring))
+            ->assertOk()
+            ->viewData('usulan')
+            ->pluck('id')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame([$provinsi->id], $id(['jalur' => JenisPerjadin::LuarKotaDalamProvinsi->value]));
+        $this->assertSame([$lintasPulau->id], $id(['jalur' => JenisPerjadin::LuarKota->value]));
+        $this->assertSame([$this->usulan->id], $id(['jalur' => JenisPerjadin::DalamKota->value]));
+        $this->assertSame([$this->usulan->id, $provinsi->id, $lintasPulau->id], $id(['jalur' => 'tidak-dikenal']));
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('keuangan', ['jalur' => JenisPerjadin::LuarKotaDalamProvinsi->value]))
+            ->assertSeeInOrder(['Tujuan', 'Jalur Perjadin', 'Periode'])
+            ->assertSee('<option value="luar-kota-provinsi" title="Perjalanan Luar Kota Dalam Satu Provinsi" selected', false)
+            ->assertSee('Luar Kota Dalam Provinsi')
+            ->assertSee($provinsi->no_usulan)
+            ->assertDontSee($lintasPulau->no_usulan);
     }
 
     // ── Laporan rincian biaya lengkap tanda tangan ──
