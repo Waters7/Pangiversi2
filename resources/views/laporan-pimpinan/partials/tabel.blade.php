@@ -26,7 +26,12 @@
                             <p class="font-semibold text-slate-700">{{ $item->user?->nama }}</p>
                             <p class="text-xs text-slate-400">{{ $item->user?->unit?->nama }}</p>
                         </td>
-                        <td class="px-4 py-3.5 font-mono text-xs font-semibold text-slate-700">{{ $item->no_usulan }}</td>
+                        <td class="px-4 py-3.5 font-mono text-xs font-semibold text-slate-700">
+                            {{ $item->no_usulan }}
+                            @if ($laporan?->nomor_laporan)
+                                <p class="text-[11px] font-normal text-teal-700 mt-0.5" data-nomor-laporan>{{ $laporan->nomor_laporan }}</p>
+                            @endif
+                        </td>
                         <td class="px-4 py-3.5 text-slate-600">{{ $item->lokasi }}</td>
                         <td class="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
                             {{ \Carbon\Carbon::parse($item->tanggal_mulai)->translatedFormat('d M') }}–{{ \Carbon\Carbon::parse($item->tanggal_selesai)->translatedFormat('d M Y') }}

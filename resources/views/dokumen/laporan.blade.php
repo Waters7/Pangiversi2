@@ -22,7 +22,7 @@
         </a>
         <div class="min-w-0">
             <h1 class="text-xl font-bold text-slate-800">Laporan Perjalanan Dinas</h1>
-            <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · No. <span class="font-mono font-semibold text-teal-700" data-nomor-laporan>{{ $laporan->nomor_laporan }}</span> · {{ $usulan->lokasi }}</p>
         </div>
         <span class="ml-auto text-xs font-bold px-3 py-1.5 rounded-full shrink-0 {{ $statusLaporan->badge() }}">
             {{ $statusLaporan->label() }}

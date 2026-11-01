@@ -197,6 +197,8 @@ Route::middleware('auth')->group(function () {
             ->name('dokumen.laporan.buka');
         Route::put('/{usulan:no_usulan}/laporan/kirim', [LaporanPerjadinController::class, 'kirim'])
             ->name('dokumen.laporan.kirim');
+        Route::put('/{usulan:no_usulan}/laporan/pakai', [LaporanPerjadinController::class, 'pakai'])
+            ->name('dokumen.laporan.pakai');
         Route::get('/{usulan:no_usulan}/laporan/cetak', [LaporanPerjadinController::class, 'cetak'])
             ->name('dokumen.laporan.cetak');
     });

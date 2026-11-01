@@ -72,6 +72,11 @@
 
     <table class="identitas">
         <tr>
+            <td class="label">Nomor Laporan</td>
+            <td class="pemisah">:</td>
+            <td>{{ $laporan->nomor_laporan ?: '—' }}</td>
+        </tr>
+        <tr>
             <td class="label">Surat Tugas</td>
             <td class="pemisah">:</td>
             <td>{{ $usulan->no_tugas ?: '—' }}</td>

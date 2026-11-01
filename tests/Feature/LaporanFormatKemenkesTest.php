@@ -183,6 +183,7 @@ class LaporanFormatKemenkesTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('kop-surat-poltekkes.jpg', $html);
+        $this->assertStringContainsString('Nomor: '.$laporan->nomor_laporan, $html);
         $this->assertStringContainsString('Rapat Koordinasi Nasional Pendidikan Vokasi Kesehatan', $html);
         foreach (['A. Pendahuluan', 'B. Kegiatan yang Dilaksanakan', 'C. Hasil yang Dicapai', 'D. Simpulan dan Saran', 'E. Penutup',
             'Mengetahui,', 'Yang membuat laporan', 'Maya Sari Wulandari', 'LAMPIRAN'] as $teks) {

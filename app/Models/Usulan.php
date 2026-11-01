@@ -6,6 +6,7 @@ use App\Enums\JenisPerjadin;
 use App\Enums\LevelPersetujuan;
 use App\Enums\StatusUsulan;
 use App\Services\PenagihDokumen;
+use App\Services\PustakaSuratTugas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -157,6 +158,30 @@ class Usulan extends Model
     public function butuhSpd(): bool
     {
         return $this->jalur()->butuhSpd($this->kategoriPerjadin);
+    }
+
+    /** Berdasar surat tugas yang sama, tanpa membedakan huruf besar dan spasi. */
+    public function suratTugasSamaDengan(self $lain): bool
+    {
+        $kunci = PustakaSuratTugas::kunci($this->no_tugas);
+
+        return $kunci !== '' && $kunci === PustakaSuratTugas::kunci($lain->no_tugas);
+    }
+
+    /**
+     * Bertugas di lokasi yang sama: kota tujuan dari master data bila
+     * keduanya tercatat, selain itu nama lokasinya tanpa membedakan huruf
+     * besar dan spasi.
+     */
+    public function lokasiSamaDengan(self $lain): bool
+    {
+        if ($this->id_lokasi && $lain->id_lokasi) {
+            return (int) $this->id_lokasi === (int) $lain->id_lokasi;
+        }
+
+        $kunci = fn (?string $lokasi) => (string) preg_replace('/\s+/', ' ', mb_strtolower(trim((string) $lokasi)));
+
+        return $kunci($this->lokasi) !== '' && $kunci($this->lokasi) === $kunci($lain->lokasi);
     }
 
     public function kategoriPerjadin(): BelongsTo

@@ -27,7 +27,10 @@
         </a>
         <div class="min-w-0">
             <h1 class="text-xl font-bold text-slate-800">Laporan Perjalanan Dinas</h1>
-            <p class="text-xs text-slate-400 mt-0.5">{{ $usulan->no_usulan }} · {{ $usulan->lokasi }} · Format Kemenkes</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+                {{ $usulan->no_usulan }} · No. <span class="font-mono font-semibold text-teal-700" data-nomor-laporan>{{ $laporan->nomor_laporan }}</span>
+                · {{ $usulan->lokasi }} · Format Kemenkes
+            </p>
         </div>
         <span class="ml-auto text-xs font-bold px-3 py-1.5 rounded-full shrink-0 {{ $statusLaporan->badge() }}">
             {{ $statusLaporan->label() }}
@@ -64,6 +67,22 @@
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-5">
+
+                @if ($laporan->acuan)
+                    <div class="flex items-start gap-3 px-4 py-3 bg-teal-50 border border-teal-100 rounded-xl" data-acuan-laporan>
+                        <svg class="w-4 h-4 text-teal-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>
+                        </svg>
+                        <p class="text-xs text-teal-800 leading-relaxed">
+                            Isi laporan ini disalin dari laporan
+                            <strong class="font-mono">{{ $laporan->acuan->nomor_laporan }}</strong>
+                            milik {{ $laporan->acuan->usulan?->user?->nama ?? '—' }}, rekan dengan surat tugas dan lokasi tugas yang sama.
+                            @unless ($terkunci)
+                                Anda tetap dapat menyesuaikannya sebelum mengirim.
+                            @endunless
+                        </p>
+                    </div>
+                @endif
 
                 {{-- Judul laporan: "tentang" nama kegiatan sesuai surat tugas --}}
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -146,6 +165,54 @@
                     'syarat' => 'judul "tentang", kegiatan yang dilaksanakan, hasil yang dicapai, simpulan dan saran, serta status hasil',
                 ])
 
+                {{-- Rekan dengan surat tugas dan lokasi tugas yang sama cukup memakai
+                     laporan yang sudah disusun. Isiannya milik formulir terpisah
+                     (atribut form), sebab formulir tidak boleh bersarang. --}}
+                @unless ($terkunci)
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5" data-pakai-laporan>
+                        <h3 class="font-bold text-slate-800 text-sm">Pakai laporan rekan setugas</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mt-1">
+                            Bertugas bersama dengan <strong>surat tugas</strong> dan <strong>lokasi tugas</strong> yang sama?
+                            Pakai laporan rekan lewat nomornya: judul, bagian A–E, status hasil, tindak lanjut, dan fotonya
+                            disalin ke laporan ini, lalu tetap Anda kirim dan tandatangani sendiri.
+                        </p>
+
+                        <label for="nomor_acuan" class="block text-xs font-semibold text-slate-500 mt-3 mb-1">Nomor laporan</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="nomor_acuan" id="nomor_acuan" form="form-pakai-laporan" maxlength="30"
+                                   value="{{ old('nomor_acuan') }}" placeholder="LPD-{{ now()->format('Y') }}-0001"
+                                   class="min-w-0 flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono uppercase focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                            <button type="submit" form="form-pakai-laporan"
+                                    class="shrink-0 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition">
+                                Pakai
+                            </button>
+                        </div>
+                        @error('nomor_acuan')
+                            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                        @enderror
+
+                        @if ($acuanTersedia->isNotEmpty())
+                            <p class="text-xs font-semibold text-slate-500 mt-4 mb-1.5">Laporan rekan setugas</p>
+                            <ul class="space-y-2">
+                                @foreach ($acuanTersedia as $calon)
+                                    <li class="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2" data-calon-acuan="{{ $calon->nomor_laporan }}">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-mono text-xs font-bold text-teal-700">{{ $calon->nomor_laporan }}</p>
+                                            <p class="text-xs text-slate-500 truncate">{{ $calon->usulan?->user?->nama }} · {{ $calon->status()->label() }}</p>
+                                        </div>
+                                        <button type="submit" form="form-pakai-laporan" name="pilih_acuan" value="{{ $calon->nomor_laporan }}"
+                                                class="shrink-0 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold transition">
+                                            Pakai
+                                        </button>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+
+                        <p class="text-[11px] text-slate-400 mt-3">Isian laporan ini saat ini akan diganti isi laporan yang dipakai.</p>
+                    </div>
+                @endunless
+
                 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                     <h3 class="font-bold text-slate-800 text-sm mb-2">Tentang format ini</h3>
                     <p class="text-xs text-slate-500 leading-relaxed">
@@ -156,6 +223,14 @@
             </div>
         </div>
     </form>
+
+    @unless ($terkunci)
+        <form id="form-pakai-laporan" method="POST" action="{{ route('dokumen.laporan.pakai', $usulan->no_usulan) }}"
+              onsubmit="return confirm('Pakai isi laporan rekan? Isian dan foto dokumentasi laporan ini saat ini akan diganti.')">
+            @csrf
+            @method('PUT')
+        </form>
+    @endunless
 
 </div>
 

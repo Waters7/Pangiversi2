@@ -19,7 +19,7 @@
     <x-flash />
 
     <x-kotak-cari :rute="route('dokumen.laporan.index')" :nilai="$cari"
-                  petunjuk="Cari no. usulan, no. surat tugas, tujuan, atau nama pelaksana" />
+                  petunjuk="Cari no. laporan, no. usulan, no. surat tugas, tujuan, atau nama pelaksana" />
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
@@ -75,6 +75,9 @@
                         <tr class="hover:bg-slate-50/60 transition">
                             <td class="px-4 py-3.5">
                                 <p class="font-mono text-xs font-semibold text-slate-700">{{ $item->no_usulan }}</p>
+                                @if ($laporan?->nomor_laporan)
+                                    <p class="font-mono text-[11px] text-teal-700 mt-0.5" data-nomor-laporan>{{ $laporan->nomor_laporan }}</p>
+                                @endif
                                 @if ($lihatSemua)
                                     <p class="text-xs text-slate-400 mt-0.5" data-pelaksana-laporan>{{ $item->user?->nama ?? '—' }}</p>
                                 @endif

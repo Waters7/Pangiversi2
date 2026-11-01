@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.53',
+                'tanggal' => '1 November 2026',
+                'butir' => [
+                    'Tiap laporan perjalanan dinas kini bernomor (LPD-tahun-urut). Nomornya tampil pada formulir, daftar laporan, halaman konfirmasi pimpinan, dan dokumen tercetak, serta dapat dicari.',
+                    'Laporan rekan dapat dipakai lewat nomornya bila surat tugas dan lokasi tugasnya sama: isinya beserta foto dokumentasi disalin ke laporan Anda, lalu tetap Anda kirim dan tandatangani sendiri.',
+                ],
+            ],
+            [
                 'versi' => '2.5.52',
                 'tanggal' => '29 Oktober 2026',
                 'butir' => [

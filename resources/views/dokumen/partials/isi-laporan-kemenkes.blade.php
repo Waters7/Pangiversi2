@@ -1,12 +1,19 @@
 {{-- Isi laporan format Kemenkes untuk halaman lihat pelaksana dan meja
      pimpinan: judul, bagian A–E beserta foto dokumentasinya, dan rencana
      tindak lanjut bila ada. --}}
-@php $laporan->loadMissing('dokumentasi', 'tindakLanjut'); @endphp
+@php $laporan->loadMissing('dokumentasi', 'tindakLanjut', 'acuan.usulan.user'); @endphp
 
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center" data-format-kemenkes>
     <p class="text-xs font-bold tracking-widest text-slate-500">LAPORAN PERJALANAN DINAS</p>
+    <p class="text-xs font-mono text-slate-500 mt-1" data-nomor-laporan>Nomor {{ $laporan->nomor_laporan }}</p>
     <p class="text-xs font-bold text-slate-500 mt-2">TENTANG</p>
     <p class="text-base font-bold text-slate-800 mt-1">{{ $laporan->tentang ?: '—' }}</p>
+    @if ($laporan->acuan)
+        <p class="text-[11px] text-slate-400 mt-2" data-acuan-laporan>
+            Isinya memakai laporan {{ $laporan->acuan->nomor_laporan }} milik {{ $laporan->acuan->usulan?->user?->nama ?? '—' }}
+            (surat tugas dan lokasi tugas sama).
+        </p>
+    @endif
 </div>
 
 @foreach ([

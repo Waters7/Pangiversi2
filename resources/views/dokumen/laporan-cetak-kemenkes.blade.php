@@ -23,6 +23,7 @@
             line-height: 1.4;
             margin: 0 0 14px;
         }
+        .judul .nomor { display: block; font-weight: normal; font-size: 10.5pt; margin-top: 2px; }
         .judul .tentang { display: block; margin-top: 8px; }
 
         h3 { font-size: 11pt; font-weight: bold; margin: 14px 0 4px; }
@@ -67,6 +68,7 @@
 
     <p class="judul">
         LAPORAN PERJALANAN DINAS
+        <span class="nomor">Nomor: {{ $laporan->nomor_laporan }}</span>
         <span class="tentang">TENTANG<br>{{ $laporan->tentang ?: $maksud }}</span>
     </p>
 

@@ -504,7 +504,11 @@
                 bagian berupa uraian panjang dan boleh diberi satu foto dokumentasi (JPG atau PNG, maks. 2 MB);
                 seluruh foto tercetak pada halaman <strong>lampiran</strong> dokumen. Yang wajib sebelum dikirim:
                 Tentang, B, C, D, dan status hasil. Laporan yang sudah diisi dengan format lama tetap memakai
-                format lamanya. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
+                format lamanya. Tiap laporan bernomor sendiri, misalnya <strong>LPD-2026-0012</strong>. Bila Anda
+                bertugas bersama rekan dengan <strong>surat tugas</strong> dan <strong>lokasi tugas</strong> yang sama,
+                pakai laporannya lewat kotak <strong>Pakai laporan rekan setugas</strong>: tulis nomornya atau pilih dari
+                daftar, lalu judul, bagian A–E, status hasil, tindak lanjut, dan fotonya disalin ke laporan Anda — masih
+                dapat disesuaikan, dan tetap Anda kirim serta tandatangani sendiri. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
                 laporan boleh dicicil. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
                 Bila Anda sudah menyusun laporan lengkap — misalnya berfoto — unggah pada kolom
                 <strong>Berkas laporan</strong> (opsional; PDF, Word, JPG, atau PNG, maks. 10 MB). Isian di

@@ -49,7 +49,7 @@
     @endif
 
     <x-kotak-cari :rute="route('laporan-perjadin.index')" :nilai="$cari" :sembunyi="['status' => request('status')]"
-                  petunjuk="Cari nama pelaksana, no. usulan, no. surat tugas, atau tujuan" />
+                  petunjuk="Cari nama pelaksana, no. laporan, no. usulan, no. surat tugas, atau tujuan" />
 
     <x-tab-status :aksi="route('laporan-perjadin.index')" :terpilih="$terpilih" :tab="$tab" />
 

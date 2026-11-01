@@ -5,11 +5,16 @@ namespace App\Models;
 use App\Enums\BagianLaporan;
 use App\Enums\StatusLaporanPerjadin;
 use App\Services\FormatLaporanPerjadin;
+use App\Services\PustakaBerkasBersama;
+use App\Services\PustakaSuratTugas;
 use App\Services\TautanVerifikasi;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -31,8 +36,13 @@ class LaporanPerjadin extends Model
     /** Format Kemenkes: Pendahuluan, kegiatan, hasil, simpulan, penutup, dan lampiran dokumentasi. */
     public const FORMAT_KEMENKES = 2;
 
+    /** Awalan nomor laporan: LPD-tahun-urut, misalnya LPD-2026-0012. */
+    public const AWALAN_NOMOR = 'LPD-';
+
     protected $fillable = [
         'id_usulan',
+        'nomor_laporan',
+        'id_laporan_acuan',
         'versi_format',
         'tentang',
         'umum',
@@ -69,12 +79,74 @@ class LaporanPerjadin extends Model
         ];
     }
 
+    /** Nomor laporan terbit begitu laporannya dibuat. */
+    protected static function booted(): void
+    {
+        static::creating(function (self $laporan): void {
+            $laporan->nomor_laporan ??= self::nomorBerikutnya();
+        });
+    }
+
+    /**
+     * Laporan sebuah perjalanan, dibuat bila belum ada.
+     *
+     * Dua laporan yang dibuat bersamaan dapat memperoleh nomor urut yang
+     * sama; indeks unik menolak yang belakangan, lalu nomornya diambil ulang.
+     */
+    public static function untukUsulan(Usulan $usulan): self
+    {
+        for ($percobaan = 1; ; $percobaan++) {
+            try {
+                return self::firstOrCreate(['id_usulan' => $usulan->id]);
+            } catch (UniqueConstraintViolationException $galat) {
+                if ($percobaan >= 3) {
+                    throw $galat;
+                }
+            }
+        }
+    }
+
+    /** Nomor urut berikutnya pada tahun berjalan. */
+    public static function nomorBerikutnya(): string
+    {
+        $awalan = self::AWALAN_NOMOR.now()->format('Y').'-';
+
+        // Diurutkan menurut panjangnya dulu supaya urutan di atas 9999 tetap benar.
+        $terakhir = self::query()
+            ->where('nomor_laporan', 'like', $awalan.'%')
+            ->orderByRaw('LENGTH(nomor_laporan) DESC')
+            ->orderByDesc('nomor_laporan')
+            ->value('nomor_laporan');
+
+        $urut = $terakhir ? (int) substr($terakhir, strlen($awalan)) + 1 : 1;
+
+        return $awalan.str_pad((string) $urut, 4, '0', STR_PAD_LEFT);
+    }
+
+    /** Laporan bernomor ini, tanpa membedakan huruf besar dan spasi. */
+    public static function denganNomor(?string $nomor): ?self
+    {
+        $nomor = mb_strtoupper(str_replace(' ', '', trim((string) $nomor)));
+
+        return $nomor === '' ? null : self::with('usulan.user')->firstWhere('nomor_laporan', $nomor);
+    }
+
     /**
      * @return BelongsTo<Usulan, $this>
      */
     public function usulan(): BelongsTo
     {
         return $this->belongsTo(Usulan::class, 'id_usulan');
+    }
+
+    /**
+     * Laporan rekan setugas yang isinya dipakai laporan ini.
+     *
+     * @return BelongsTo<LaporanPerjadin, $this>
+     */
+    public function acuan(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'id_laporan_acuan');
     }
 
     /**
@@ -230,6 +302,132 @@ class LaporanPerjadin extends Model
         ]);
 
         return implode(' — ', $bagian);
+    }
+
+    // ── Memakai laporan rekan setugas ──
+
+    /**
+     * Mengapa laporan ini tidak dapat dipakai oleh laporan lain, atau null
+     * bila boleh: surat tugas dan lokasi tugasnya harus sama, keduanya
+     * format Kemenkes, dan bagian wajibnya sudah terisi.
+     */
+    public function alasanTidakDapatDipakaiOleh(self $pemakai): ?string
+    {
+        $this->loadMissing('usulan');
+        $pemakai->loadMissing('usulan');
+
+        $asal = $this->usulan;
+        $tujuan = $pemakai->usulan;
+        $nomor = $this->nomor_laporan;
+
+        return match (true) {
+            $this->id === $pemakai->id || $this->id_usulan === $pemakai->id_usulan => 'Nomor '.$nomor.' adalah nomor laporan ini sendiri.',
+            ! $asal || ! $tujuan => 'Perjalanan dinas laporan '.$nomor.' tidak ditemukan.',
+            ! $this->formatKemenkes() || ! $pemakai->formatKemenkes() => 'Laporan '.$nomor.' memakai format lama, isinya tidak dapat dipakai pada format Kemenkes.',
+            ! $tujuan->suratTugasSamaDengan($asal) => 'Surat tugasnya berbeda: laporan '.$nomor.' berdasar surat tugas '.($asal->no_tugas ?: '—')
+                .', sedangkan perjalanan ini '.(filled($tujuan->no_tugas) ? 'surat tugas '.$tujuan->no_tugas : 'belum mencatat nomor surat tugas').'.',
+            ! $tujuan->lokasiSamaDengan($asal) => 'Lokasi tugasnya berbeda: laporan '.$nomor.' untuk tugas di '.($asal->lokasi ?: '—')
+                .', sedangkan perjalanan ini ke '.($tujuan->lokasi ?: '—').'.',
+            $this->bagianWajibKosong() !== [] => 'Laporan '.$nomor.' belum lengkap diisi pelaksananya: '.implode(', ', $this->bagianWajibKosong()).'.',
+            default => null,
+        };
+    }
+
+    /**
+     * Laporan rekan setugas yang isinya dapat dipakai laporan ini — surat
+     * tugas dan lokasinya sama — tidak termasuk yang justru memakai isi
+     * laporan ini.
+     *
+     * @return Collection<int, LaporanPerjadin>
+     */
+    public static function acuanTersediaUntuk(self $pemakai): Collection
+    {
+        $pemakai->loadMissing('usulan');
+        $kunci = PustakaSuratTugas::kunci($pemakai->usulan?->no_tugas);
+
+        if ($kunci === '') {
+            return new Collection;
+        }
+
+        return self::query()
+            ->where('id', '!=', $pemakai->id)
+            ->where('versi_format', '>=', self::FORMAT_KEMENKES)
+            ->where(fn (Builder $q) => $q->whereNull('id_laporan_acuan')->orWhere('id_laporan_acuan', '!=', $pemakai->id))
+            ->whereHas('usulan', fn (Builder $q) => $q
+                ->where('id', '!=', $pemakai->id_usulan)
+                ->whereRaw(PustakaSuratTugas::kunciSql('no_tugas').' = ?', [$kunci]))
+            ->with('usulan.user')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (self $acuan) => $acuan->alasanTidakDapatDipakaiOleh($pemakai) === null)
+            ->values();
+    }
+
+    /**
+     * Pakai isi laporan rekan setugas: judul, uraian tiap bagian, status
+     * hasil, rencana tindak lanjut, dan foto dokumentasi menggantikan isian
+     * laporan ini. Berkas laporan ikut bila rekannya mengunggah; bila tidak,
+     * berkas milik sendiri dibiarkan.
+     *
+     * Foto dan berkas disalin, bukan dirujuk, supaya mengganti atau
+     * menghapusnya pada laporan yang satu tidak ikut menghapus milik
+     * rekannya. Laporan ini tetap dikirim dan ditandatangani pelaksananya
+     * sendiri.
+     */
+    public function salinIsiDari(self $acuan): void
+    {
+        $acuan->loadMissing('tindakLanjut', 'dokumentasi');
+        $pustaka = app(PustakaBerkasBersama::class);
+
+        $fotoBaru = [];
+        foreach ($acuan->dokumentasi as $foto) {
+            if ($berkas = $pustaka->salin($foto->berkas, 'dokumen/laporan-dokumentasi')) {
+                $fotoBaru[$foto->bagian->value] = $berkas;
+            }
+        }
+
+        $berkasBaru = $pustaka->salin($acuan->berkas_laporan, 'dokumen/laporan');
+        $dilepas = $this->dokumentasi()->pluck('berkas')->all();
+
+        if ($berkasBaru && filled($this->berkas_laporan)) {
+            $dilepas[] = $this->berkas_laporan;
+        }
+
+        DB::transaction(function () use ($acuan, $fotoBaru, $berkasBaru): void {
+            $isian = [
+                'tentang' => $acuan->tentang,
+                'id_status_hasil' => $acuan->id_status_hasil,
+                'id_laporan_acuan' => $acuan->id,
+            ];
+
+            foreach (BagianLaporan::cases() as $bagian) {
+                $isian[$bagian->kolom()] = $acuan->{$bagian->kolom()};
+            }
+
+            $this->update($isian + ($berkasBaru ? ['berkas_laporan' => $berkasBaru] : []));
+
+            $this->tindakLanjut()->delete();
+            foreach ($acuan->tindakLanjut->values() as $urutan => $tindak) {
+                $this->tindakLanjut()->create([
+                    'urutan' => $urutan + 1,
+                    'uraian' => $tindak->uraian,
+                    'penanggung_jawab' => $tindak->penanggung_jawab,
+                    'target_selesai' => $tindak->target_selesai,
+                    'status' => $tindak->status,
+                ]);
+            }
+
+            $this->dokumentasi()->delete();
+            foreach ($fotoBaru as $bagian => $berkas) {
+                $this->dokumentasi()->create(['bagian' => $bagian, 'berkas' => $berkas]);
+            }
+        });
+
+        if ($dilepas !== []) {
+            Storage::disk('public')->delete($dilepas);
+        }
+
+        $this->unsetRelation('tindakLanjut')->unsetRelation('dokumentasi');
     }
 
     /**

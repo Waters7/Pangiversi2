@@ -258,7 +258,7 @@ class LaporanPimpinanController extends Controller
 
     private function laporan(Usulan $usulan): LaporanPerjadin
     {
-        return LaporanPerjadin::firstOrCreate(['id_usulan' => $usulan->id]);
+        return LaporanPerjadin::untukUsulan($usulan);
     }
 
     private function statusDipilih(Request $request, ?StatusLaporanPerjadin $bawaan): ?StatusLaporanPerjadin
@@ -288,6 +288,7 @@ class LaporanPimpinanController extends Controller
                 ->where('no_usulan', 'like', "%{$cari}%")
                 ->orWhere('no_tugas', 'like', "%{$cari}%")
                 ->orWhere('lokasi', 'like', "%{$cari}%")
+                ->orWhereHas('laporan', fn (Builder $l) => $l->where('nomor_laporan', 'like', "%{$cari}%"))
                 ->orWhereHas('user', fn (Builder $u) => $u->where('nama', 'like', "%{$cari}%"))))
             ->orderByDesc('tanggal_selesai')
             ->paginate(15)

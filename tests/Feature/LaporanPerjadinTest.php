@@ -429,5 +429,6 @@ class LaporanPerjadinTest extends TestCase
 
         $this->assertStringContainsString('Kantor Dinas Kesehatan Provinsi', $html);
         $this->assertStringContainsString('Puskesmas Tuminting', $html);
+        $this->assertStringContainsString($laporan->nomor_laporan, $html);
     }
 }

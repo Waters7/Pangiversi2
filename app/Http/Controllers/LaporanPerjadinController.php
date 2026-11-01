@@ -70,6 +70,7 @@ class LaporanPerjadinController extends Controller
                 ->where('no_usulan', 'like', "%{$cari}%")
                 ->orWhere('no_tugas', 'like', "%{$cari}%")
                 ->orWhere('lokasi', 'like', "%{$cari}%")
+                ->orWhereHas('laporan', fn ($l) => $l->where('nomor_laporan', 'like', "%{$cari}%"))
                 ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$cari}%"))))
             ->orderByDesc('tanggal_selesai')
             ->paginate(15)
@@ -113,10 +114,13 @@ class LaporanPerjadinController extends Controller
         if ($laporan->formatKemenkes()) {
             return view('dokumen.laporan-kemenkes', [
                 'usulan' => $usulan,
-                'laporan' => $laporan->load('tindakLanjut', 'dokumentasi'),
+                'laporan' => $laporan->load('tindakLanjut', 'dokumentasi', 'acuan.usulan.user'),
                 'statusTindakLanjut' => StatusTindakLanjut::options(),
                 'statusHasil' => StatusHasil::pilihan(),
                 'awal' => $this->isianAwal($usulan),
+                'acuanTersedia' => $laporan->bolehDisunting() && ! $laporan->sudahSelesai()
+                    ? LaporanPerjadin::acuanTersediaUntuk($laporan)
+                    : collect(),
             ]);
         }
 
@@ -458,6 +462,55 @@ class LaporanPerjadinController extends Controller
     }
 
     /**
+     * Pakai isi laporan rekan setugas lewat nomor laporannya — boleh bila
+     * surat tugas dan lokasi tugasnya sama.
+     *
+     * Isinya disalin ke laporan ini dan masih dapat disesuaikan; laporan
+     * ini tetap dikirim, ditandatangani, dan dikonfirmasi tersendiri, sebab
+     * konfirmasinya syarat pelunasan perjalanan pelaksana masing-masing.
+     */
+    public function pakai(Request $request, Usulan $usulan): RedirectResponse
+    {
+        $this->pastikanBoleh($request, $usulan);
+        $this->pastikanMasihBolehDisunting($usulan);
+
+        $data = $request->validate([
+            'nomor_acuan' => ['nullable', 'string', 'max:30', 'required_without:pilih_acuan'],
+            'pilih_acuan' => ['nullable', 'string', 'max:30'],
+        ], [
+            'nomor_acuan.required_without' => 'Tuliskan nomor laporan yang hendak dipakai.',
+        ]);
+
+        $laporan = $this->laporan($usulan);
+
+        if (! $laporan->formatKemenkes() || $laporan->sudahSelesai()) {
+            return back()->with('error', 'Isi laporan rekan hanya dapat dipakai pada laporan format Kemenkes yang belum dinyatakan selesai.');
+        }
+
+        $nomor = filled($data['pilih_acuan'] ?? null) ? $data['pilih_acuan'] : (string) ($data['nomor_acuan'] ?? '');
+        $acuan = LaporanPerjadin::denganNomor($nomor);
+        $alasan = $acuan
+            ? $acuan->alasanTidakDapatDipakaiOleh($laporan)
+            : 'Laporan bernomor '.mb_strtoupper(trim($nomor)).' tidak ditemukan.';
+
+        if ($alasan !== null) {
+            return back()->withInput()->withErrors(['nomor_acuan' => $alasan]);
+        }
+
+        $laporan->salinIsiDari($acuan);
+
+        $this->audit->catat(
+            AuditLog::AKSI_DOKUMEN,
+            "Laporan perjalanan dinas {$usulan->no_usulan} ({$laporan->nomor_laporan}) memakai isi laporan {$acuan->nomor_laporan} milik {$acuan->usulan?->user?->nama}.",
+            ['usulan' => $usulan],
+        );
+
+        return redirect()
+            ->route('dokumen.laporan.edit', $usulan->no_usulan)
+            ->with('success', "Isi laporan {$acuan->nomor_laporan} sudah dipakai. Periksa dan sesuaikan bila perlu, lalu Simpan & Kirim ke Pimpinan — laporan ini tetap ditandatangani Anda sendiri.");
+    }
+
+    /**
      * Buka kembali laporan yang sudah diselesaikan agar dapat diperbaiki.
      */
     public function bukaKembali(Request $request, Usulan $usulan): RedirectResponse
@@ -567,7 +620,7 @@ class LaporanPerjadinController extends Controller
 
     private function laporan(Usulan $usulan): LaporanPerjadin
     {
-        return LaporanPerjadin::firstOrCreate(['id_usulan' => $usulan->id]);
+        return LaporanPerjadin::untukUsulan($usulan);
     }
 
     /**
