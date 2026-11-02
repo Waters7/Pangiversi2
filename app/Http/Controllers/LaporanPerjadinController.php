@@ -463,7 +463,7 @@ class LaporanPerjadinController extends Controller
 
     /**
      * Pakai isi laporan rekan setugas lewat nomor laporannya — boleh bila
-     * surat tugas dan lokasi tugasnya sama.
+     * nomor surat tugas, waktu pelaksanaan, dan lokasi tugasnya sama.
      *
      * Isinya disalin ke laporan ini dan masih dapat disesuaikan; laporan
      * ini tetap dikirim, ditandatangani, dan dikonfirmasi tersendiri, sebab

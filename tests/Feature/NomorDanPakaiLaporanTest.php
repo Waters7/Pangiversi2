@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 /**
  * Nomor laporan perjalanan dinas, dan memakai laporan rekan lewat nomornya
- * bila surat tugas dan lokasi tugasnya sama.
+ * bila nomor surat tugas, waktu pelaksanaan, dan lokasi tugasnya sama.
  */
 class NomorDanPakaiLaporanTest extends TestCase
 {
@@ -165,7 +165,7 @@ class NomorDanPakaiLaporanTest extends TestCase
             ->assertSee('Isinya memakai laporan '.$acuan->nomor_laporan.' milik Rina Kartika Dewi');
     }
 
-    public function test_laporan_rekan_hanya_dapat_dipakai_bila_surat_tugas_dan_lokasinya_sama(): void
+    public function test_laporan_rekan_hanya_dapat_dipakai_bila_surat_tugas_waktu_dan_lokasinya_sama(): void
     {
         $acuan = $this->laporanRekanLengkap();
         LaporanPerjadin::untukUsulan($this->usulan);
@@ -174,7 +174,11 @@ class NomorDanPakaiLaporanTest extends TestCase
         $this->pakai(['nomor_acuan' => $acuan->nomor_laporan])->assertSessionHasErrors('nomor_acuan');
         $this->assertStringContainsString('Surat tugasnya berbeda', $this->galat());
 
-        $this->usulanRekan->update(['no_tugas' => 'kp.01.02/f.xxx/1557/2026 ', 'lokasi' => 'Bandung']);
+        $this->usulanRekan->update(['no_tugas' => 'kp.01.02/f.xxx/1557/2026 ', 'tanggal_selesai' => '2026-10-27']);
+        $this->pakai(['nomor_acuan' => $acuan->nomor_laporan])->assertSessionHasErrors('nomor_acuan');
+        $this->assertStringContainsString('Waktu pelaksanaannya berbeda', $this->galat());
+
+        $this->usulanRekan->update(['tanggal_selesai' => '2026-10-26', 'lokasi' => 'Bandung']);
         $this->pakai(['nomor_acuan' => $acuan->nomor_laporan])->assertSessionHasErrors('nomor_acuan');
         $this->assertStringContainsString('Lokasi tugasnya berbeda', $this->galat());
 

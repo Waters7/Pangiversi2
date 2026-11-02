@@ -11,7 +11,7 @@
     @if ($laporan->acuan)
         <p class="text-[11px] text-slate-400 mt-2" data-acuan-laporan>
             Isinya memakai laporan {{ $laporan->acuan->nomor_laporan }} milik {{ $laporan->acuan->usulan?->user?->nama ?? '—' }}
-            (surat tugas dan lokasi tugas sama).
+            (surat tugas, waktu pelaksanaan, dan lokasi tugas sama).
         </p>
     @endif
 </div>

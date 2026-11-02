@@ -308,8 +308,8 @@ class LaporanPerjadin extends Model
 
     /**
      * Mengapa laporan ini tidak dapat dipakai oleh laporan lain, atau null
-     * bila boleh: surat tugas dan lokasi tugasnya harus sama, keduanya
-     * format Kemenkes, dan bagian wajibnya sudah terisi.
+     * bila boleh: nomor surat tugas, waktu pelaksanaan, dan lokasi tugasnya
+     * harus sama, keduanya format Kemenkes, dan bagian wajibnya sudah terisi.
      */
     public function alasanTidakDapatDipakaiOleh(self $pemakai): ?string
     {
@@ -326,6 +326,8 @@ class LaporanPerjadin extends Model
             ! $this->formatKemenkes() || ! $pemakai->formatKemenkes() => 'Laporan '.$nomor.' memakai format lama, isinya tidak dapat dipakai pada format Kemenkes.',
             ! $tujuan->suratTugasSamaDengan($asal) => 'Surat tugasnya berbeda: laporan '.$nomor.' berdasar surat tugas '.($asal->no_tugas ?: '—')
                 .', sedangkan perjalanan ini '.(filled($tujuan->no_tugas) ? 'surat tugas '.$tujuan->no_tugas : 'belum mencatat nomor surat tugas').'.',
+            ! $tujuan->waktuSamaDengan($asal) => 'Waktu pelaksanaannya berbeda: laporan '.$nomor.' untuk perjalanan '.$asal->periode
+                .', sedangkan perjalanan ini '.$tujuan->periode.'.',
             ! $tujuan->lokasiSamaDengan($asal) => 'Lokasi tugasnya berbeda: laporan '.$nomor.' untuk tugas di '.($asal->lokasi ?: '—')
                 .', sedangkan perjalanan ini ke '.($tujuan->lokasi ?: '—').'.',
             $this->bagianWajibKosong() !== [] => 'Laporan '.$nomor.' belum lengkap diisi pelaksananya: '.implode(', ', $this->bagianWajibKosong()).'.',
@@ -334,9 +336,9 @@ class LaporanPerjadin extends Model
     }
 
     /**
-     * Laporan rekan setugas yang isinya dapat dipakai laporan ini — surat
-     * tugas dan lokasinya sama — tidak termasuk yang justru memakai isi
-     * laporan ini.
+     * Laporan rekan setugas yang isinya dapat dipakai laporan ini — nomor
+     * surat tugas, waktu pelaksanaan, dan lokasinya sama — tidak termasuk
+     * yang justru memakai isi laporan ini.
      *
      * @return Collection<int, LaporanPerjadin>
      */

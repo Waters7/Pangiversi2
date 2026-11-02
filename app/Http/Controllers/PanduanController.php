@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.54',
+                'tanggal' => '2 November 2026',
+                'butir' => [
+                    'Memakai laporan rekan kini juga mensyaratkan waktu pelaksanaan yang sama — tanggal berangkat dan tanggal kembali — selain nomor surat tugas dan lokasi tugas yang sama.',
+                ],
+            ],
+            [
                 'versi' => '2.5.53',
                 'tanggal' => '1 November 2026',
                 'butir' => [

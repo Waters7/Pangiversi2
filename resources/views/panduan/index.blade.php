@@ -505,7 +505,8 @@
                 seluruh foto tercetak pada halaman <strong>lampiran</strong> dokumen. Yang wajib sebelum dikirim:
                 Tentang, B, C, D, dan status hasil. Laporan yang sudah diisi dengan format lama tetap memakai
                 format lamanya. Tiap laporan bernomor sendiri, misalnya <strong>LPD-2026-0012</strong>. Bila Anda
-                bertugas bersama rekan dengan <strong>surat tugas</strong> dan <strong>lokasi tugas</strong> yang sama,
+                bertugas bersama rekan dengan <strong>nomor surat tugas</strong>, <strong>waktu pelaksanaan</strong>
+                (tanggal berangkat dan kembali), dan <strong>lokasi tugas</strong> yang sama,
                 pakai laporannya lewat kotak <strong>Pakai laporan rekan setugas</strong>: tulis nomornya atau pilih dari
                 daftar, lalu judul, bagian A–E, status hasil, tindak lanjut, dan fotonya disalin ke laporan Anda — masih
                 dapat disesuaikan, dan tetap Anda kirim serta tandatangani sendiri. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi

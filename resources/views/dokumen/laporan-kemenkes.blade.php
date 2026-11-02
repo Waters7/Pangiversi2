@@ -76,7 +76,7 @@
                         <p class="text-xs text-teal-800 leading-relaxed">
                             Isi laporan ini disalin dari laporan
                             <strong class="font-mono">{{ $laporan->acuan->nomor_laporan }}</strong>
-                            milik {{ $laporan->acuan->usulan?->user?->nama ?? '—' }}, rekan dengan surat tugas dan lokasi tugas yang sama.
+                            milik {{ $laporan->acuan->usulan?->user?->nama ?? '—' }}, rekan dengan surat tugas, waktu pelaksanaan, dan lokasi tugas yang sama.
                             @unless ($terkunci)
                                 Anda tetap dapat menyesuaikannya sebelum mengirim.
                             @endunless
@@ -165,14 +165,15 @@
                     'syarat' => 'judul "tentang", kegiatan yang dilaksanakan, hasil yang dicapai, simpulan dan saran, serta status hasil',
                 ])
 
-                {{-- Rekan dengan surat tugas dan lokasi tugas yang sama cukup memakai
+                {{-- Rekan dengan surat tugas, waktu pelaksanaan, dan lokasi tugas yang sama cukup memakai
                      laporan yang sudah disusun. Isiannya milik formulir terpisah
                      (atribut form), sebab formulir tidak boleh bersarang. --}}
                 @unless ($terkunci)
                     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5" data-pakai-laporan>
                         <h3 class="font-bold text-slate-800 text-sm">Pakai laporan rekan setugas</h3>
                         <p class="text-xs text-slate-500 leading-relaxed mt-1">
-                            Bertugas bersama dengan <strong>surat tugas</strong> dan <strong>lokasi tugas</strong> yang sama?
+                            Bertugas bersama dengan <strong>nomor surat tugas</strong>, <strong>waktu pelaksanaan</strong>,
+                            dan <strong>lokasi tugas</strong> yang sama?
                             Pakai laporan rekan lewat nomornya: judul, bagian A–E, status hasil, tindak lanjut, dan fotonya
                             disalin ke laporan ini, lalu tetap Anda kirim dan tandatangani sendiri.
                         </p>

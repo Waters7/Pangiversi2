@@ -168,6 +168,16 @@ class Usulan extends Model
         return $kunci !== '' && $kunci === PustakaSuratTugas::kunci($lain->no_tugas);
     }
 
+    /** Waktu pelaksanaan sama: tanggal berangkat dan tanggal kembalinya sama. */
+    public function waktuSamaDengan(self $lain): bool
+    {
+        $tanggal = fn (mixed $nilai) => blank($nilai) ? null : Carbon::parse($nilai)->toDateString();
+
+        return $tanggal($this->tanggal_mulai) !== null
+            && $tanggal($this->tanggal_mulai) === $tanggal($lain->tanggal_mulai)
+            && $tanggal($this->tanggal_selesai ?? $this->tanggal_mulai) === $tanggal($lain->tanggal_selesai ?? $lain->tanggal_mulai);
+    }
+
     /**
      * Bertugas di lokasi yang sama: kota tujuan dari master data bila
      * keduanya tercatat, selain itu nama lokasinya tanpa membedakan huruf
