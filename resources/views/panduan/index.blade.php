@@ -747,13 +747,14 @@
 
             <x-panduan-langkah nomor="7" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
                 Menu <strong>Laporan → List Daftar Nominatif</strong> memuat seluruh daftar yang
-                terbit — menunggu PPK, sudah ditandatangani, sudah diterima — beserta siapa saja
-                pelaksana yang sudah menandatangani berkasnya; kategori, akun pembiayaan, dan
-                <strong>tim kerja</strong> ditetapkan setelah daftar diterima — pilihan tim kerjanya mengikuti
-                pagu tim kerja pada akun itu. Menu <strong>Pembebanan Anggaran</strong> menetapkannya kapan saja,
-                juga sebelum PPK mengirim daftarnya, bagi super administrator dan peran yang diberi hak
-                <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; ringkasannya memuat pagu,
-                realisasi, dan sisa tiap tim kerja. Rincian yang sudah ditandatangani pelaksana
+                terbit — menunggu PPK, atau sudah ditandatangani dan langsung diterima tim keuangan —
+                beserta siapa saja pelaksana yang sudah menandatangani berkasnya; kategori, akun
+                pembiayaan, dan <strong>tim kerja</strong> ditetapkan setelah daftar diterima — pilihan tim kerjanya
+                mengikuti pagu tim kerja pada akun itu. Menu <strong>Pembebanan Anggaran</strong> menetapkannya kapan
+                saja, juga sebelum PPK menandatanganinya, bagi super administrator dan peran yang diberi hak
+                <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; tiap daftarnya menyebut kegiatan dan nama
+                pelaksananya, dapat dicari menurut nomor surat tugas, nama pelaksana, atau kegiatan, dan
+                ringkasannya memuat pagu, realisasi, dan sisa tiap tim kerja. Rincian yang sudah ditandatangani pelaksana
                 dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>.
             </x-panduan-langkah>
 
@@ -810,9 +811,9 @@
                 dikelompokkan per bulan dan tahun.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="5" judul="Kirim nominatif ke tim keuangan" :terakhir="true">
-                Setelah ditandatangani, kirimkan daftarnya ke tim keuangan sebagai dasar
-                pembayaran. Tanda tangannya elektronik: cetakan nominatif memuat QR dan kode
+            <x-panduan-langkah nomor="5" judul="Nominatif langsung terkirim ke tim keuangan" :terakhir="true">
+                Begitu Anda tandatangani, daftarnya otomatis terkirim ke tim keuangan sebagai dasar
+                pembayaran — tidak ada lagi tombol kirim terpisah. Tanda tangannya elektronik: cetakan nominatif memuat QR dan kode
                 verifikasi yang dapat dipindai siapa pun.
             </x-panduan-langkah>
 
@@ -996,8 +997,8 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="List Daftar Nominatif">
-                Seluruh daftar nominatif yang terbit — menunggu PPK, sudah ditandatangani, sudah
-                diterima tim keuangan — dengan saringan status dan keterangan siapa saja pelaksana
+                Seluruh daftar nominatif yang terbit — menunggu PPK, atau sudah ditandatangani dan
+                langsung diterima tim keuangan — dengan saringan status dan keterangan siapa saja pelaksana
                 yang sudah menandatangani berkasnya. Di sini pula pembebanan kategori, akun, dan tim
                 kerjanya ditetapkan setelah daftar diterima; sebelum itu lewat menu Pembebanan Anggaran.
             </x-panduan-langkah>

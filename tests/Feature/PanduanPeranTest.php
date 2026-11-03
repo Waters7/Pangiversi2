@@ -185,6 +185,8 @@ class PanduanPeranTest extends TestCase
     {
         $this->bukaSebagai(PeranPengguna::DosenTendik)
             ->assertSee('Riwayat Perubahan')
+            ->assertSee('Versi 2.5.57')
+            ->assertSee('Daftar nominatif yang ditandatangani PPK kini otomatis terkirim ke tim keuangan')
             ->assertSee('Versi 2.5.56')
             ->assertSee('Menu baru Pembebanan Anggaran')
             ->assertSee('Versi 2.5.55')

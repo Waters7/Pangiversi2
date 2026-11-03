@@ -12,7 +12,7 @@
         <h1 class="text-xl font-bold text-slate-800">Verifikasi Daftar Nominatif</h1>
         <p class="text-xs text-slate-400 mt-0.5">
             Terbit per surat tugas, setelah seluruh pelaksana di bawahnya menyelesaikan dokumen.
-            Tandatangani, lalu kirim ke tim keuangan.
+            Tandatangani — daftarnya langsung terkirim ke tim keuangan.
         </p>
     </div>
 
@@ -133,7 +133,7 @@
                         @unless ($nominatif->sudahDitandatangani())
                             <form method="POST" action="{{ route('persetujuan.nominatif.tanda-tangan', $nominatif) }}"
                                   x-data
-                                  @submit.prevent="if (confirm('Tandatangani daftar nominatif {{ $nominatif->no_tugas }}?')) $el.submit()">
+                                  @submit.prevent="if (confirm('Tandatangani daftar nominatif {{ $nominatif->no_tugas }}? Daftarnya langsung terkirim ke tim keuangan.')) $el.submit()">
                                 @csrf @method('PUT')
                                 <button type="submit"
                                         class="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl transition">
@@ -141,16 +141,6 @@
                                 </button>
                             </form>
                         @endunless
-
-                        @if ($nominatif->sudahDitandatangani() && ! $nominatif->sudahDikirim())
-                            <form method="POST" action="{{ route('persetujuan.nominatif.kirim', $nominatif) }}">
-                                @csrf @method('PUT')
-                                <button type="submit"
-                                        class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition">
-                                    Kirim ke Tim Keuangan
-                                </button>
-                            </form>
-                        @endif
                         @endcan
 
                         <a href="{{ route('laporan.nominatif.cetak', $nominatif) }}"

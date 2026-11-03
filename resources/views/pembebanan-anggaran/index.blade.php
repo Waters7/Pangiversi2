@@ -128,8 +128,8 @@
         <input type="hidden" name="tahap" value="{{ $tahap }}">
         <input type="hidden" name="ta" value="{{ request('ta') }}">
         <div class="flex-1">
-            <label for="cari" class="block text-xs font-semibold text-slate-600 mb-1.5">Nomor surat tugas</label>
-            <input type="text" name="cari" id="cari" value="{{ $cari }}" placeholder="cth: PP.05.01/F.XXX/2871/2026"
+            <label for="cari" class="block text-xs font-semibold text-slate-600 mb-1.5">Cari</label>
+            <input type="text" name="cari" id="cari" value="{{ $cari }}" placeholder="Nomor surat tugas, nama pelaksana, atau kegiatan"
                    class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
         </div>
         <div class="sm:w-56">
@@ -167,6 +167,22 @@
                             <span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pembebanan belum lengkap</span>
                         @endif
                     </div>
+                    @php
+                        $usulanTugas = $usulan->get($nominatif->no_tugas) ?? collect();
+                        $kegiatan = $usulanTugas->map(fn ($u) => $u->spd?->maksud ?: $u->uraian)->filter()->unique()->values();
+                        $pelaksana = $usulanTugas->map(fn ($u) => $u->user?->nama)->filter()->unique()->values();
+                    @endphp
+                    @if ($kegiatan->isNotEmpty())
+                        <p class="text-sm text-slate-700 mt-1" data-kegiatan-nominatif>
+                            <span class="text-xs font-semibold text-slate-500">Kegiatan:</span> {{ $kegiatan->implode(' · ') }}
+                        </p>
+                    @endif
+                    @if ($pelaksana->isNotEmpty())
+                        <p class="text-xs text-slate-600 mt-0.5" data-pelaksana-nominatif>
+                            <span class="font-semibold text-slate-500">Pelaksana:</span>
+                            {{ $pelaksana->take(6)->implode(', ') }}{{ $pelaksana->count() > 6 ? ', dan '.($pelaksana->count() - 6).' lainnya' : '' }}
+                        </p>
+                    @endif
                     <p class="text-xs text-slate-400 mt-0.5">
                         {{ $barisDaftar->count() }} pelaksana ·
                         {{ $rupiah($barisDaftar->sum('jumlah')) }}

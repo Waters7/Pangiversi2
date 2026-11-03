@@ -231,7 +231,6 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('can:menandatangani-daftar-riil')->group(function () {
             Route::put('/nominatif/{nominatif}/tanda-tangan', [PersetujuanPpkController::class, 'tandaTanganiNominatif'])->name('persetujuan.nominatif.tanda-tangan');
-            Route::put('/nominatif/{nominatif}/kirim', [PersetujuanPpkController::class, 'kirimNominatif'])->name('persetujuan.nominatif.kirim');
         });
     });
 

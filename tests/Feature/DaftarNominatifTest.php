@@ -350,35 +350,48 @@ class DaftarNominatifTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_ppk_menandatangani_daftar(): void
+    /** Tanda tangan PPK langsung mengirim daftarnya ke tim keuangan. */
+    public function test_ppk_menandatangani_daftar_dan_langsung_terkirim(): void
     {
         $this->usulanLengkap();
         $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
 
         $this->actingAs($this->ppk)
             ->put(route('persetujuan.nominatif.tanda-tangan', $daftar))
-            ->assertSessionHas('success');
+            ->assertSessionHas('success', 'Daftar nominatif ditandatangani dan otomatis terkirim ke tim keuangan.');
 
         $daftar->refresh();
 
         $this->assertNotNull($daftar->ditandatangani_at);
+        $this->assertNotNull($daftar->dikirim_at);
         $this->assertSame($this->ppk->id, $daftar->id_ppk);
+        $this->assertFalse(Route::has('persetujuan.nominatif.kirim'));
     }
 
     /**
      * Mengirim tanpa tanda tangan akan membuat tim keuangan memproses berkas
      * yang belum sah.
      */
-    public function test_tidak_dapat_dikirim_sebelum_ditandatangani(): void
+    public function test_daftar_yang_belum_ditandatangani_belum_terkirim(): void
     {
         $this->usulanLengkap();
         $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
 
-        $this->actingAs($this->ppk)
-            ->put(route('persetujuan.nominatif.kirim', $daftar))
-            ->assertSessionHas('error');
-
         $this->assertNull($daftar->fresh()->dikirim_at);
+        $this->assertDatabaseMissing('notifikasi', ['judul' => 'Daftar nominatif diterima dari PPK']);
+    }
+
+    /** Daftar lama yang tertahan sudah ditandatangani tetapi belum dikirim dianggap terkirim. */
+    public function test_daftar_lama_yang_sudah_ditandatangani_dianggap_terkirim(): void
+    {
+        $ditandatangani = now()->subDays(12)->startOfMinute();
+        $tertahan = DaftarNominatif::create(['no_tugas' => 'ST/TERTAHAN/2026', 'ditandatangani_at' => $ditandatangani]);
+        $menunggu = DaftarNominatif::create(['no_tugas' => 'ST/MENUNGGU/2026']);
+
+        (require database_path('migrations/2026_11_03_081154_kirim_daftar_nominatif_yang_sudah_ditandatangani.php'))->up();
+
+        $this->assertTrue($tertahan->fresh()->dikirim_at->equalTo($ditandatangani));
+        $this->assertNull($menunggu->fresh()->dikirim_at);
     }
 
     /**
@@ -389,10 +402,9 @@ class DaftarNominatifTest extends TestCase
     {
         $this->usulanLengkap();
         $daftar = $this->penyusun()->terbitkan(self::NO_TUGAS);
-        $daftar->update(['id_ppk' => $this->ppk->id, 'ditandatangani_at' => now()]);
 
         $this->actingAs($this->ppk)
-            ->put(route('persetujuan.nominatif.kirim', $daftar))
+            ->put(route('persetujuan.nominatif.tanda-tangan', $daftar))
             ->assertSessionHas('success');
 
         $this->assertNotNull($daftar->fresh()->dikirim_at);

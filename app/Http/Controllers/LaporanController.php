@@ -291,8 +291,7 @@ class LaporanController extends Controller
      */
     private const STATUS_NOMINATIF = [
         'menunggu' => 'Menunggu Tanda Tangan PPK',
-        'ditandatangani' => 'Ditandatangani PPK',
-        'diterima' => 'Diterima Tim Keuangan',
+        'diterima' => 'Ditandatangani & Diterima Tim Keuangan',
     ];
 
     /**
@@ -333,7 +332,6 @@ class LaporanController extends Controller
 
         $cocokStatus = fn (DaftarNominatifModel $item, string $kunci) => match ($kunci) {
             'diterima' => $item->sudahDikirim(),
-            'ditandatangani' => $item->sudahDitandatangani() && ! $item->sudahDikirim(),
             'menunggu' => ! $item->sudahDitandatangani(),
         };
 

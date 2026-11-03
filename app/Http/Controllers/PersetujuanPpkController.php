@@ -311,6 +311,12 @@ class PersetujuanPpkController extends Controller
         ]);
     }
 
+    /**
+     * Tandatangani daftar nominatif; daftarnya langsung terkirim ke tim
+     * keuangan. Dulu pengiriman langkah terpisah, dan daftar kerap tertahan
+     * sudah ditandatangani tetapi tidak pernah dikirim — pembebanannya pun
+     * tidak dapat ditetapkan.
+     */
     public function tandaTanganiNominatif(Request $request, DaftarNominatif $nominatif): RedirectResponse
     {
         if ($nominatif->sudahDitandatangani()) {
@@ -320,30 +326,12 @@ class PersetujuanPpkController extends Controller
         $nominatif->update([
             'id_ppk' => $request->user()->id,
             'ditandatangani_at' => now(),
+            'dikirim_at' => now(),
         ]);
 
         // Kode ini menjadi QR pada cetakannya, menggantikan penanda tanda
         // tangan yang kosong sebelum disahkan.
         $nominatif->terbitkanKodeVerifikasi();
-
-        return back()->with('success', 'Daftar nominatif ditandatangani. Kirimkan ke tim keuangan bila sudah final.');
-    }
-
-    /**
-     * Mengirim ke tim keuangan adalah langkah terpisah dari menandatangani:
-     * PPK dapat memeriksa hasil tanda tangannya lebih dulu.
-     */
-    public function kirimNominatif(Request $request, DaftarNominatif $nominatif): RedirectResponse
-    {
-        if (! $nominatif->sudahDitandatangani()) {
-            return back()->with('error', 'Tandatangani daftar nominatif lebih dulu sebelum mengirimkannya.');
-        }
-
-        if ($nominatif->sudahDikirim()) {
-            return back()->with('error', 'Daftar nominatif ini sudah dikirim ke tim keuangan.');
-        }
-
-        $nominatif->update(['dikirim_at' => now()]);
 
         // Tim keuangan yang memprosesnya menjadi pembayaran; Tim SDM tetap
         // dapat membacanya sebagai arsip lewat menu Laporan.
@@ -357,7 +345,7 @@ class PersetujuanPpkController extends Controller
             ],
         );
 
-        return back()->with('success', 'Daftar nominatif dikirim ke tim keuangan.');
+        return back()->with('success', 'Daftar nominatif ditandatangani dan otomatis terkirim ke tim keuangan.');
     }
 
     // ── Riwayat tanda tangan ──

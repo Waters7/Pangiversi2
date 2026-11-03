@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.57',
+                'tanggal' => '3 November 2026',
+                'butir' => [
+                    'Daftar nominatif yang ditandatangani PPK kini otomatis terkirim ke tim keuangan — tombol Kirim ke Tim Keuangan ditiadakan. Daftar yang sudah ditandatangani tetapi belum dikirim dianggap terkirim.',
+                    'Pembebanan Anggaran menampilkan kegiatan dan nama pelaksana tiap daftar nominatif, dan dapat dicari menurut nama pelaksana atau kegiatan.',
+                ],
+            ],
+            [
                 'versi' => '2.5.56',
                 'tanggal' => '3 November 2026',
                 'butir' => [

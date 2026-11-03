@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusUsulan;
 use App\Models\AkunPembiayaan;
 use App\Models\AuditLog;
 use App\Models\DaftarNominatif;
 use App\Models\KategoriPembiayaan;
 use App\Models\TahunAnggaran;
+use App\Models\Usulan;
 use App\Services\AuditService;
 use App\Services\PembebananNominatif;
 use App\Services\PenyusunNominatif;
@@ -27,8 +29,7 @@ class PembebananAnggaranController extends Controller
     /** @var array<string, string> */
     private const TAHAP = [
         'menunggu' => 'Menunggu Tanda Tangan PPK',
-        'ditandatangani' => 'Ditandatangani PPK',
-        'diterima' => 'Diterima Tim Keuangan',
+        'diterima' => 'Ditandatangani & Diterima Tim Keuangan',
     ];
 
     /** @var array<string, string> */
@@ -52,8 +53,18 @@ class PembebananAnggaranController extends Controller
         $saringPembebanan = array_key_exists((string) $request->input('pembebanan'), self::PEMBEBANAN) ? $request->input('pembebanan') : null;
         $cari = trim((string) $request->input('cari'));
 
+        // Dicari menurut nomor surat tugas, atau nama pelaksana dan kegiatan
+        // pada usulan di bawah surat tugas itu.
         $dasar = fn () => DaftarNominatif::query()
-            ->when($cari !== '', fn (Builder $q) => $q->where('no_tugas', 'like', "%{$cari}%"))
+            ->when($cari !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
+                ->where('no_tugas', 'like', "%{$cari}%")
+                ->orWhereIn('no_tugas', Usulan::query()
+                    ->select('no_tugas')
+                    ->whereNotNull('no_tugas')
+                    ->where(fn (Builder $u) => $u
+                        ->where('uraian', 'like', "%{$cari}%")
+                        ->orWhereHas('spd', fn (Builder $spd) => $spd->where('maksud', 'like', "%{$cari}%"))
+                        ->orWhereHas('user', fn (Builder $pelaksana) => $pelaksana->where('nama', 'like', "%{$cari}%"))))))
             ->when($saringPembebanan === 'belum', fn (Builder $q) => $this->belumLengkap($q))
             ->when($saringPembebanan === 'lengkap', fn (Builder $q) => $q->whereNotNull('id_akun_pembiayaan')->whereNotNull('id_tim_kerja'));
 
@@ -67,9 +78,20 @@ class PembebananAnggaranController extends Controller
 
         $tahunAnggaran = TahunAnggaran::find($request->input('ta')) ?? TahunAnggaran::aktif();
 
+        // Pelaksana dan kegiatan diambil dari seluruh usulan yang disetujui
+        // di bawah surat tugasnya — termasuk yang berkasnya belum tuntas dan
+        // karena itu belum tercantum pada daftarnya.
+        $usulan = Usulan::with('user', 'spd')
+            ->whereIn('no_tugas', $daftar->getCollection()->pluck('no_tugas'))
+            ->whereIn('status', [StatusUsulan::Disetujui->value, StatusUsulan::Selesai->value])
+            ->orderBy('id')
+            ->get()
+            ->groupBy('no_tugas');
+
         return view('pembebanan-anggaran.index', [
             'daftar' => $daftar,
             'baris' => $penyusun->barisBanyak($daftar->getCollection()->pluck('no_tugas')),
+            'usulan' => $usulan,
             'alokasi' => $pembebanan->untukDaftar($daftar->getCollection()),
             'tahap' => $tahap,
             'pilihanTahap' => self::TAHAP,
@@ -117,7 +139,6 @@ class PembebananAnggaranController extends Controller
     {
         return match ($tahap) {
             'menunggu' => $query->whereNull('ditandatangani_at'),
-            'ditandatangani' => $query->whereNotNull('ditandatangani_at')->whereNull('dikirim_at'),
             'diterima' => $query->whereNotNull('dikirim_at'),
         };
     }

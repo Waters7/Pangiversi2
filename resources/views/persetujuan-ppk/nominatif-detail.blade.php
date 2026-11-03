@@ -69,7 +69,7 @@
             @unless ($nominatif->sudahDitandatangani())
                 <form method="POST" action="{{ route('persetujuan.nominatif.tanda-tangan', $nominatif) }}"
                       x-data
-                      @submit.prevent="if (confirm('Tandatangani daftar nominatif ini?')) $el.submit()">
+                      @submit.prevent="if (confirm('Tandatangani daftar nominatif ini? Daftarnya langsung terkirim ke tim keuangan.')) $el.submit()">
                     @csrf @method('PUT')
                     <button type="submit"
                             class="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-xl transition">
@@ -77,16 +77,6 @@
                     </button>
                 </form>
             @endunless
-
-            @if ($nominatif->sudahDitandatangani() && ! $nominatif->sudahDikirim())
-                <form method="POST" action="{{ route('persetujuan.nominatif.kirim', $nominatif) }}">
-                    @csrf @method('PUT')
-                    <button type="submit"
-                            class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
-                        Kirim ke Tim Keuangan
-                    </button>
-                </form>
-            @endif
             @endcan
 
             @if ($nominatif->sudahDikirim())

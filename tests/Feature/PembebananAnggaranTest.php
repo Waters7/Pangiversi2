@@ -107,23 +107,60 @@ class PembebananAnggaranTest extends TestCase
     public function test_daftar_pada_setiap_tahap_tampil_dan_dapat_disaring(): void
     {
         $this->nominatif('ST/MENUNGGU/2026');
-        $this->nominatif('ST/DITANDATANGANI/2026', ['ditandatangani_at' => now()]);
-        $this->nominatif('ST/DITERIMA/2026', ['ditandatangani_at' => now(), 'dikirim_at' => now(), 'id_akun_pembiayaan' => $this->akunBiasa->id, 'id_tim_kerja' => $this->penjaminanMutu->id]);
+        $this->nominatif('ST/BELUM-BERTIM/2026', ['ditandatangani_at' => now(), 'dikirim_at' => now()]);
+        $this->nominatif('ST/LENGKAP/2026', ['ditandatangani_at' => now(), 'dikirim_at' => now(), 'id_akun_pembiayaan' => $this->akunBiasa->id, 'id_tim_kerja' => $this->penjaminanMutu->id]);
 
         $this->actingAs($this->admin)
             ->get(route('pembebanan-anggaran'))
-            ->assertSee(['ST/MENUNGGU/2026', 'ST/DITANDATANGANI/2026', 'ST/DITERIMA/2026'])
-            ->assertSee('data-pilihan-tim', false);
+            ->assertSee(['ST/MENUNGGU/2026', 'ST/BELUM-BERTIM/2026', 'ST/LENGKAP/2026'])
+            ->assertSee('data-pilihan-tim', false)
+            ->assertSee('Ditandatangani &amp; Diterima Tim Keuangan', false);
 
         $this->actingAs($this->admin)
-            ->get(route('pembebanan-anggaran', ['tahap' => 'ditandatangani']))
-            ->assertSee('ST/DITANDATANGANI/2026')
-            ->assertDontSee(['ST/MENUNGGU/2026', 'ST/DITERIMA/2026']);
+            ->get(route('pembebanan-anggaran', ['tahap' => 'menunggu']))
+            ->assertSee('ST/MENUNGGU/2026')
+            ->assertDontSee(['ST/BELUM-BERTIM/2026', 'ST/LENGKAP/2026']);
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran', ['tahap' => 'diterima']))
+            ->assertSee(['ST/BELUM-BERTIM/2026', 'ST/LENGKAP/2026'])
+            ->assertDontSee('ST/MENUNGGU/2026');
 
         $this->actingAs($this->admin)
             ->get(route('pembebanan-anggaran', ['pembebanan' => 'belum']))
-            ->assertSee(['ST/MENUNGGU/2026', 'ST/DITANDATANGANI/2026'])
-            ->assertDontSee('ST/DITERIMA/2026');
+            ->assertSee(['ST/MENUNGGU/2026', 'ST/BELUM-BERTIM/2026'])
+            ->assertDontSee('ST/LENGKAP/2026');
+    }
+
+    public function test_nama_pelaksana_dan_kegiatan_tampil_dan_dapat_dicari(): void
+    {
+        $ppk = User::factory()->ppk()->create();
+        $pelaksana = User::factory()->create(['nama' => 'Rina Kartika Dewi']);
+        $usulan = Usulan::factory()->create([
+            'id_user' => $pelaksana->id,
+            'no_tugas' => 'ST/KEGIATAN/2026',
+            'status' => StatusUsulan::Disetujui->value,
+            'uraian' => 'Mengikuti IHT OSCE AIPTLMI Regional 7',
+            'id_spd' => null,
+        ]);
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $usulan->id]);
+        $this->tandatanganiBerkas($this->lengkapiPertanggungjawaban($usulan)->fresh(), $ppk);
+        $this->nominatif('ST/KEGIATAN/2026');
+        $this->nominatif('ST/LAIN/2026');
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran'))
+            ->assertSeeInOrder(['ST/KEGIATAN/2026', 'Kegiatan:', 'Mengikuti IHT OSCE AIPTLMI Regional 7', 'Pelaksana:', 'Rina Kartika Dewi']);
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran', ['cari' => 'rina kartika']))
+            ->assertSee('ST/KEGIATAN/2026')
+            ->assertDontSee('ST/LAIN/2026');
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran', ['cari' => 'OSCE']))
+            ->assertSee('ST/KEGIATAN/2026')
+            ->assertDontSee('ST/LAIN/2026');
     }
 
     public function test_akun_dan_tim_kerja_ditetapkan_sebelum_daftar_dikirim(): void
