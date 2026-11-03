@@ -86,6 +86,13 @@ enum Kemampuan: string
      */
     case MelihatArsipPerjadin = 'melihat-arsip-perjadin';
 
+    /**
+     * Menetapkan sumber dana, akun pembiayaan, dan tim kerja tiap daftar
+     * nominatif lewat menu Pembebanan Anggaran — kapan saja, tanpa
+     * menunggu PPK mengirimnya ke tim keuangan.
+     */
+    case MenetapkanAkunNominatif = 'menetapkan-akun-nominatif';
+
     case MengelolaMasterData = 'mengelola-master-data';
 
     case MengelolaPengguna = 'mengelola-pengguna';
@@ -179,6 +186,7 @@ enum Kemampuan: string
             self::MelihatDashboardEksekutif => 'Melihat dashboard eksekutif',
             self::MelihatLaporan => 'Melihat laporan dan rekap',
             self::MelihatArsipPerjadin => 'Melihat arsip daftar riil dan nominatif',
+            self::MenetapkanAkunNominatif => 'Menetapkan akun dan tim kerja daftar nominatif',
             self::MengelolaMasterData => 'Mengelola master data',
             self::MengelolaPengguna => 'Mengelola pengguna',
             self::MelihatJejakAudit => 'Melihat jejak audit',

@@ -137,6 +137,15 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.56',
+                'tanggal' => '3 November 2026',
+                'butir' => [
+                    'Menu baru Pembebanan Anggaran: menetapkan sumber dana, akun pembiayaan, dan tim kerja tiap daftar nominatif — yang masih menunggu PPK, sudah ditandatangani, maupun sudah diterima — beserta pagu, realisasi, dan sisa tiap tim kerja.',
+                    'Tim kerja dan pagunya pada akun 524111, 524119, dan 525115 TA 2026 diisi menurut Daftar Anggaran Fix; pilihan tim kerja mengikuti akun dan sumber dana yang dipilih. List Daftar Nominatif ikut memuat pilihan tim kerja.',
+                    'Hak akses baru Menetapkan akun dan tim kerja daftar nominatif, bawaannya super administrator dan dapat diberikan ke peran lain.',
+                ],
+            ],
+            [
                 'versi' => '2.5.55',
                 'tanggal' => '3 November 2026',
                 'butir' => [

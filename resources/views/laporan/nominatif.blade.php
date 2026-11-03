@@ -137,6 +137,11 @@
                                 {{ $nominatif->akunPembiayaan->kode }}
                             </span>
                         @endif
+                        @if ($nominatif->timKerja)
+                            <span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700" data-tim-kerja>
+                                {{ $nominatif->timKerja->nama }}
+                            </span>
+                        @endif
                         @if (! $nominatif->kategoriPembiayaan && ! $nominatif->akunPembiayaan)
                             <span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                                 Pembebanan belum ditetapkan
@@ -148,38 +153,15 @@
                 <div class="flex flex-col sm:flex-row lg:items-end gap-3">
                     {{-- Pembebanan ditetapkan di sini, bukan saat daftar terbit:
                          sumber dana dan mata anggarannya baru pasti setelah tim
-                         keuangan menerima dan memeriksa daftarnya. --}}
+                         keuangan menerima dan memeriksa daftarnya. Sebelum itu
+                         pemegang haknya menetapkannya lewat menu Pembebanan Anggaran. --}}
                     @if ($nominatif->sudahDikirim())
-                    <form method="POST" action="{{ route('laporan.nominatif.akun', $nominatif) }}"
-                          class="flex flex-wrap items-end gap-2">
-                        @csrf @method('PUT')
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kategori Pembiayaan</label>
-                            <select name="id_kategori_pembiayaan"
-                                    class="px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                                <option value="">Belum ditetapkan</option>
-                                @foreach ($pilihanKategori as $kategori)
-                                    <option value="{{ $kategori->id }}" @selected($nominatif->id_kategori_pembiayaan === $kategori->id)>
-                                        {{ $kategori->label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Akun Pembiayaan</label>
-                            <select name="id_akun_pembiayaan"
-                                    class="px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
-                                <option value="">Belum ditetapkan</option>
-                                @foreach ($pilihanAkun as $id => $label)
-                                    <option value="{{ $id }}" @selected($nominatif->id_akun_pembiayaan === $id)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <button type="submit"
-                                class="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold rounded-xl transition">
-                            Simpan
-                        </button>
-                    </form>
+                        @include('laporan.partials.form-pembebanan', ['aksi' => route('laporan.nominatif.akun', $nominatif)])
+                    @elseif (auth()->user()->punyaKemampuan(\App\Enums\Kemampuan::MenetapkanAkunNominatif))
+                        <a href="{{ route('pembebanan-anggaran', ['cari' => $nominatif->no_tugas]) }}"
+                           class="text-xs font-semibold text-teal-600 hover:text-teal-700 self-end max-w-xs" data-ke-pembebanan>
+                            Tetapkan di menu Pembebanan Anggaran →
+                        </a>
                     @else
                         <p class="text-xs text-slate-400 self-end max-w-xs">
                             Pembebanan ditetapkan setelah daftar diterima dari PPK.

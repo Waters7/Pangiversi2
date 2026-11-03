@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DokumenCetak;
+use App\Enums\Kemampuan;
 use App\Models\AkunPembiayaan;
 use App\Models\DaftarNominatif as DaftarNominatifModel;
 use App\Models\DaftarRiil;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Models\Usulan;
 use App\Services\EkspresiTanggal;
 use App\Services\KertasCetak;
+use App\Services\PembebananNominatif;
 use App\Services\PengaturanDokumen;
 use App\Services\PenulisNominatifXlsx;
 use App\Services\PenyusunNominatif;
@@ -298,7 +300,7 @@ class LaporanController extends Controller
      * diterima — supaya tim keuangan melihat mana yang masih menunggu PPK,
      * beserta siapa saja pelaksana yang sudah menandatangani berkasnya.
      */
-    public function nominatif(Request $request, PenyusunNominatif $penyusun)
+    public function nominatif(Request $request, PenyusunNominatif $penyusun, PembebananNominatif $pembebanan)
     {
         $cari = $request->input('cari');
 
@@ -307,7 +309,7 @@ class LaporanController extends Controller
         // tanggal surat tugasnya supaya tetap berada di bulan yang wajar.
         $tanggal = fn (DaftarNominatifModel $item) => $item->dikirim_at ?? $item->tanggal_tugas ?? $item->created_at;
 
-        $semua = DaftarNominatifModel::with('ppk', 'kategoriPembiayaan', 'akunPembiayaan')
+        $semua = DaftarNominatifModel::with('ppk', 'kategoriPembiayaan', 'akunPembiayaan', 'timKerja')
             ->when($cari, fn ($q) => $q->where('no_tugas', 'like', "%{$cari}%"))
             ->get()
             ->sortByDesc($tanggal)
@@ -385,6 +387,7 @@ class LaporanController extends Controller
                 ->map($tanggal)->filter()->countBy(fn ($waktu) => $waktu->month),
             'pilihanAkun' => AkunPembiayaan::pilihan(),
             'pilihanKategori' => KategoriPembiayaan::pilihan(),
+            'alokasi' => $pembebanan->untukDaftar($tampil->filter(fn (DaftarNominatifModel $item) => $item->sudahDikirim())),
             'jumlahBelumBerakun' => $semua->whereNull('id_akun_pembiayaan')->count(),
         ]);
     }
@@ -421,15 +424,22 @@ class LaporanController extends Controller
      * Dua hal yang berbeda: kategori menyatakan sumber dananya (RM, BLU, LN),
      * akun menyatakan mata anggaran yang dibebani. Satu sumber dana dapat
      * membebani beberapa akun, jadi keduanya dipilih terpisah.
+     *
+     * Tim kerja yang pagunya dibebani ikut ditetapkan di sini.
+     *
+     * Ditetapkan setelah PPK mengirim daftarnya ke tim keuangan; pemegang
+     * hak menetapkan akun nominatif — bawaannya super administrator — boleh
+     * menetapkannya lebih awal lewat menu Pembebanan Anggaran.
      */
-    public function tetapkanAkun(Request $request, DaftarNominatifModel $nominatif): RedirectResponse
+    public function tetapkanAkun(Request $request, DaftarNominatifModel $nominatif, PembebananNominatif $pembebanan): RedirectResponse
     {
-        $validated = $request->validate([
-            'id_kategori_pembiayaan' => ['nullable', 'exists:kategori_pembiayaan,id'],
-            'id_akun_pembiayaan' => ['nullable', 'exists:akun_pembiayaan,id'],
-        ]);
+        abort_unless(
+            $nominatif->sudahDikirim() || $request->user()->punyaKemampuan(Kemampuan::MenetapkanAkunNominatif),
+            403,
+            'Pembebanan ditetapkan setelah daftar nominatif dikirim PPK ke tim keuangan.',
+        );
 
-        $nominatif->update($validated);
+        $pembebanan->tetapkan($request, $nominatif);
 
         return back()->with('success', "Pembebanan daftar nominatif {$nominatif->no_tugas} diperbarui.");
     }

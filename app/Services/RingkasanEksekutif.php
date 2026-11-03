@@ -6,6 +6,7 @@ use App\Enums\StatusUsulan;
 use App\Models\AkunPembiayaan;
 use App\Models\Keuangan;
 use App\Models\PaguAkun;
+use App\Models\PaguTimKerja;
 use App\Models\PesertaUsulan;
 use App\Models\TahunAnggaran;
 use App\Models\Usulan;
@@ -119,6 +120,84 @@ class RingkasanEksekutif
      *     belum_berakun: float
      * }
      */
+    /**
+     * Pagu dan realisasi tiap tim kerja pada akun yang berpagu tim kerja.
+     *
+     * Realisasinya dihitung seperti anggaranPerAkun(): total keuangan
+     * perjalanan dinas, dibebankan ke akun dan tim kerja pada daftar
+     * nominatif surat tugasnya. Realisasi berakun itu yang belum diberi tim
+     * kerja dikumpulkan tersendiri.
+     *
+     * @return Collection<int, array{
+     *     kode: string,
+     *     nama: string,
+     *     pagu: float,
+     *     realisasi: float,
+     *     belum_bertim: float,
+     *     tim: Collection<int, array{nama: string, kewadiran: ?string, sumber: ?string, pagu: float, realisasi: float, sisa: float, persen: ?float, melebihi: bool}>
+     * }>
+     */
+    public function anggaranPerTimKerja(int $tahun): Collection
+    {
+        $realisasi = Keuangan::query()
+            ->join('usulan', 'usulan.id', '=', 'keuangan.id_usulan')
+            ->join('daftar_nominatif', 'daftar_nominatif.no_tugas', '=', 'usulan.no_tugas')
+            ->whereIn('usulan.status', $this->statusBerlaku())
+            ->whereYear('usulan.tanggal_mulai', $tahun)
+            ->whereNotNull('daftar_nominatif.id_akun_pembiayaan')
+            ->groupBy('daftar_nominatif.id_akun_pembiayaan', 'daftar_nominatif.id_tim_kerja', 'daftar_nominatif.id_kategori_pembiayaan')
+            ->selectRaw('daftar_nominatif.id_akun_pembiayaan as id_akun, daftar_nominatif.id_tim_kerja as id_tim, daftar_nominatif.id_kategori_pembiayaan as id_sumber, SUM(keuangan.total) as jumlah')
+            ->get();
+
+        $paguAkun = PaguAkun::whereHas('tahunAnggaran', fn ($query) => $query->where('tahun', $tahun))
+            ->pluck('pagu', 'id_akun_pembiayaan');
+
+        return PaguTimKerja::with('akun', 'timKerja', 'sumberDana')
+            ->whereHas('tahunAnggaran', fn ($query) => $query->where('tahun', $tahun))
+            ->get()
+            ->groupBy('id_akun_pembiayaan')
+            ->map(function (Collection $alokasi, int $idAkun) use ($realisasi, $paguAkun): array {
+                $akun = $alokasi->first()->akun;
+                $realisasiAkun = $realisasi->where('id_akun', $idAkun);
+
+                $tim = $alokasi
+                    ->sortBy(fn (PaguTimKerja $baris) => [$baris->timKerja?->urutan ?? 0, $baris->timKerja?->nama, $baris->sumberDana?->kode])
+                    ->map(function (PaguTimKerja $baris) use ($realisasiAkun, $alokasi): array {
+                        // Daftar tanpa sumber dana dihitung ke alokasi tim itu
+                        // bila timnya hanya punya satu sumber dana pada akun ini.
+                        $satuSumber = $alokasi->where('id_tim_kerja', $baris->id_tim_kerja)->count() === 1;
+                        $nilaiRealisasi = (float) $realisasiAkun
+                            ->filter(fn ($r) => (int) $r->id_tim === $baris->id_tim_kerja
+                                && ((int) $r->id_sumber === (int) $baris->id_kategori_pembiayaan || ($satuSumber && $r->id_sumber === null)))
+                            ->sum('jumlah');
+                        $nilaiPagu = (float) $baris->pagu;
+
+                        return [
+                            'nama' => $baris->timKerja?->nama ?? '—',
+                            'kewadiran' => $baris->timKerja?->kewadiran,
+                            'sumber' => $baris->sumberDana?->kode,
+                            'pagu' => $nilaiPagu,
+                            'realisasi' => $nilaiRealisasi,
+                            'sisa' => $nilaiPagu - $nilaiRealisasi,
+                            'persen' => $nilaiPagu > 0 ? round($nilaiRealisasi / $nilaiPagu * 100, 2) : null,
+                            'melebihi' => $nilaiRealisasi > $nilaiPagu,
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'kode' => $akun?->kode ?? '—',
+                    'nama' => $akun?->nama ?? '—',
+                    'pagu' => (float) ($paguAkun[$idAkun] ?? $alokasi->sum('pagu')),
+                    'realisasi' => (float) $realisasiAkun->sum('jumlah'),
+                    'belum_bertim' => (float) $realisasiAkun->whereNull('id_tim')->sum('jumlah'),
+                    'tim' => $tim,
+                ];
+            })
+            ->sortBy('kode')
+            ->values();
+    }
+
     public function anggaranPerAkun(int $tahun): array
     {
         $realisasi = Keuangan::query()

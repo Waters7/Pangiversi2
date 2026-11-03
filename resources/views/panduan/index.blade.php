@@ -748,8 +748,12 @@
             <x-panduan-langkah nomor="7" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
                 Menu <strong>Laporan → List Daftar Nominatif</strong> memuat seluruh daftar yang
                 terbit — menunggu PPK, sudah ditandatangani, sudah diterima — beserta siapa saja
-                pelaksana yang sudah menandatangani berkasnya; kategori dan akun pembiayaan
-                ditetapkan setelah daftar diterima. Rincian yang sudah ditandatangani pelaksana
+                pelaksana yang sudah menandatangani berkasnya; kategori, akun pembiayaan, dan
+                <strong>tim kerja</strong> ditetapkan setelah daftar diterima — pilihan tim kerjanya mengikuti
+                pagu tim kerja pada akun itu. Menu <strong>Pembebanan Anggaran</strong> menetapkannya kapan saja,
+                juga sebelum PPK mengirim daftarnya, bagi super administrator dan peran yang diberi hak
+                <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; ringkasannya memuat pagu,
+                realisasi, dan sisa tiap tim kerja. Rincian yang sudah ditandatangani pelaksana
                 dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>.
             </x-panduan-langkah>
 
@@ -994,8 +998,8 @@
             <x-panduan-langkah nomor="4" judul="List Daftar Nominatif">
                 Seluruh daftar nominatif yang terbit — menunggu PPK, sudah ditandatangani, sudah
                 diterima tim keuangan — dengan saringan status dan keterangan siapa saja pelaksana
-                yang sudah menandatangani berkasnya. Di sini pula pembebanan kategori dan akun
-                anggarannya ditetapkan setelah daftar diterima.
+                yang sudah menandatangani berkasnya. Di sini pula pembebanan kategori, akun, dan tim
+                kerjanya ditetapkan setelah daftar diterima; sebelum itu lewat menu Pembebanan Anggaran.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Jadwal Perjalanan dan peta kota tujuan" :terakhir="true">

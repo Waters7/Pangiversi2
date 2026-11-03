@@ -36,6 +36,7 @@ use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PangkatGolonganController;
 use App\Http\Controllers\PemantauanServerController;
 use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\PembebananAnggaranController;
 use App\Http\Controllers\PengaturanDokumenController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PersetujuanController;
@@ -369,6 +370,13 @@ Route::middleware('auth')->group(function () {
     // Arsip daftar riil dan daftar nominatif. Terbuka juga bagi Tim SDM, yang
     // mengarsipkannya tanpa berhak membaca rekap anggaran. Didaftarkan lebih
     // dulu agar tidak tertangkap rute {usulan} di bawahnya.
+    // Pembebanan Anggaran: sumber dana, akun, dan tim kerja tiap daftar
+    // nominatif, kapan saja — tidak menunggu PPK mengirimnya.
+    Route::middleware('can:menetapkan-akun-nominatif')->prefix('pembebanan-anggaran')->group(function () {
+        Route::get('/', [PembebananAnggaranController::class, 'index'])->name('pembebanan-anggaran');
+        Route::put('/{nominatif}', [PembebananAnggaranController::class, 'update'])->name('pembebanan-anggaran.update');
+    });
+
     Route::middleware('can:melihat-arsip-perjadin')->prefix('laporan')->group(function () {
         Route::get('/daftar-riil', [LaporanController::class, 'daftarRiil'])->name('laporan.daftar-riil');
 

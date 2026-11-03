@@ -24,6 +24,7 @@ class DaftarNominatif extends Model
         'tanggal_tugas',
         'id_kategori_pembiayaan',
         'id_akun_pembiayaan',
+        'id_tim_kerja',
         'id_ppk',
         'ditandatangani_at',
         'dikirim_at',
@@ -52,6 +53,29 @@ class DaftarNominatif extends Model
     public function akunPembiayaan(): BelongsTo
     {
         return $this->belongsTo(AkunPembiayaan::class, 'id_akun_pembiayaan');
+    }
+
+    /** Tim kerja yang pagunya dibebani daftar ini, pada akun yang ditetapkan. */
+    public function timKerja(): BelongsTo
+    {
+        return $this->belongsTo(TimKerja::class, 'id_tim_kerja');
+    }
+
+    /** Tahun yang membiayai daftar ini: tahun surat tugasnya, atau tahun daftar itu terbit. */
+    public function tahunPembebanan(): ?int
+    {
+        return ($this->tanggal_tugas ?? $this->dikirim_at ?? $this->created_at)?->year;
+    }
+
+    /**
+     * Tahun anggaran yang membiayai daftar ini, atau tahun anggaran aktif
+     * bila tahunnya belum tercatat sebagai tahun anggaran.
+     */
+    public function tahunAnggaran(): ?TahunAnggaran
+    {
+        $tahun = $this->tahunPembebanan();
+
+        return ($tahun ? TahunAnggaran::firstWhere('tahun', $tahun) : null) ?? TahunAnggaran::aktif();
     }
 
     public function sudahDitandatangani(): bool

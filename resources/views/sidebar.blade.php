@@ -614,6 +614,17 @@
       </div>
       @endcan
 
+      {{-- Pembebanan Anggaran: sumber dana, akun, dan tim kerja tiap daftar nominatif. --}}
+      @can('menetapkan-akun-nominatif')
+      <a href="{{ route('pembebanan-anggaran') }}"
+         class="nav-item {{ request()->routeIs('pembebanan-anggaran', 'pembebanan-anggaran.*') ? 'nav-active text-white' : 'text-slate-400' }} flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/>
+        </svg>
+        Pembebanan Anggaran
+      </a>
+      @endcan
+
       @can('melihat-laporan')
       <div class="border-t border-white/10 my-3"></div>
       <p class="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 pb-2">Administrasi</p>
