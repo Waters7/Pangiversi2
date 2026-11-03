@@ -478,7 +478,7 @@ class LaporanPerjadinController extends Controller
             'nomor_acuan' => ['nullable', 'string', 'max:30', 'required_without:pilih_acuan'],
             'pilih_acuan' => ['nullable', 'string', 'max:30'],
         ], [
-            'nomor_acuan.required_without' => 'Tuliskan nomor laporan yang hendak dipakai.',
+            'nomor_acuan.required_without' => 'Pilih laporan rekan yang hendak dipakai.',
         ]);
 
         $laporan = $this->laporan($usulan);

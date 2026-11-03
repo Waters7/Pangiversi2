@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.55',
+                'tanggal' => '3 November 2026',
+                'butir' => [
+                    'Kotak Pakai laporan rekan setugas kini berada di atas judul laporan, berisi daftar tarik-turun laporan rekan yang dapat dipakai; bila belum ada, kotaknya menyebutkannya.',
+                ],
+            ],
+            [
                 'versi' => '2.5.54',
                 'tanggal' => '2 November 2026',
                 'butir' => [

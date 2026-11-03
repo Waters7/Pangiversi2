@@ -507,8 +507,8 @@
                 format lamanya. Tiap laporan bernomor sendiri, misalnya <strong>LPD-2026-0012</strong>. Bila Anda
                 bertugas bersama rekan dengan <strong>nomor surat tugas</strong>, <strong>waktu pelaksanaan</strong>
                 (tanggal berangkat dan kembali), dan <strong>lokasi tugas</strong> yang sama,
-                pakai laporannya lewat kotak <strong>Pakai laporan rekan setugas</strong>: tulis nomornya atau pilih dari
-                daftar, lalu judul, bagian A–E, status hasil, tindak lanjut, dan fotonya disalin ke laporan Anda — masih
+                pakai laporannya lewat kotak <strong>Pakai laporan rekan setugas</strong> di atas judul laporan: pilih
+                laporannya dari daftar tarik-turun — hanya laporan yang memenuhi syarat yang tampil — lalu judul, bagian A–E, status hasil, tindak lanjut, dan fotonya disalin ke laporan Anda — masih
                 dapat disesuaikan, dan tetap Anda kirim serta tandatangani sendiri. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
                 laporan boleh dicicil. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
                 Bila Anda sudah menyusun laporan lengkap — misalnya berfoto — unggah pada kolom

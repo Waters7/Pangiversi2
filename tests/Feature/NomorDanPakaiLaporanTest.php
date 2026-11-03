@@ -134,9 +134,11 @@ class NomorDanPakaiLaporanTest extends TestCase
         $fotoLama = UploadedFile::fake()->image('lama.jpg')->store('dokumen/laporan-dokumentasi', 'public');
         $milikSendiri->dokumentasi()->create(['bagian' => BagianLaporan::Hasil->value, 'berkas' => $fotoLama]);
 
+        // Pilihan laporan rekan berupa daftar tarik-turun di atas judul laporan.
         $this->actingAs($this->pelaksana)
             ->get(route('dokumen.laporan.edit', $this->usulan))
-            ->assertSee('data-calon-acuan="'.$acuan->nomor_laporan.'"', false);
+            ->assertSeeInOrder(['Pakai laporan rekan setugas', '<select name="pilih_acuan"', 'data-calon-acuan="'.$acuan->nomor_laporan.'"', 'LAPORAN PERJALANAN DINAS'], false)
+            ->assertDontSee('data-tanpa-acuan', false);
 
         $this->pakai(['nomor_acuan' => ' lpd-2026-0001 '])
             ->assertSessionHasNoErrors()
@@ -184,7 +186,8 @@ class NomorDanPakaiLaporanTest extends TestCase
 
         $this->actingAs($this->pelaksana)
             ->get(route('dokumen.laporan.edit', $this->usulan))
-            ->assertDontSee('data-calon-acuan', false);
+            ->assertDontSee('data-calon-acuan', false)
+            ->assertSee('data-tanpa-acuan', false);
 
         $this->assertNull(LaporanPerjadin::untukUsulan($this->usulan)->tentang);
 
