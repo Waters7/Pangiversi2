@@ -14,6 +14,7 @@ use App\Models\TahunAnggaran;
 use App\Models\TimKerja;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\PenyusunNominatif;
 use App\Services\RingkasanEksekutif;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -177,6 +178,113 @@ class PembebananAnggaranTest extends TestCase
         // Sumber dana terisi dari satu-satunya pagu tim itu pada akun ini.
         $this->assertSame($this->rm, $nominatif->id_kategori_pembiayaan);
         $this->assertDatabaseHas(AuditLog::class, ['aksi' => AuditLog::AKSI_BIAYA, 'objek' => 'pembebanan-nominatif']);
+    }
+
+    /** @param  array<string, mixed>  $atribut */
+    private function usulan(string $noTugas, StatusUsulan $status, array $atribut = []): Usulan
+    {
+        return Usulan::factory()->create($atribut + [
+            'id_user' => User::factory()->create()->id,
+            'no_tugas' => $noTugas,
+            'status' => $status->value,
+            'tanggal_mulai' => '2026-10-05',
+            'tanggal_selesai' => '2026-10-07',
+        ]);
+    }
+
+    private function bukaMenunggu(): TestResponse
+    {
+        return $this->actingAs($this->admin)->get(route('pembebanan-anggaran', ['tahap' => 'menunggu']))->assertOk();
+    }
+
+    private function rencana(string $noTugas): DaftarNominatif
+    {
+        return DaftarNominatif::termasukRencana()->where('no_tugas', $noTugas)->sole();
+    }
+
+    public function test_surat_tugas_pada_usulan_tampil_sebelum_nominatif_terbit(): void
+    {
+        $pelaksana = User::factory()->create(['nama' => 'Maya Sari']);
+
+        foreach ([StatusUsulan::MenungguPpk, StatusUsulan::PerluRevisi, StatusUsulan::Disetujui, StatusUsulan::Selesai] as $urutan => $status) {
+            $this->usulan("ST/BARU/{$urutan}", $status, ['id_user' => $pelaksana->id, 'uraian' => 'Rapat Koordinasi Nasional']);
+        }
+
+        $this->usulan('ST/DRAF/2026', StatusUsulan::Draft);
+        $this->usulan('ST/DITOLAK/2026', StatusUsulan::Ditolak);
+
+        $this->bukaMenunggu()
+            ->assertSee(['ST/BARU/0', 'ST/BARU/1', 'ST/BARU/2', 'ST/BARU/3', 'Maya Sari', 'Rapat Koordinasi Nasional', 'Nominatif Belum Terbit'])
+            ->assertDontSee(['ST/DRAF/2026', 'ST/DITOLAK/2026'])
+            ->assertSee(route('pembebanan-anggaran.update', $this->rencana('ST/BARU/0')), false);
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran', ['tahap' => 'diterima']))
+            ->assertDontSee('ST/BARU/0');
+    }
+
+    public function test_pembiayaan_ditetapkan_lebih_dulu_dan_terbawa_saat_nominatif_terbit(): void
+    {
+        $ppk = User::factory()->ppk()->create();
+        $usulan = $this->usulan('ST/AWAL/2026', StatusUsulan::Disetujui);
+        Keuangan::factory()->belumBayar()->create(['id_usulan' => $usulan->id]);
+
+        $this->bukaMenunggu();
+        $rencana = $this->rencana('ST/AWAL/2026');
+
+        $this->tetapkan($rencana, ['id_akun_pembiayaan' => $this->akunBiasa->id, 'id_tim_kerja' => $this->penjaminanMutu->id])
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue($this->rencana('ST/AWAL/2026')->rencana);
+        $this->assertNull(DaftarNominatif::firstWhere('no_tugas', 'ST/AWAL/2026'));
+
+        $this->tandatanganiBerkas($usulan, $ppk);
+
+        $daftar = app(PenyusunNominatif::class)->terbitkanBilaSiap($usulan->fresh());
+
+        $this->assertSame($rencana->id, $daftar->id);
+        $this->assertFalse($daftar->fresh()->rencana);
+        $this->assertSame($this->akunBiasa->id, $daftar->fresh()->id_akun_pembiayaan);
+        $this->assertSame($this->penjaminanMutu->id, $daftar->fresh()->id_tim_kerja);
+        $this->assertSame($this->rm, $daftar->fresh()->id_kategori_pembiayaan);
+        $this->assertNull(app(PenyusunNominatif::class)->terbitkanBilaSiap($usulan->fresh()));
+    }
+
+    public function test_tim_kerja_rencana_tetap_harus_berpagu_pada_akunnya(): void
+    {
+        $this->usulan('ST/SALAH/2026', StatusUsulan::Disetujui);
+        $this->bukaMenunggu();
+
+        $this->tetapkan($this->rencana('ST/SALAH/2026'), ['id_akun_pembiayaan' => $this->akunBiasa->id, 'id_tim_kerja' => $this->kemahasiswaan->id])
+            ->assertSessionHasErrors('id_tim_kerja');
+    }
+
+    /** Selama belum terbit, tidak ada daftar yang dapat ditandatangani atau dibaca pihak lain. */
+    public function test_rencana_tidak_terlihat_sebagai_daftar_nominatif(): void
+    {
+        $ppk = User::factory()->ppk()->create();
+        $this->usulan('ST/RENCANA/2026', StatusUsulan::Disetujui);
+        $this->bukaMenunggu();
+        $rencana = $this->rencana('ST/RENCANA/2026');
+
+        $this->actingAs($ppk)->get(route('persetujuan.nominatif'))->assertOk()->assertDontSee('ST/RENCANA/2026');
+        $this->actingAs($ppk)->get(route('persetujuan.nominatif.detail', $rencana->id))->assertNotFound();
+        $this->actingAs($ppk)->put(route('persetujuan.nominatif.tanda-tangan', $rencana->id))->assertNotFound();
+        $this->actingAs($this->admin)->get(route('laporan.nominatif'))->assertOk()->assertDontSee('ST/RENCANA/2026');
+        $this->actingAs($this->admin)->get(route('laporan.nominatif.cetak', $rencana->id))->assertNotFound();
+
+        $this->assertSame(0, DaftarNominatif::count());
+    }
+
+    public function test_rencana_dilepas_bila_usulannya_ditolak(): void
+    {
+        $usulan = $this->usulan('ST/LEPAS/2026', StatusUsulan::MenungguPpk);
+        $this->bukaMenunggu()->assertSee('ST/LEPAS/2026');
+
+        $usulan->update(['status' => StatusUsulan::Ditolak->value]);
+
+        $this->bukaMenunggu()->assertDontSee('ST/LEPAS/2026');
+        $this->assertSame(0, DaftarNominatif::termasukRencana()->where('no_tugas', 'ST/LEPAS/2026')->count());
     }
 
     /** Formulirnya hanya menyebut nama tim. */

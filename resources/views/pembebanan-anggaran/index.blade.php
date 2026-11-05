@@ -31,8 +31,8 @@
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-800">Pembebanan Anggaran</h1>
         <p class="text-xs text-slate-400 mt-0.5">
-            Tetapkan sumber dana, akun pembiayaan, dan tim kerja tiap daftar nominatif — yang masih menunggu
-            tanda tangan PPK, yang sudah ditandatangani, maupun yang sudah diterima tim keuangan.
+            Tetapkan sumber dana, akun pembiayaan, dan tim kerja tiap surat tugas — yang daftar nominatifnya
+            belum terbit, masih menunggu tanda tangan PPK, sudah ditandatangani, maupun sudah diterima tim keuangan.
             {{ $jumlahBelumLengkap }} daftar belum lengkap pembebanannya.
         </p>
     </div>
@@ -170,8 +170,12 @@
                         </p>
                     @endif
                     <p class="text-xs text-slate-400 mt-0.5">
-                        {{ $barisDaftar->count() }} pelaksana ·
-                        {{ $rupiah($barisDaftar->sum('jumlah')) }}
+                        @if ($nominatif->rencana)
+                            Pembiayaan yang ditetapkan di sini terbawa saat daftar nominatifnya terbit
+                        @else
+                            {{ $barisDaftar->count() }} pelaksana ·
+                            {{ $rupiah($barisDaftar->sum('jumlah')) }}
+                        @endif
                         @if ($nominatif->tanggal_tugas)
                             · surat tugas {{ $nominatif->tanggal_tugas->translatedFormat('d F Y') }}
                         @endif

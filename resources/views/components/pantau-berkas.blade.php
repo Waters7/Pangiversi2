@@ -11,7 +11,6 @@
     $gaya = fn (string $keadaan): array => match ($keadaan) {
         PemantauBerkas::SELESAI => ['bg-emerald-100 text-emerald-700', 'text-slate-700'],
         PemantauBerkas::PERHATIAN => ['bg-red-100 text-red-700', 'text-red-700'],
-        PemantauBerkas::TIDAK_PERLU => ['bg-slate-100 text-slate-400', 'text-slate-400'],
         default => ['bg-slate-100 text-slate-400', 'text-slate-500'],
     };
 
@@ -20,8 +19,7 @@
         ['judul' => 'Status Pembayaran', 'butir' => $pantau['pembayaran']],
     ];
 
-    $selesai = collect($pantau['tanda_tangan'])->merge($pantau['pembayaran'])
-        ->reject(fn (array $b) => $b['keadaan'] === PemantauBerkas::TIDAK_PERLU);
+    $selesai = collect($pantau['tanda_tangan'])->merge($pantau['pembayaran']);
     $jumlahSelesai = $selesai->where('keadaan', PemantauBerkas::SELESAI)->count();
 @endphp
 
@@ -46,8 +44,6 @@
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                                 @elseif ($butir['keadaan'] === PemantauBerkas::PERHATIAN)
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01"/></svg>
-                                @elseif ($butir['keadaan'] === PemantauBerkas::TIDAK_PERLU)
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
                                 @else
                                     <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                                 @endif

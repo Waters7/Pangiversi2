@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\StatusUsulan;
 use App\Models\AkunPembiayaan;
 use App\Models\DaftarNominatif;
+use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\TimKerja;
 use App\Models\User;
@@ -52,7 +53,7 @@ class EksporArsipLaporanTest extends TestCase
 
         $usulan = $this->lengkapiPertanggungjawaban($usulan);
         app(SinkronBiayaDokumen::class)->selaraskan($usulan);
-        $this->tandatanganiBerkas($usulan->fresh(), $this->ppk);
+        $this->tandatanganiBerkas($usulan->fresh(), $this->ppk)->update(['total_riil' => 150_000]);
 
         return $usulan->fresh();
     }
@@ -96,6 +97,23 @@ class EksporArsipLaporanTest extends TestCase
 
         $this->assertStringContainsString($usulan->no_usulan, $agustus);
         $this->assertStringNotContainsString($lain->no_usulan, $agustus);
+    }
+
+    public function test_arsip_daftar_riil_tidak_memuat_perjalanan_tanpa_transport_lokal(): void
+    {
+        $tanpaTransport = $this->perjalanan('Maya Sari');
+        DaftarRiil::where('id_usulan', $tanpaTransport->id)->update(['total_riil' => 0]);
+        $bertransport = $this->perjalanan('Rina Kartika', 'KP.03.01/F.XXXVIII/56/2026');
+
+        $this->actingAs($this->timKeuangan)
+            ->get(route('laporan.daftar-riil', ['cari' => 'Maya']))
+            ->assertOk()
+            ->assertDontSee($tanpaTransport->no_usulan);
+
+        $isi = $this->isiSheet($this->unduh('laporan.daftar-riil.ekspor'));
+
+        $this->assertStringContainsString($bertransport->no_usulan, $isi);
+        $this->assertStringNotContainsString($tanpaTransport->no_usulan, $isi);
     }
 
     public function test_arsip_rincian_lengkap_memuat_berkas_yang_lengkap_saja(): void

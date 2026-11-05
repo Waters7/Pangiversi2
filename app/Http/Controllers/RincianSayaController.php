@@ -143,6 +143,9 @@ class RincianSayaController extends Controller
                 ->orWhereNotNull('divalidasi_at')
                 ->orWhereHas('usulan.keuangan.rincianBiaya', fn ($r) => $r->whereNotNull('divalidasi_at')))
             ->whereHas('peserta', fn ($q) => $q->where('id_user', $request->user()->id))
+            // Perjalanan tanpa transport lokal tidak punya daftar riil; barisnya
+            // hanya tempat menumpang tanda tangan rincian biaya.
+            ->when($jenis === JalurPersetujuan::RIIL, fn ($q) => $q->where('total_riil', '>', 0))
             ->when($cari, fn ($q) => $q->whereHas(
                 'usulan',
                 fn ($u) => $u->where('no_usulan', 'like', "%{$cari}%")

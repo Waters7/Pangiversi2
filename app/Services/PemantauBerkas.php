@@ -29,8 +29,6 @@ class PemantauBerkas
 
     public const PERHATIAN = 'perhatian';
 
-    public const TIDAK_PERLU = 'tidak-perlu';
-
     /**
      * Daftar nominatif yang sudah dimuat, bertaut nomor surat tugasnya.
      *
@@ -112,7 +110,7 @@ class PemantauBerkas
                     $this->butirJalur('Daftar riil · tanda tangan Anda', $riil, 'pelaksana'),
                     $this->butirJalur('Daftar riil · tanda tangan PPK', $riil, 'ppk'),
                 ]
-                : [$this->butir('Daftar riil transport lokal', self::TIDAK_PERLU, null, null, 'Tidak ada transport lokal — tidak perlu ditandatangani')]),
+                : []),
             $this->butirLaporan($usulan),
             ...$this->butirNominatif($usulan),
         ];
@@ -208,7 +206,7 @@ class PemantauBerkas
         return [
             $this->butirUangMuka($keuangan),
             $this->butirPelunasan($usulan, $keuangan),
-            $this->butirTransport($berkas, $keuangan),
+            ...($berkas->berlaku() ? [$this->butirTransport($berkas, $keuangan)] : []),
         ];
     }
 
@@ -259,10 +257,6 @@ class PemantauBerkas
     private function butirTransport(DaftarRiil $berkas, ?Keuangan $keuangan): array
     {
         $label = 'Transport lokal';
-
-        if (! $berkas->berlaku()) {
-            return $this->butir($label, self::TIDAK_PERLU, null, null, 'Tidak ada transport lokal');
-        }
 
         if ($berkas->sudahDibayar()) {
             return $this->butir($label, self::SELESAI, $berkas->dibayar_at,

@@ -46,8 +46,10 @@ class PembebananAnggaranController extends Controller
         PembebananNominatif $pembebanan,
         RingkasanEksekutif $ringkasan,
     ): View {
-        // Daftar yang sudah siap terbit ikut tampil walau PPK belum membuka antreannya.
+        // Daftar yang sudah siap terbit ikut tampil walau PPK belum membuka antreannya,
+        // dan surat tugas lainnya dapat dibebani sebelum daftarnya terbit.
         $penyusun->terbitkanYangSiap();
+        $pembebanan->siapkanRencana();
 
         $tahap = array_key_exists((string) $request->input('tahap'), self::TAHAP) ? $request->input('tahap') : null;
         $saringPembebanan = array_key_exists((string) $request->input('pembebanan'), self::PEMBEBANAN) ? $request->input('pembebanan') : null;
@@ -55,7 +57,7 @@ class PembebananAnggaranController extends Controller
 
         // Dicari menurut nomor surat tugas, atau nama pelaksana dan kegiatan
         // pada usulan di bawah surat tugas itu.
-        $dasar = fn () => DaftarNominatif::query()
+        $dasar = fn () => DaftarNominatif::termasukRencana()
             ->when($cari !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
                 ->where('no_tugas', 'like', "%{$cari}%")
                 ->orWhereIn('no_tugas', Usulan::query()
@@ -78,12 +80,12 @@ class PembebananAnggaranController extends Controller
 
         $tahunAnggaran = TahunAnggaran::find($request->input('ta')) ?? TahunAnggaran::aktif();
 
-        // Pelaksana dan kegiatan diambil dari seluruh usulan yang disetujui
+        // Pelaksana dan kegiatan diambil dari seluruh usulan yang sudah diajukan
         // di bawah surat tugasnya — termasuk yang berkasnya belum tuntas dan
         // karena itu belum tercantum pada daftarnya.
         $usulan = Usulan::with('user', 'spd')
             ->whereIn('no_tugas', $daftar->getCollection()->pluck('no_tugas'))
-            ->whereIn('status', [StatusUsulan::Disetujui->value, StatusUsulan::Selesai->value])
+            ->whereNotIn('status', [StatusUsulan::Draft->value, StatusUsulan::Ditolak->value])
             ->orderBy('id')
             ->get()
             ->groupBy('no_tugas');
@@ -104,12 +106,14 @@ class PembebananAnggaranController extends Controller
             'tahunAnggaran' => $tahunAnggaran,
             'pilihanTahun' => TahunAnggaran::orderByDesc('tahun')->get(),
             'anggaranTim' => $tahunAnggaran ? $ringkasan->anggaranPerTimKerja($tahunAnggaran->tahun) : collect(),
-            'jumlahBelumLengkap' => $this->belumLengkap(DaftarNominatif::query())->count(),
+            'jumlahBelumLengkap' => $this->belumLengkap(DaftarNominatif::termasukRencana())->count(),
         ]);
     }
 
-    public function update(Request $request, DaftarNominatif $nominatif, PembebananNominatif $pembebanan): RedirectResponse
+    public function update(Request $request, string $id, PembebananNominatif $pembebanan): RedirectResponse
     {
+        $nominatif = DaftarNominatif::termasukRencana()->findOrFail($id);
+
         $pembebanan->tetapkan($request, $nominatif);
         $nominatif->load('kategoriPembiayaan', 'akunPembiayaan', 'timKerja');
 

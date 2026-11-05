@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\TautanVerifikasi;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -14,6 +15,11 @@ use Illuminate\Support\Str;
  * yang menurunkannya dari usulan berikut rincian biayanya. Yang disimpan
  * hanya keputusan atas daftar itu — tanda tangan PPK dan pengiriman ke
  * Tim SDM.
+ *
+ * Surat tugas yang daftarnya belum terbit dapat dibebani lebih dulu lewat
+ * menu Pembebanan Anggaran. Barisnya bertanda rencana dan tersembunyi dari
+ * seluruh kueri lain, sebab belum ada daftar yang dapat ditandatangani;
+ * begitu terbit, baris yang sama dipakai sehingga pembebanannya terbawa.
  */
 class DaftarNominatif extends Model
 {
@@ -21,6 +27,7 @@ class DaftarNominatif extends Model
 
     protected $fillable = [
         'no_tugas',
+        'rencana',
         'tanggal_tugas',
         'id_kategori_pembiayaan',
         'id_akun_pembiayaan',
@@ -34,10 +41,24 @@ class DaftarNominatif extends Model
     protected function casts(): array
     {
         return [
+            'rencana' => 'boolean',
             'tanggal_tugas' => 'date',
             'ditandatangani_at' => 'datetime',
             'dikirim_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('terbit', fn (Builder $query) => $query->where('rencana', false));
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     */
+    public function scopeTermasukRencana(Builder $query): void
+    {
+        $query->withoutGlobalScope('terbit');
     }
 
     public function ppk(): BelongsTo
@@ -134,6 +155,7 @@ class DaftarNominatif extends Model
     public function getStatusLabelAttribute(): string
     {
         return match (true) {
+            (bool) $this->rencana => 'Nominatif Belum Terbit',
             $this->sudahDikirim() => 'Terkirim ke Tim Keuangan',
             $this->sudahDitandatangani() => 'Ditandatangani PPK',
             default => 'Menunggu Tanda Tangan PPK',
@@ -143,6 +165,7 @@ class DaftarNominatif extends Model
     public function getStatusBadgeAttribute(): string
     {
         return match (true) {
+            (bool) $this->rencana => 'bg-slate-100 text-slate-600',
             $this->sudahDikirim() => 'bg-emerald-100 text-emerald-700',
             $this->sudahDitandatangani() => 'bg-teal-100 text-teal-700',
             default => 'bg-amber-100 text-amber-700',

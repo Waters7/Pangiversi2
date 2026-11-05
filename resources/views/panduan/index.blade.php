@@ -593,7 +593,8 @@
                     </div>
                     <p class="p-4 text-xs text-slate-600 leading-relaxed">
                         Khusus <strong>transport lokal</strong> perjalanan luar kota lintas pulau — biaya nyata
-                        yang tidak seluruhnya didukung bukti dan dinyatakan sendiri oleh pelaksana.
+                        yang tidak seluruhnya didukung bukti dan dinyatakan sendiri oleh pelaksana. Perjalanan
+                        tanpa transport lokal tidak tercantum di sini.
                     </p>
                 </div>
             </div>
@@ -760,7 +761,9 @@
                 beserta siapa saja pelaksana yang sudah menandatangani berkasnya; kategori, akun
                 pembiayaan, dan <strong>tim kerja</strong> ditetapkan setelah daftar diterima — pilihan tim kerjanya
                 mengikuti pagu tim kerja pada akun itu. Menu <strong>Pembebanan Anggaran</strong> menetapkannya kapan
-                saja, juga sebelum PPK menandatanganinya, bagi super administrator dan peran yang diberi hak
+                saja, juga sebelum PPK menandatanganinya, bahkan sebelum daftarnya terbit: tab <strong>Menunggu
+                Tanda Tangan PPK</strong> memuat seluruh surat tugas yang sudah ada usulannya, dan pembiayaannya
+                terbawa saat daftarnya terbit. Menu ini bagi super administrator dan peran yang diberi hak
                 <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; tiap daftarnya menyebut kegiatan dan nama
                 pelaksananya, dapat dicari menurut nomor surat tugas, nama pelaksana, atau kegiatan, dan
                 ringkasannya menyebut tim kerja dan sumber dana tiap akun. Rincian yang sudah ditandatangani pelaksana

@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
 use App\Models\PaguTimKerja;
 use App\Models\TahunAnggaran;
+use App\Models\Usulan;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -65,6 +67,38 @@ class PembebananNominatif
         ]);
 
         return ['tahun' => $tahun->all(), 'pilihan' => $pilihan->all()];
+    }
+
+    /**
+     * Siapkan baris rencana bagi tiap surat tugas pada usulan yang sudah
+     * diajukan tetapi daftar nominatifnya belum terbit, supaya pembiayaannya
+     * dapat ditetapkan lebih dulu. Rencana yang usulannya sudah tidak ada,
+     * misalnya ditolak, dilepas.
+     */
+    public function siapkanRencana(): void
+    {
+        $suratTugas = Usulan::with('spd')
+            ->whereNotNull('no_tugas')
+            ->where('no_tugas', '!=', '')
+            ->whereNotIn('status', [StatusUsulan::Draft->value, StatusUsulan::Ditolak->value])
+            ->orderBy('id')
+            ->get()
+            ->groupBy('no_tugas');
+
+        DaftarNominatif::termasukRencana()
+            ->where('rencana', true)
+            ->whereNotIn('no_tugas', $suratTugas->keys())
+            ->delete();
+
+        $ada = DaftarNominatif::termasukRencana()->pluck('no_tugas')->flip();
+
+        $suratTugas
+            ->reject(fn (Collection $usulan, string $noTugas) => $ada->has($noTugas))
+            ->each(fn (Collection $usulan, string $noTugas) => DaftarNominatif::create([
+                'no_tugas' => $noTugas,
+                'rencana' => true,
+                'tanggal_tugas' => $usulan->first()->spd?->tanggal_surat ?? $usulan->first()->tanggal_mulai,
+            ]));
     }
 
     /**

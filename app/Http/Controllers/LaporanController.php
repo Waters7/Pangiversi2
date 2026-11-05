@@ -287,11 +287,12 @@ class LaporanController extends Controller
         $bulan = $request->input('bulan');
 
         $semua = DaftarRiil::with('usulan.user', 'peserta', 'ppk')
-            ->when($cari, fn ($q) => $q->whereHas(
+            ->where('total_riil', '>', 0)
+            ->when($cari, fn ($q) => $q->where(fn ($w) => $w->whereHas(
                 'usulan',
                 fn ($u) => $u->where('no_usulan', 'like', "%{$cari}%")
                     ->orWhere('no_tugas', 'like', "%{$cari}%")
-            )->orWhereHas('peserta', fn ($p) => $p->where('nama', 'like', "%{$cari}%")))
+            )->orWhereHas('peserta', fn ($p) => $p->where('nama', 'like', "%{$cari}%"))))
             ->get()
             ->map(fn (DaftarRiil $item) => [
                 'berkas' => $item,

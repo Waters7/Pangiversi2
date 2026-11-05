@@ -137,6 +137,14 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.62',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Perjalanan tanpa transport lokal tidak lagi tercantum pada Daftar Riil Saya dan Arsip Daftar Riil, dan panel Pemantauan Berkas tidak menyebut daftar riilnya.',
+                    'Pembebanan Anggaran kini memuat seluruh surat tugas yang sudah ada usulannya beserta pelaksana dan kegiatannya, walau daftar nominatifnya belum terbit. Pembiayaannya dapat ditetapkan lebih dulu dan terbawa saat daftarnya terbit.',
+                ],
+            ],
+            [
                 'versi' => '2.5.61',
                 'tanggal' => '5 November 2026',
                 'butir' => [

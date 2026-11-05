@@ -481,8 +481,8 @@ class RincianSayaTest extends TestCase
         $this->assertSame('Menunggu konfirmasi laporan oleh Direktur', $this->butirPantau($halaman, 'pembayaran')['Pelunasan']['keterangan']);
     }
 
-    /** Perjalanan tanpa transport lokal: daftar riilnya tidak ditagih tanda tangan maupun pembayaran. */
-    public function test_panel_pemantauan_menandai_transport_lokal_yang_tidak_ada(): void
+    /** Perjalanan tanpa transport lokal tidak punya daftar riil, jadi panelnya tidak menyebutnya. */
+    public function test_panel_pemantauan_tanpa_transport_lokal_tidak_menyebut_daftar_riil(): void
     {
         $this->berkasSampaiKePelaksana();
         $this->daftar()->update(['total_riil' => 0]);
@@ -490,10 +490,29 @@ class RincianSayaTest extends TestCase
         $halaman = $this->actingAs($this->pelaksana)
             ->get(route('rincian-saya.rincian-biaya'))
             ->assertOk()
-            ->assertSee('Tidak ada transport lokal');
+            ->assertDontSee('Tidak ada transport lokal')
+            ->assertDontSee('Daftar riil');
 
-        $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'tanda_tangan')['Daftar riil transport lokal']['keadaan']);
-        $this->assertSame(PemantauBerkas::TIDAK_PERLU, $this->butirPantau($halaman, 'pembayaran')['Transport lokal']['keadaan']);
+        $this->assertArrayNotHasKey('Transport lokal', $this->butirPantau($halaman, 'pembayaran'));
+    }
+
+    public function test_daftar_riil_saya_hanya_memuat_perjalanan_bertransport_lokal(): void
+    {
+        $this->berkasSampaiKePelaksana();
+
+        $jumlahBerkas = fn (string $rute) => $this->actingAs($this->pelaksana)
+            ->get(route($rute))
+            ->assertOk()
+            ->viewData('daftar')
+            ->flatten(1)
+            ->count();
+
+        $this->assertSame(1, $jumlahBerkas('rincian-saya.daftar-riil'));
+
+        $this->daftar()->update(['total_riil' => 0]);
+
+        $this->assertSame(0, $jumlahBerkas('rincian-saya.daftar-riil'));
+        $this->assertSame(1, $jumlahBerkas('rincian-saya.rincian-biaya'));
     }
 
     /**

@@ -416,10 +416,7 @@ class PenyusunNominatif
         // Usulannya sudah dimuat saat menilai kelayakan, jadi tanggal surat
         // tugasnya dibaca dari situ — tidak perlu ditarik ulang per nomor.
         return $this->kelompokSiap()
-            ->map(fn (Collection $usulan, string $no) => DaftarNominatif::firstOrCreate(
-                ['no_tugas' => $no],
-                ['tanggal_tugas' => $usulan->first()?->spd?->tanggal_surat],
-            ))
+            ->map(fn (Collection $usulan, string $no) => $this->terbitkanDaftar($no, $usulan->first()?->spd?->tanggal_surat))
             ->values();
     }
 
@@ -437,16 +434,26 @@ class PenyusunNominatif
 
         $daftar = $this->terbitkan($usulan->no_tugas);
 
-        return $daftar->wasRecentlyCreated ? $daftar : null;
+        return $daftar->wasRecentlyCreated || $daftar->wasChanged('rencana') ? $daftar : null;
     }
 
     public function terbitkan(string $noTugas): DaftarNominatif
     {
-        $tanggal = $this->usulanSuratTugas($noTugas)->first()?->spd?->tanggal_surat;
+        return $this->terbitkanDaftar($noTugas, $this->usulanSuratTugas($noTugas)->first()?->spd?->tanggal_surat);
+    }
 
-        return DaftarNominatif::firstOrCreate(
-            ['no_tugas' => $noTugas],
-            ['tanggal_tugas' => $tanggal],
-        );
+    /**
+     * Surat tugas yang sudah dibebani lebih dulu memakai baris rencananya,
+     * sehingga akun dan tim kerjanya terbawa.
+     */
+    private function terbitkanDaftar(string $noTugas, mixed $tanggal): DaftarNominatif
+    {
+        $daftar = DaftarNominatif::termasukRencana()->firstOrCreate(['no_tugas' => $noTugas], ['tanggal_tugas' => $tanggal]);
+
+        if ($daftar->rencana) {
+            $daftar->update(['rencana' => false, 'tanggal_tugas' => $tanggal ?? $daftar->tanggal_tugas]);
+        }
+
+        return $daftar;
     }
 }
