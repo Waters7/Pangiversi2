@@ -40,5 +40,6 @@ Route::middleware(['throttle:30,1', 'token.mappalus'])
     ->name('api.v1.mappalus.')
     ->group(function (): void {
         Route::get('/nominatif', [MappalusController::class, 'index'])->name('nominatif');
+        Route::get('/nominatif/terkirim', [MappalusController::class, 'terkirim'])->name('nominatif.terkirim');
         Route::post('/nominatif/konfirmasi', [MappalusController::class, 'konfirmasi'])->name('nominatif.konfirmasi');
     });

@@ -147,6 +147,10 @@
                     <code class="block mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono break-all">POST {{ $alamatApi }}/konfirmasi</code>
                 </li>
                 <li>Ulangi sampai <span class="font-mono">data</span> kosong. Referensi pada <span class="font-mono">ditarik</span> sudah tidak berlaku.</li>
+                <li>
+                    Perlu data yang sudah terkirim lagi? Minta menurut waktu kirimnya; isinya sama dengan yang dulu dikirim:
+                    <code class="block mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono break-all">GET {{ $alamatApi }}/terkirim?dari=2026-11-01&amp;sampai=2026-11-05</code>
+                </li>
             </ol>
             <p class="text-[11px] text-slate-400 mt-3">Hanya HTTPS dan token pada header. Batas 30 permintaan per menit. Panggil dari server, bukan dari peramban.</p>
         </div>
@@ -172,7 +176,29 @@
     <x-tab-status :aksi="route('administrasi.mappalus')" kunci="status" :terpilih="$status" :tab="$tab" />
 
     <x-kotak-cari :rute="route('administrasi.mappalus')" :nilai="$cari" petunjuk="Cari nama pelaksana, surat tugas, atau nomor usulan…"
-                  :sembunyi="['status' => $status]" />
+                  :sembunyi="['status' => $status, 'dari' => $dari, 'sampai' => $sampai]" />
+
+    <form method="GET" action="{{ route('administrasi.mappalus') }}" class="flex flex-col sm:flex-row sm:items-end gap-3 mb-5" data-saring-waktu-kirim>
+        @foreach (['status' => $status, 'cari' => $cari] as $kunci => $isi)
+            @if (filled($isi))
+                <input type="hidden" name="{{ $kunci }}" value="{{ $isi }}">
+            @endif
+        @endforeach
+
+        <div>
+            <label for="dari" class="block text-xs font-semibold text-slate-600 mb-1.5">Dikirim dari tanggal</label>
+            <input type="date" name="dari" id="dari" value="{{ $dari }}"
+                   class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+        </div>
+        <div>
+            <label for="sampai" class="block text-xs font-semibold text-slate-600 mb-1.5">Sampai tanggal</label>
+            <input type="date" name="sampai" id="sampai" value="{{ $sampai }}"
+                   class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+        </div>
+        <button type="submit" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
+            Terapkan
+        </button>
+    </form>
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
         <div class="overflow-x-auto">
@@ -211,9 +237,12 @@
                             <td class="px-4 py-3 align-top text-xs text-slate-500 whitespace-nowrap">
                                 @if ($catatan)
                                     <p>{{ $catatan->jumlah_diambil }}× diambil</p>
-                                    <p class="text-slate-400">Terakhir {{ $catatan->diambil_at?->translatedFormat('d M Y, H:i') }}</p>
+                                    <p class="text-slate-400">Terakhir dikirim {{ $catatan->diambil_at?->translatedFormat('d M Y, H:i') }}</p>
                                     @if ($catatan->dikonfirmasi_at)
                                         <p class="text-slate-400">Dikonfirmasi {{ $catatan->dikonfirmasi_at->translatedFormat('d M Y, H:i') }}</p>
+                                    @endif
+                                    @if ($catatan->jumlah_kirim_ulang > 0)
+                                        <p class="text-slate-400">{{ $catatan->jumlah_kirim_ulang }}× dikirim ulang, terakhir {{ $catatan->kirim_ulang_at?->translatedFormat('d M Y, H:i') }}</p>
                                     @endif
                                 @else
                                     <span class="text-slate-400">Belum pernah</span>

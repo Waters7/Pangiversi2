@@ -8,6 +8,7 @@ use App\Services\AksesMappalus;
 use App\Services\AuditService;
 use App\Services\DataMappalus;
 use App\Services\RekapArsipXlsx;
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,8 @@ class MappalusController extends Controller
             'alamat' => $this->akses->daftarAlamat(),
             'status' => $this->statusTerpilih($request),
             'cari' => trim((string) $request->input('cari')),
+            'dari' => $this->tanggal($request->input('dari'))?->toDateString(),
+            'sampai' => $this->tanggal($request->input('sampai'))?->toDateString(),
             'jumlah' => $integrasi->countBy('status')->all(),
             'total' => $integrasi->count(),
             'belumLengkap' => $semua->count() - $integrasi->count(),
@@ -158,13 +161,24 @@ class MappalusController extends Controller
     {
         $status = $this->statusTerpilih($request);
         $cari = mb_strtolower(trim((string) $request->input('cari')));
+        $dari = $this->tanggal($request->input('dari'))?->startOfDay();
+        $sampai = $this->tanggal($request->input('sampai'))?->endOfDay();
 
         return $baris
             ->when($status, fn (Collection $isi) => $isi->where('status', $status))
             ->when($cari !== '', fn (Collection $isi) => $isi->filter(
                 fn (array $item) => str_contains(mb_strtolower($item['data']['keterangan'].' '.$item['data']['referensi']), $cari)
             ))
+            ->when($dari, fn (Collection $isi) => $isi->filter(fn (array $item) => $item['catatan']?->diambil_at?->gte($dari)))
+            ->when($sampai, fn (Collection $isi) => $isi->filter(fn (array $item) => $item['catatan']?->diambil_at?->lte($sampai)))
             ->values();
+    }
+
+    private function tanggal(mixed $nilai): ?Carbon
+    {
+        return is_string($nilai) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $nilai) === 1 && checkdate(...array_map('intval', [substr($nilai, 5, 2), substr($nilai, 8, 2), substr($nilai, 0, 4)]))
+            ? Carbon::parse($nilai)
+            : null;
     }
 
     private function statusTerpilih(Request $request): ?string

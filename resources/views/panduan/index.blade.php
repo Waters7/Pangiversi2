@@ -1187,6 +1187,8 @@
                     dan dapat dibatasi ke alamat IP tertentu. Tiap baris berstatus Belum Diambil, Sudah Diambil,
                     Dikonfirmasi, Berubah, atau Ditarik, lengkap dengan waktu dan jumlah pengambilannya; riwayat
                     permintaannya, termasuk yang ditolak, tampil di halaman yang sama dan datanya dapat diekspor ke Excel.
+                    Data yang sudah terkirim dapat diminta lagi oleh Mappalus menurut waktu kirimnya; isinya sama dengan yang
+                    dulu dikirim dan permintaannya tercatat sebagai kirim ulang. Halamannya juga dapat disaring menurut tanggal kirim.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pantau server dan ukuran aplikasi" :terakhir="! $boleh['jejakAudit']">

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DaftarNominatif;
 use App\Models\PengambilanMappalus;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 /**
@@ -110,6 +111,35 @@ class DataMappalus
                 'diambil_at' => now(),
             ])->save();
         }
+    }
+
+    /**
+     * Data yang sudah terkirim pada rentang waktu itu, menurut catatan
+     * kirimannya: yang disajikan persis isi yang dulu dikirim, urut dari yang
+     * terlama. Waktu kirim terakhirnya yang dipakai, sebab itulah saat versi
+     * yang tercatat ini sampai ke Mappalus.
+     *
+     * @return Collection<int, PengambilanMappalus>
+     */
+    public function terkirim(CarbonInterface $dari, CarbonInterface $sampai): Collection
+    {
+        return PengambilanMappalus::whereBetween('diambil_at', [$dari, $sampai])
+            ->orderBy('diambil_at')
+            ->orderBy('id')
+            ->get()
+            ->toBase();
+    }
+
+    /**
+     * Catat permintaan ulang tanpa menyentuh waktu kirim dan konfirmasinya,
+     * supaya rentang waktu yang sama tetap menyajikan data yang sama.
+     *
+     * @param  Collection<int, PengambilanMappalus>  $catatan
+     */
+    public function catatKirimUlang(Collection $catatan): void
+    {
+        PengambilanMappalus::whereKey($catatan->pluck('id'))
+            ->increment('jumlah_kirim_ulang', 1, ['kirim_ulang_at' => now()]);
     }
 
     /**

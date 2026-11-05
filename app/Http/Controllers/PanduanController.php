@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.63',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Mappalus dapat meminta lagi data yang sudah terkirim menurut waktu kirimnya, dengan isi yang sama seperti dulu dikirim. Permintaan itu tercatat sebagai kirim ulang, dan halaman Integrasi Mappalus beserta ekspornya dapat disaring menurut tanggal kirim.',
+                ],
+            ],
+            [
                 'versi' => '2.5.62',
                 'tanggal' => '5 November 2026',
                 'butir' => [

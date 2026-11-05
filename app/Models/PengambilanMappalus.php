@@ -23,8 +23,10 @@ class PengambilanMappalus extends Model
         'sidik',
         'sidik_dikonfirmasi',
         'jumlah_diambil',
+        'jumlah_kirim_ulang',
         'pertama_diambil_at',
         'diambil_at',
+        'kirim_ulang_at',
         'dikonfirmasi_at',
     ];
 
@@ -36,8 +38,10 @@ class PengambilanMappalus extends Model
         return [
             'total_nominal' => 'decimal:2',
             'jumlah_diambil' => 'integer',
+            'jumlah_kirim_ulang' => 'integer',
             'pertama_diambil_at' => 'datetime',
             'diambil_at' => 'datetime',
+            'kirim_ulang_at' => 'datetime',
             'dikonfirmasi_at' => 'datetime',
         ];
     }

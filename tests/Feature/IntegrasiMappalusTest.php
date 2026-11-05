@@ -452,6 +452,151 @@ class IntegrasiMappalusTest extends TestCase
         $this->ambil()->assertJsonPath('ditarik', []);
     }
 
+    // ── Kirim ulang menurut waktu kirim ──
+
+    /** @param  array<string, mixed>  $rentang */
+    private function mintaUlang(array $rentang): TestResponse
+    {
+        return $this->withToken($this->token)->getJson(route('api.v1.mappalus.nominatif.terkirim', $rentang));
+    }
+
+    /** Dua pelaksana yang terkirim pada hari berbeda, lalu dikonfirmasi. */
+    private function terkirimDuaHari(): array
+    {
+        $maya = $this->pelaksanaSelesai('Maya Sari');
+        $this->nominatifBertandaTangan();
+
+        $this->travelTo('2026-11-03 10:00:00');
+        $this->konfirmasi($this->ambil()->json('data'));
+
+        $rina = $this->pelaksanaSelesai('Rina Kartika');
+
+        $this->travelTo('2026-11-05 09:00:00');
+        $this->konfirmasi($this->ambil()->json('data'));
+
+        return [$maya, $rina];
+    }
+
+    public function test_data_terkirim_dapat_diminta_lagi_menurut_waktu_kirimnya(): void
+    {
+        [$maya, $rina] = $this->terkirimDuaHari();
+
+        $this->ambil()->assertJsonCount(0, 'data');
+
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03'])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.referensi', $maya->no_usulan)
+            ->assertJsonPath('data.0.status', DataMappalus::DIKONFIRMASI)
+            ->assertJsonPath('data.0.keterangan', 'Maya Sari - '.self::NO_TUGAS)
+            ->assertJsonPath('meta.total', 1);
+
+        $semua = $this->mintaUlang(['dari' => '2026-11-01', 'sampai' => '2026-11-30'])->assertJsonCount(2, 'data');
+
+        $this->assertSame([$maya->no_usulan, $rina->no_usulan], array_column($semua->json('data'), 'referensi'));
+
+        $this->mintaUlang(['dari' => '2026-11-04', 'sampai' => '2026-11-04'])->assertJsonCount(0, 'data');
+    }
+
+    public function test_rentang_memakai_jam_bila_disebut(): void
+    {
+        $this->terkirimDuaHari();
+
+        $this->mintaUlang(['dari' => '2026-11-03 09:00:00', 'sampai' => '2026-11-03 09:59:59'])->assertJsonCount(0, 'data');
+        $this->mintaUlang(['dari' => '2026-11-03 09:00:00', 'sampai' => '2026-11-03 10:00:00'])->assertJsonCount(1, 'data');
+        $this->mintaUlang(['dari' => '2026-11-03T17:30:00+08:00', 'sampai' => '2026-11-03T18:30:00+08:00'])->assertJsonCount(1, 'data');
+    }
+
+    /** Rentang yang sama harus selalu menyajikan data yang sama, dan statusnya tidak berubah. */
+    public function test_permintaan_ulang_tidak_mengubah_waktu_kirim_maupun_konfirmasi(): void
+    {
+        [$maya] = $this->terkirimDuaHari();
+        $catatan = PengambilanMappalus::firstWhere('referensi', $maya->no_usulan);
+
+        $this->travelTo('2026-11-06 08:00:00');
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03'])->assertJsonCount(1, 'data');
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03'])->assertJsonCount(1, 'data');
+
+        $sesudah = $catatan->fresh();
+
+        $this->assertEquals($catatan->diambil_at, $sesudah->diambil_at);
+        $this->assertEquals($catatan->dikonfirmasi_at, $sesudah->dikonfirmasi_at);
+        $this->assertSame($catatan->jumlah_diambil, $sesudah->jumlah_diambil);
+        $this->assertSame(2, $sesudah->jumlah_kirim_ulang);
+        $this->assertEquals(now(), $sesudah->kirim_ulang_at);
+        $this->assertSame(DataMappalus::DIKONFIRMASI, $this->statusPerReferensi()[$maya->no_usulan]);
+    }
+
+    public function test_permintaan_ulang_menyajikan_versi_yang_dulu_dikirim(): void
+    {
+        [$maya] = $this->terkirimDuaHari();
+        $catatan = PengambilanMappalus::firstWhere('referensi', $maya->no_usulan);
+
+        RincianBiaya::whereHas('keuangan', fn ($q) => $q->where('id_usulan', $maya->id))->first()->increment('jumlah', 50_000);
+
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03'])
+            ->assertJsonPath('data.0.versi', $catatan->sidik)
+            ->assertJsonPath('data.0.total_nominal', fn ($nilai) => (float) $nilai === (float) $catatan->total_nominal)
+            ->assertJsonPath('data.0.status', DataMappalus::BERUBAH);
+    }
+
+    public function test_data_yang_ditarik_tidak_dikirim_ulang_hanya_disebut(): void
+    {
+        [$maya] = $this->terkirimDuaHari();
+
+        DaftarNominatif::firstWhere('no_tugas', self::NO_TUGAS)->update(['ditandatangani_at' => null]);
+
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03'])
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('ditarik', [$maya->no_usulan]);
+
+        $this->assertSame(0, PengambilanMappalus::firstWhere('referensi', $maya->no_usulan)->jumlah_kirim_ulang);
+    }
+
+    public function test_permintaan_ulang_terbagi_per_halaman(): void
+    {
+        $this->terkirimDuaHari();
+
+        $rentang = ['dari' => '2026-11-01', 'sampai' => '2026-11-30', 'per_halaman' => 1];
+
+        $this->mintaUlang($rentang)->assertJsonCount(1, 'data')->assertJsonPath('meta.halaman_terakhir', 2);
+        $this->mintaUlang($rentang + ['halaman' => 2])->assertJsonCount(1, 'data');
+
+        $this->assertSame(2, (int) PengambilanMappalus::sum('jumlah_kirim_ulang'));
+    }
+
+    public function test_permintaan_ulang_memeriksa_rentang_dan_token(): void
+    {
+        $this->getJson(route('api.v1.mappalus.nominatif.terkirim', ['dari' => '2026-11-01', 'sampai' => '2026-11-05']))->assertUnauthorized();
+
+        $this->mintaUlang([])->assertUnprocessable()->assertJsonValidationErrors(['dari', 'sampai']);
+        $this->mintaUlang(['dari' => 'kemarin-lusa', 'sampai' => '2026-11-05'])->assertUnprocessable()->assertJsonValidationErrors('dari');
+        $this->mintaUlang(['dari' => '2026-11-05', 'sampai' => '2026-11-01'])->assertUnprocessable()->assertJsonValidationErrors('sampai');
+    }
+
+    public function test_halaman_dan_ekspor_dapat_disaring_menurut_waktu_kirim(): void
+    {
+        [$maya, $rina] = $this->terkirimDuaHari();
+
+        $this->mintaUlang(['dari' => '2026-11-03', 'sampai' => '2026-11-03']);
+
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.mappalus', ['dari' => '2026-11-03', 'sampai' => '2026-11-03']))
+            ->assertSee('Maya Sari - '.self::NO_TUGAS)
+            ->assertDontSee('Rina Kartika - '.self::NO_TUGAS)
+            ->assertSee('1× dikirim ulang');
+
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.mappalus', ['dari' => 'bukan-tanggal']))
+            ->assertOk()
+            ->assertSee('Rina Kartika - '.self::NO_TUGAS);
+
+        $ekspor = $this->isiEkspor(['dari' => '2026-11-05', 'sampai' => '2026-11-05']);
+
+        $this->assertStringContainsString($rina->no_usulan, $ekspor);
+        $this->assertStringNotContainsString($maya->no_usulan, $ekspor);
+    }
+
     // ── Halaman ──
 
     public function test_halaman_menunjukkan_data_yang_sudah_diambil_dan_dapat_disaring(): void

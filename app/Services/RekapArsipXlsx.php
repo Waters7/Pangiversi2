@@ -160,8 +160,10 @@ class RekapArsipXlsx
             ['Status', 16, 'tengah'],
             ['Jumlah Diambil', 9, 'tengah'],
             ['Pertama Diambil', 17, 'tengah'],
-            ['Terakhir Diambil', 17, 'tengah'],
+            ['Terakhir Dikirim', 17, 'tengah'],
             ['Dikonfirmasi', 17, 'tengah'],
+            ['Jumlah Kirim Ulang', 9, 'tengah'],
+            ['Terakhir Kirim Ulang', 17, 'tengah'],
         ], $baris->map(fn (array $item) => [
             $item['data']['referensi'],
             $item['data']['keterangan'],
@@ -173,6 +175,8 @@ class RekapArsipXlsx
             $item['catatan']?->pertama_diambil_at?->format('d/m/Y H:i'),
             $item['catatan']?->diambil_at?->format('d/m/Y H:i'),
             $item['catatan']?->dikonfirmasi_at?->format('d/m/Y H:i'),
+            $item['catatan']?->jumlah_kirim_ulang ?? 0,
+            $item['catatan']?->kirim_ulang_at?->format('d/m/Y H:i'),
         ]));
     }
 
