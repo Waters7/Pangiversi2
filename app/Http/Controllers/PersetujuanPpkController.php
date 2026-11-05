@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Notifikasi;
-use App\Models\PengirimanMappalus;
+use App\Models\PengambilanMappalus;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
@@ -28,6 +28,9 @@ use Illuminate\View\View;
  */
 class PersetujuanPpkController extends Controller
 {
+    /** Judul kelompok teratas pada halaman verifikasi. */
+    private const KELOMPOK_SIAP = 'Siap Ditandatangani';
+
     public function __construct(
         private PenyusunNominatif $penyusun,
         private NotifikasiService $notifikasi,
@@ -72,6 +75,7 @@ class PersetujuanPpkController extends Controller
             fn (array $baris) => $baris['usulan']->tanggal_mulai,
             $request->input('tahun'),
             $request->input('bulan'),
+            fn (array $baris) => $baris['siap_ditandatangani'],
         );
 
         return view('persetujuan-ppk.rincian-biaya', [
@@ -118,6 +122,9 @@ class PersetujuanPpkController extends Controller
             // Jalur rincian punya tanda tangannya sendiri: menandatangani
             // daftar riil tidak ikut mengesahkan dokumen ini.
             'jalur' => $berkas?->jalurRincian(),
+            'siap_ditandatangani' => $berkas !== null
+                && ! $berkas->jalurRincian()->sudahDitandatangani()
+                && $berkas->jalurRincian()->siapDitandatanganiPpk(),
             'status' => match (true) {
                 (bool) $berkas?->jalurRincian()->sudahDitandatangani() => 'ditandatangani',
                 $belumDivalidasi === 0 => 'tervalidasi',
@@ -163,6 +170,7 @@ class PersetujuanPpkController extends Controller
             fn (DaftarRiil $daftar) => $daftar->usulan?->tanggal_mulai,
             $request->input('tahun'),
             $request->input('bulan'),
+            fn (DaftarRiil $daftar) => $this->perluTindakan($daftar),
         );
 
         return view('persetujuan-ppk.daftar-riil', [
@@ -386,10 +394,10 @@ class PersetujuanPpkController extends Controller
             ],
         );
 
-        $diterimaMappalus = PengirimanMappalus::where('id_nominatif', $nominatif->id)->whereNotNull('sidik_diterima')->count();
+        $diambilMappalus = PengambilanMappalus::where('id_nominatif', $nominatif->id)->count();
 
         return back()->with('success', 'Tanda tangan dicabut. Daftar kembali menunggu tanda tangan dan QR pada cetakan lamanya tidak berlaku lagi.'
-            .($diterimaMappalus > 0 ? " {$diterimaMappalus} data pelaksananya sudah diterima Mappalus; periksa kembali setelah dikoreksi." : ''));
+            .($diambilMappalus > 0 ? " {$diambilMappalus} data pelaksananya sudah diambil Mappalus dan kini ditandai ditarik." : ''));
     }
 
     // ── Riwayat tanda tangan ──
@@ -477,7 +485,9 @@ class PersetujuanPpkController extends Controller
 
     /**
      * Saring baris menurut tahun/bulan lalu kelompokkan per periode
-     * ("September 2026"), diurutkan dari yang terbaru.
+     * ("September 2026"), diurutkan dari yang terbaru. Yang sudah dapat
+     * ditandatangani dikumpulkan paling atas, berapa pun umurnya: itulah
+     * yang dicari PPK, dan berkas lama jangan sampai tertimbun yang baru.
      *
      * Tab status tetap dihitung dari seluruh baris; saringan periode hanya
      * mengurangi yang ditampilkan — angka tab dan angka bulan menjawab
@@ -485,9 +495,10 @@ class PersetujuanPpkController extends Controller
      *
      * @param  Collection<int, mixed>  $baris
      * @param  callable(mixed): mixed  $tanggalDari  Mengambil tanggal (string|Carbon|null) dari satu baris.
+     * @param  callable(mixed): bool  $siapDitandatangani  Baris ini sudah dapat ditandatangani PPK.
      * @return array{daftar: Collection<string, Collection<int, mixed>>, tahunTersedia: Collection<int, int>, jumlahBulan: Collection<int, int>}
      */
-    private function kelompokkanPeriode(Collection $baris, callable $tanggalDari, ?string $tahun, ?string $bulan): array
+    private function kelompokkanPeriode(Collection $baris, callable $tanggalDari, ?string $tahun, ?string $bulan, callable $siapDitandatangani): array
     {
         $bertanggal = $baris->map(fn ($item) => [
             'item' => $item,
@@ -497,12 +508,16 @@ class PersetujuanPpkController extends Controller
         $tampil = $bertanggal
             ->when($tahun, fn (Collection $b) => $b->filter(fn (array $x) => $x['tanggal']?->year === (int) $tahun))
             ->when($bulan, fn (Collection $b) => $b->filter(fn (array $x) => $x['tanggal']?->month === (int) $bulan))
-            ->sortByDesc(fn (array $x) => $x['tanggal']?->timestamp ?? 0)
+            ->sortByDesc(fn (array $x) => $x['tanggal']?->timestamp ?? 0);
+
+        [$siap, $lainnya] = $tampil->partition(fn (array $x) => $siapDitandatangani($x['item']));
+
+        $perPeriode = $lainnya
             ->groupBy(fn (array $x) => $x['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal')
             ->map(fn (Collection $kelompok) => $kelompok->pluck('item')->values());
 
         return [
-            'daftar' => $tampil,
+            'daftar' => collect($siap->isEmpty() ? [] : [self::KELOMPOK_SIAP => $siap->pluck('item')->values()])->union($perPeriode),
             'tahunTersedia' => $bertanggal->pluck('tanggal')->filter()
                 ->map(fn (Carbon $t) => $t->year)->unique()->sortDesc()->values(),
             'jumlahBulan' => $bertanggal

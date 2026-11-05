@@ -16,7 +16,9 @@ return [
     |
     */
 
-    'paths' => ['api/*'],
+    // API Mappalus sengaja di luar daftar ini: tokennya hanya untuk server,
+    // jadi peramban dari asal mana pun tidak boleh membaca balasannya.
+    'paths' => ['api/v1/dashboard-eksekutif*'],
 
     'allowed_methods' => ['GET', 'OPTIONS'],
 

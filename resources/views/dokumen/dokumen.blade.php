@@ -20,8 +20,52 @@
         </div>
     </div>
 
+    @php
+        $saringan = ['jalur' => $jalur?->value, 'unit' => $unit, 'kelengkapan' => $kelengkapan];
+    @endphp
+
     <x-kotak-cari :rute="route('dokumen')" :nilai="$cari"
-                  petunjuk="Cari no. usulan, no. surat tugas, tujuan, atau nama pelaksana" />
+                  petunjuk="Cari no. usulan, no. surat tugas, tujuan, atau nama pelaksana"
+                  :sembunyi="$saringan + ['tahun' => $tahun, 'bulan' => $bulan]" />
+
+    {{-- Navigasi seluruh perjalanan: yang dicari tim keuangan dan pimpinan biasanya
+         satu bulan, satu jalur, atau satu unit, bukan satu nomor. --}}
+    @if ($lihatSemua)
+        <x-saring-periode :aksi="route('dokumen')" :tahun="$tahun" :bulan="$bulan"
+                          :tahun-tersedia="$tahunTersedia" :jumlah-bulan="$jumlahBulan"
+                          :ekstra="$saringan + ['cari' => $cari]" />
+
+        <form method="GET" action="{{ route('dokumen') }}" class="grid gap-3 sm:grid-cols-3 mb-5" data-navigasi-dokumen>
+            @foreach (['cari' => $cari, 'tahun' => $tahun, 'bulan' => $bulan] as $kunci => $isi)
+                @if (filled($isi))
+                    <input type="hidden" name="{{ $kunci }}" value="{{ $isi }}">
+                @endif
+            @endforeach
+
+            <select name="jalur" aria-label="Jalur perjalanan" onchange="this.form.submit()"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                <option value="">Semua jalur</option>
+                @foreach (\App\Enums\JenisPerjadin::cases() as $pilihan)
+                    <option value="{{ $pilihan->value }}" @selected($jalur === $pilihan)>{{ $pilihan->labelSingkat() }}</option>
+                @endforeach
+            </select>
+
+            <select name="unit" aria-label="Unit kerja" onchange="this.form.submit()"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                <option value="">Semua unit kerja</option>
+                @foreach ($daftarUnit as $pilihan)
+                    <option value="{{ $pilihan->id }}" @selected($unit === $pilihan->id)>{{ $pilihan->nama }}</option>
+                @endforeach
+            </select>
+
+            <select name="kelengkapan" aria-label="Kelengkapan dokumen" onchange="this.form.submit()"
+                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
+                <option value="">Semua status dokumen</option>
+                <option value="lengkap" @selected($kelengkapan === 'lengkap')>Dokumen lengkap</option>
+                <option value="belum" @selected($kelengkapan === 'belum')>Belum lengkap</option>
+            </select>
+        </form>
+    @endif
 
     @if ($usulan->isEmpty())
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center">
@@ -151,6 +195,10 @@
                     </tbody>
                 </table>
             </div>
+
+            @if ($halaman)
+                <x-pagination :paginator="$halaman" />
+            @endif
 
         </div>    
     @endif

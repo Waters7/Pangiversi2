@@ -433,7 +433,10 @@
                     kolom nominalnya terkunci pada angka itu; Anda cukup mengunggah buktinya. Nota
                     transport lokal yang diunggah wajib diisi nominalnya — tanpa nominal, nota itu tidak
                     masuk transport lokal dan tidak diganti. Nota yang salah unggah dapat dihapus lewat
-                    centang <strong>Hapus nota ruas ini</strong>.
+                    centang <strong>Hapus nota ruas ini</strong>. Pada perjalanan luar kota, dalam satu provinsi
+                    maupun lintas pulau, bagian Akomodasi menanyakan dulu <strong>Apakah ada biaya
+                    akomodasi?</strong> Bila tidak ada, bill hotel dan kuitansinya tidak ditagih; bila ada,
+                    berkasnya ditagih sesuai format.
                 </span>
                 <span class="block mb-3">
                     Berkas rombongan cukup diunggah sekali: ketik nomor tiket, nomor transaksi hotel, atau nomor
@@ -469,7 +472,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota dalam satu provinsi</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal — bila ada biaya penginapan', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal — bila ada biaya akomodasi', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -483,7 +486,7 @@
                             <p class="text-[11px] font-bold text-slate-600">Luar kota lintas pulau</p>
                         </div>
                         <ul class="p-3 space-y-1.5">
-                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
+                            @foreach (['SPPD bertanda tangan', 'Tiket pergi: boarding pass & invoice', 'Tiket pulang: boarding pass & invoice', 'Nota transport lokal — bila ada biaya', 'Bill hotel / kuitansi hotel beserta nomor transaksi & nominal — bila ada biaya akomodasi', 'Bukti bayar biaya penyelenggaraan — bila ada', 'Laporan perjalanan dinas, dikonfirmasi Direktur'] as $berkas)
                                 <li class="flex items-start gap-2 text-xs text-slate-600">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></span>
                                     {{ $berkas }}
@@ -761,7 +764,11 @@
                 <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; tiap daftarnya menyebut kegiatan dan nama
                 pelaksananya, dapat dicari menurut nomor surat tugas, nama pelaksana, atau kegiatan, dan
                 ringkasannya memuat pagu, realisasi, dan sisa tiap tim kerja. Rincian yang sudah ditandatangani pelaksana
-                dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>.
+                dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>. Arsip Daftar Riil, Arsip
+                Rincian Lengkap, dan List Daftar Nominatif punya tombol <strong>Export Excel</strong> yang
+                memuat seluruh baris pada saringan yang sedang dipilih. Menu <strong>Dokumen Perdin</strong>
+                membuka seluruh perjalanan bagi tim keuangan, pimpinan, dan super administrator, dengan saringan
+                tahun, bulan, jalur, unit kerja, dan kelengkapan dokumen.
             </x-panduan-langkah>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
@@ -798,6 +805,8 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="2" judul="Verifikasi Rincian Biaya">
+                Yang sudah dapat Anda tandatangani berkumpul paling atas pada kelompok
+                <strong>Siap Ditandatangani</strong>, berapa pun umurnya.
                 Tab <strong>Perlu Tindakan</strong> hanya memuat berkas yang benar-benar siap:
                 sudah disetujui pelaksana, atau masa sanggahnya lewat tanpa keberatan. Berkas yang
                 masih di tangan tim keuangan tetap terlihat, tetapi tanpa tombol yang belum boleh
@@ -805,14 +814,16 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Verifikasi Daftar Riil">
-                Dokumen yang terpisah, jadi keputusannya juga terpisah. Bila ada yang tidak sesuai,
+                Dokumen yang terpisah dan hanya untuk perjalanan luar kota lintas pulau, jadi keputusannya
+                juga terpisah. Yang dapat ditandatangani tampil paling atas. Bila ada yang tidak sesuai,
                 kembalikan ke tim keuangan disertai alasannya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="4" judul="Verifikasi Daftar Nominatif">
                 Nominatif terbit sendiri per surat tugas begitu <em>satu</em> pelaksana di
-                bawahnya tuntas — rincian biayanya Anda tandatangani, ditambah daftar riil dan kelengkapan
-                berkas pada perjalanan lintas pulau — dan hanya memuat yang sudah tuntas. Yang belum tercantum disebut di bawah tabelnya dan
+                bawahnya tuntas — rincian biayanya Anda tandatangani, ditambah daftar riil pada
+                perjalanan lintas pulau — dan hanya memuat yang sudah tuntas. Ini berlaku pada semua
+                jalur, dan berkas pertanggungjawaban boleh menyusul. Yang belum tercantum disebut di bawah tabelnya dan
                 bertambah sendiri setelah berkasnya Anda sahkan. Ketiga menu verifikasi
                 dikelompokkan per bulan dan tahun.
             </x-panduan-langkah>
@@ -822,7 +833,8 @@
                 pembayaran — tidak ada lagi tombol kirim terpisah. Tanda tangannya elektronik: cetakan nominatif memuat QR dan kode
                 verifikasi yang dapat dipindai siapa pun. Bila ternyata ada kesalahan, tekan
                 <strong>Cabut Tanda Tangan</strong> dan tuliskan kesalahannya: daftarnya ditarik dari tim keuangan,
-                QR lamanya tidak berlaku, dan setelah dikoreksi Anda tandatangani ulang.
+                QR lamanya tidak berlaku, dan setelah dikoreksi Anda tandatangani ulang. Tiap daftar juga
+                menyebut <strong>status pembayaran bendahara</strong> untuk tiap pelaksana.
             </x-panduan-langkah>
 
             <div class="mt-6 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 leading-relaxed">
@@ -1166,12 +1178,12 @@
                     pemantauan setiap permintaan yang masuk beserta token yang dibawanya, dan
                     pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan — setiap
                     perubahan dikonfirmasi lewat kotak dialog dan tercatat pada jejak audit. Submenu
-                    <strong>Integrasi Mappalus</strong> mengirim daftar nominatif bertanda tangan ke Mappalus per
-                    pelaksana — tim kerja, kode akun, total nominal, serta nama pelaksana dan nomor surat tugas —
-                    memakai alamat API dan token dari pengembang Mappalus. Tiap baris berstatus Siap Kirim, Berhasil,
-                    Gagal, Berubah, Belum Lengkap, atau Ditarik. Yang sudah berhasil tidak terkirim dua kali;
-                    <strong>Sinkron Sekarang</strong> mengirim yang siap dan yang gagal, dan <strong>Kirim Ulang</strong>
-                    mengirim satu baris yang gagal atau berubah.
+                    <strong>Integrasi Mappalus</strong> menerbitkan token yang diserahkan kepada pengembang Mappalus,
+                    supaya Mappalus dapat mengambil data lewat API PANGI: per pelaksana pada nominatif bertanda tangan
+                    PPK yang tim kerja dan kode akunnya sudah diisi. Tokennya tampil sekali, dapat diganti atau dicabut,
+                    dan dapat dibatasi ke alamat IP tertentu. Tiap baris berstatus Belum Diambil, Sudah Diambil,
+                    Dikonfirmasi, Berubah, atau Ditarik, lengkap dengan waktu dan jumlah pengambilannya; riwayat
+                    permintaannya, termasuk yang ditolak, tampil di halaman yang sama dan datanya dapat diekspor ke Excel.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pantau server dan ukuran aplikasi" :terakhir="! $boleh['jejakAudit']">

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\KategoriBiaya;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarNominatif;
+use App\Models\DaftarRiil;
 use App\Models\RincianBiaya;
 use App\Models\Usulan;
 use Carbon\CarbonInterface;
@@ -59,7 +60,7 @@ class PenyusunNominatif
 
     /**
      * Pelaksana di bawah surat tugas ini yang belum tercantum pada
-     * daftarnya: berkasnya belum lengkap atau belum ditandatangani PPK.
+     * daftarnya: dokumennya belum ditandatangani PPK.
      * Usulan yang ditolak bukan menunggu — ia tidak akan pernah tercantum.
      *
      * @return Collection<int, string>
@@ -105,7 +106,7 @@ class PenyusunNominatif
     private function keteranganTandaTangan(Usulan $usulan): array
     {
         $riil = $usulan->daftarRiil->first();
-        $tercantum = $this->usulanSiap($usulan);
+        $tercantum = $this->disahkanPpk($usulan);
 
         [$tahap, $keterangan, $waktu] = match (true) {
             StatusUsulan::dari($usulan->status) === StatusUsulan::Draft => ['draf', 'Usulan masih draf, belum diajukan', null],
@@ -136,7 +137,7 @@ class PenyusunNominatif
     private function namaMenunggu(Collection $usulan): Collection
     {
         return $usulan
-            ->reject(fn (Usulan $item) => $this->usulanSiap($item))
+            ->reject(fn (Usulan $item) => $this->disahkanPpk($item))
             ->reject(fn (Usulan $item) => StatusUsulan::dari($item->status) === StatusUsulan::Ditolak)
             ->map(fn (Usulan $item) => $item->user?->nama ?? $item->peserta->first()?->nama ?? $item->no_usulan)
             ->values();
@@ -155,8 +156,8 @@ class PenyusunNominatif
 
     /**
      * Baris dari sekelompok usulan satu surat tugas. Hanya pelaksana yang
-     * berkasnya tuntas yang tercantum; yang lain menyusul begitu berkasnya
-     * ditandatangani PPK, dan nomor urutnya disusun dari yang tercantum.
+     * dokumennya sudah disahkan PPK yang tercantum; yang lain menyusul, dan
+     * nomor urutnya disusun dari yang tercantum.
      *
      * @param  Collection<int, Usulan>  $usulan
      * @return Collection<int, array<string, mixed>>
@@ -164,7 +165,7 @@ class PenyusunNominatif
     private function barisKelompok(Collection $usulan): Collection
     {
         return $usulan
-            ->filter(fn (Usulan $item) => $this->usulanSiap($item))
+            ->filter(fn (Usulan $item) => $this->disahkanPpk($item))
             ->values()
             ->map(fn (Usulan $item, int $i) => $this->barisUsulan($item, $i + 1));
     }
@@ -333,13 +334,11 @@ class PenyusunNominatif
 
     /**
      * Daftar nominatif terbit begitu ada satu pelaksana di bawah surat
-     * tugas itu yang berkas pertanggungjawabannya sudah ditandatangani PPK.
+     * tugas itu yang dokumennya sudah ditandatangani PPK.
      *
-     * Bukan sekadar dokumennya lengkap: rincian biaya dan daftar pengeluaran
-     * riil harus sudah disahkan kedua belah pihak, sebab keduanyalah dasar
-     * angka pada daftar nominatif ini. Pelaksana lain yang belum tuntas
-     * tidak menahan daftarnya — ia belum tercantum, dan bertambah sendiri
-     * ke daftar yang sama begitu berkasnya disahkan.
+     * Pelaksana lain yang belum tuntas tidak menahan daftarnya — ia belum
+     * tercantum, dan bertambah sendiri ke daftar yang sama begitu dokumennya
+     * disahkan.
      */
     public function siapTerbit(string $noTugas): bool
     {
@@ -347,30 +346,19 @@ class PenyusunNominatif
     }
 
     /**
-     * Seorang pelaksana tercantum pada daftar nominatif begitu dokumennya
-     * ditandatangani PPK. Perjalanan lintas pulau menunggu rincian biaya dan
-     * daftar riilnya disahkan serta berkasnya lengkap, sebab daftar riil
-     * bersumber dari nota pelaksana. Jalur lain cukup rincian biayanya:
-     * berkas pertanggungjawabannya boleh menyusul sesudah itu.
-     */
-    public function usulanSiap(Usulan $usulan): bool
-    {
-        $usulan->loadMissing(self::RELASI_KELENGKAPAN);
-
-        return $this->disahkanPpk($usulan)
-            && (! $usulan->memakaiDaftarRiil() || $this->penagih->lengkap($usulan));
-    }
-
-    /**
-     * Rincian biaya dan daftar riil pelaksana ini sudah ditandatangani PPK
-     * pada kedua jalurnya — pengesahan yang menjadi dasar angkanya.
+     * Seorang pelaksana tercantum pada daftar nominatif begitu dokumen yang
+     * berlaku pada jalurnya ditandatangani PPK: rincian biaya pada semua
+     * jalur, ditambah daftar riil pada perjalanan lintas pulau. Berkas
+     * pertanggungjawaban boleh menyusul sesudah itu, pada jalur mana pun.
      */
     public function disahkanPpk(Usulan $usulan): bool
     {
-        $usulan->loadMissing('daftarRiil');
+        $usulan->loadMissing('daftarRiil', 'kategoriPerjadin');
 
         return $usulan->daftarRiil->isNotEmpty()
-            && $usulan->daftarRiil->every(fn ($daftar) => $daftar->disahkanPpkSeluruhnya());
+            && $usulan->daftarRiil->every(fn (DaftarRiil $daftar) => $usulan->memakaiDaftarRiil()
+                ? $daftar->disahkanPpkSeluruhnya()
+                : $daftar->jalurRincian()->sudahDitandatangani());
     }
 
     /**
@@ -381,7 +369,7 @@ class PenyusunNominatif
      */
     private function kelompokSiapTerbit(Collection $usulan): bool
     {
-        return $usulan->contains(fn (Usulan $item) => $this->usulanSiap($item));
+        return $usulan->contains(fn (Usulan $item) => $this->disahkanPpk($item));
     }
 
     /**
@@ -404,17 +392,12 @@ class PenyusunNominatif
         $sudahTerbit = DaftarNominatif::pluck('no_tugas');
 
         // Calonnya disaring lebih dulu di basis data: surat tugas yang punya
-        // setidaknya satu usulan dengan daftar riil bertanda tangan PPK pada
-        // kedua jalur. Tanpa ini tiap surat tugas ditarik satu per satu hanya
-        // untuk ditolak — dan justru yang belum lengkap itulah yang paling
-        // banyak menumpuk. Saringannya sengaja longgar; penilaian sebenarnya
-        // tetap di PHP.
+        // setidaknya satu rincian biaya bertanda tangan PPK. Tanpa ini tiap
+        // surat tugas ditarik satu per satu hanya untuk ditolak. Saringannya
+        // sengaja longgar; penilaian menurut jalurnya tetap di PHP.
         $calon = Usulan::whereNotNull('no_tugas')
             ->whereNotIn('no_tugas', $sudahTerbit)
-            ->whereHas('daftarRiil')
-            ->whereDoesntHave('daftarRiil', fn ($q) => $q
-                ->whereNull('rincian_ditandatangani_at')
-                ->orWhere(fn ($r) => $r->whereNull('ditandatangani_at')->where('total_riil', '>', 0)))
+            ->whereHas('daftarRiil', fn ($q) => $q->whereNotNull('rincian_ditandatangani_at'))
             ->distinct()
             ->pluck('no_tugas');
 
@@ -448,7 +431,7 @@ class PenyusunNominatif
      */
     public function terbitkanBilaSiap(Usulan $usulan): ?DaftarNominatif
     {
-        if (blank($usulan->no_tugas) || ! $this->usulanSiap($usulan)) {
+        if (blank($usulan->no_tugas) || ! $this->disahkanPpk($usulan)) {
             return null;
         }
 

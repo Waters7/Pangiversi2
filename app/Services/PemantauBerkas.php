@@ -172,7 +172,7 @@ class PemantauBerkas
     private function butirNominatif(?Usulan $usulan): array
     {
         $nominatif = $usulan ? $this->nominatifUntuk($usulan) : null;
-        $tercantum = $usulan !== null && $nominatif !== null && $this->penyusun->usulanSiap($usulan);
+        $tercantum = $usulan !== null && $nominatif !== null && $this->penyusun->disahkanPpk($usulan);
 
         if ($nominatif === null) {
             return [$this->butir('Daftar nominatif', self::MENUNGGU, null, null,

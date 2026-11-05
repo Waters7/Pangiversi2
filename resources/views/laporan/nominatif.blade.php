@@ -8,12 +8,16 @@
 
     <x-flash />
 
-    <div class="mb-6">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div class="min-w-0">
         <h1 class="text-xl font-bold text-slate-800">List Daftar Nominatif</h1>
         <p class="text-xs text-slate-400 mt-0.5">
             Seluruh daftar nominatif per surat tugas — yang masih menunggu PPK, sudah ditandatangani,
             maupun sudah diterima tim keuangan — beserta siapa saja pelaksana yang sudah menandatangani.
         </p>
+        </div>
+
+        <x-tombol-ekspor :tautan="route('laporan.nominatif.ekspor', request()->query())" />
     </div>
 
     {{-- Saringan status: seluruh daftar tampil, tapi tiap tahap dapat dipilih. --}}

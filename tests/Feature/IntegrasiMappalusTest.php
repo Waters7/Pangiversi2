@@ -7,35 +7,31 @@ use App\Enums\StatusUsulan;
 use App\Models\AkunPembiayaan;
 use App\Models\DaftarNominatif;
 use App\Models\Keuangan;
+use App\Models\LogApi;
+use App\Models\PengambilanMappalus;
 use App\Models\Pengaturan;
-use App\Models\PengirimanMappalus;
 use App\Models\RincianBiaya;
 use App\Models\TimKerja;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\AksesMappalus;
+use App\Services\DataMappalus;
 use App\Services\PenyusunNominatif;
 use App\Services\SinkronBiayaDokumen;
-use App\Services\SinkronMappalus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
+use ZipArchive;
 
 /**
- * Daftar nominatif bertanda tangan PPK dikirim ke Mappalus per pelaksana,
- * dan statusnya membedakan yang sudah diterima dari yang gagal supaya tidak
- * ada data ganda maupun kiriman yang terlewat.
+ * Mappalus mengambil daftar nominatif lewat API PANGI memakai token dari
+ * PANGI. Hanya pembawa token itu yang dapat mengambil, dan PANGI mencatat data
+ * apa saja yang sudah diambil dan dikonfirmasi.
  */
 class IntegrasiMappalusTest extends TestCase
 {
     use RefreshDatabase;
-
-    private const ALAMAT = 'https://mappalus.contoh.test/api/nominatif';
-
-    private const TOKEN = 'token-uji-mappalus';
 
     private const NO_TUGAS = 'KP.03.01/F.XXXVIII/99/2026';
 
@@ -43,17 +39,15 @@ class IntegrasiMappalusTest extends TestCase
 
     private User $ppk;
 
+    private string $token;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Http::preventStrayRequests();
-
         $this->admin = User::factory()->create(['role' => PeranPengguna::SuperAdministrator->value]);
         $this->ppk = User::factory()->ppk()->create();
-
-        Pengaturan::simpan([Pengaturan::MAPPALUS_URL => self::ALAMAT]);
-        Pengaturan::simpanRahasia(Pengaturan::MAPPALUS_TOKEN, self::TOKEN);
+        $this->token = app(AksesMappalus::class)->buatToken();
     }
 
     private function pelaksanaSelesai(string $nama = 'Maya Sari'): Usulan
@@ -88,340 +82,458 @@ class IntegrasiMappalusTest extends TestCase
         return $daftar;
     }
 
-    private function mappalusMenerima(): void
+    /** @param  array<string, mixed>  $parameter */
+    private function ambil(array $parameter = [], ?string $token = null): TestResponse
     {
-        Http::fake([self::ALAMAT => Http::response(['diterima' => true], 201)]);
+        return $this->withToken($token ?? $this->token)->getJson(route('api.v1.mappalus.nominatif', $parameter));
+    }
+
+    /** @param  array<int, array<string, mixed>>  $baris */
+    private function konfirmasi(array $baris): TestResponse
+    {
+        return $this->withToken($this->token)->postJson(route('api.v1.mappalus.nominatif.konfirmasi'), [
+            'data' => array_map(fn (array $isi) => ['referensi' => $isi['referensi'], 'versi' => $isi['versi']], $baris),
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $saringan */
+    private function isiEkspor(array $saringan = []): string
+    {
+        $balasan = $this->actingAs($this->admin)->get(route('administrasi.mappalus.ekspor', $saringan))->assertOk();
+
+        $berkas = tempnam(sys_get_temp_dir(), 'uji-xlsx-');
+        file_put_contents($berkas, $balasan->getContent());
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($berkas) === true);
+
+        $xml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+
+        $zip->close();
+        unlink($berkas);
+
+        return $xml;
     }
 
     /** @return array<string, string> */
     private function statusPerReferensi(): array
     {
-        return app(SinkronMappalus::class)->baris()->pluck('status', 'data.referensi')->all();
+        return app(DataMappalus::class)->baris()->pluck('status', 'data.referensi')->all();
     }
 
-    private function sinkronManual(): mixed
+    // ── Keamanan ──
+
+    public function test_permintaan_tanpa_token_atau_token_salah_ditolak_dan_tercatat(): void
     {
-        return $this->actingAs($this->admin)->post(route('administrasi.mappalus.sinkron'));
+        $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan();
+
+        $this->getJson(route('api.v1.mappalus.nominatif'))->assertUnauthorized()->assertExactJson(['message' => 'Akses ditolak.']);
+        $this->ambil(token: 'token-tebakan-yang-salah')->assertUnauthorized();
+        $this->postJson(route('api.v1.mappalus.nominatif.konfirmasi'), ['data' => []])->assertUnauthorized();
+
+        $this->assertSame(3, LogApi::where('hasil', LogApi::DITOLAK)->count());
+        $this->assertSame(0, PengambilanMappalus::count());
     }
 
-    public function test_hanya_super_administrator_yang_dapat_membuka_dan_mengirim(): void
+    public function test_api_tertutup_selama_belum_ada_token(): void
+    {
+        app(AksesMappalus::class)->cabutToken();
+
+        $this->ambil()->assertUnauthorized();
+        $this->withToken('')->getJson(route('api.v1.mappalus.nominatif'))->assertUnauthorized();
+
+        $this->assertSame(2, LogApi::where('hasil', LogApi::TERTUTUP)->count());
+    }
+
+    public function test_token_hanya_diterima_lewat_header_authorization(): void
+    {
+        $this->getJson(route('api.v1.mappalus.nominatif', ['token' => $this->token]))->assertUnauthorized();
+        $this->getJson(route('api.v1.mappalus.nominatif'), ['X-Api-Token' => $this->token])->assertUnauthorized();
+    }
+
+    public function test_token_mappalus_dan_token_dashboard_tidak_saling_membuka(): void
+    {
+        config(['api.token' => 'token-dashboard-eksekutif']);
+
+        $this->ambil(token: 'token-dashboard-eksekutif')->assertUnauthorized();
+        $this->withToken($this->token)->getJson('/api/v1/dashboard-eksekutif/ringkasan')->assertUnauthorized();
+    }
+
+    public function test_token_tersimpan_sebagai_sidik_dan_tampil_sekali(): void
+    {
+        $tersimpan = DB::table('pengaturan')->pluck('nilai')->implode(' ');
+        $this->assertStringNotContainsString($this->token, $tersimpan);
+
+        $this->actingAs($this->admin)->followingRedirects()
+            ->post(route('administrasi.mappalus.token.buat'))
+            ->assertOk()
+            ->assertSee('data-token-baru', false);
+
+        $this->actingAs($this->admin)->get(route('administrasi.mappalus'))
+            ->assertOk()
+            ->assertDontSee('data-token-baru', false)
+            ->assertSee('Token berakhiran');
+    }
+
+    public function test_token_baru_menggugurkan_yang_lama_dan_pencabutan_menutup_api(): void
+    {
+        $this->ambil()->assertOk();
+
+        $baru = app(AksesMappalus::class)->buatToken();
+
+        $this->ambil()->assertUnauthorized();
+        $this->ambil(token: $baru)->assertOk();
+
+        $this->actingAs($this->admin)->delete(route('administrasi.mappalus.token.cabut'))->assertSessionHas('success');
+
+        $this->ambil(token: $baru)->assertUnauthorized();
+    }
+
+    public function test_batas_alamat_menolak_pemanggil_lain_walau_tokennya_benar(): void
+    {
+        $this->actingAs($this->admin)
+            ->put(route('administrasi.mappalus.alamat'), ['alamat_ip' => "203.0.113.10\n198.51.100.0/24"])
+            ->assertSessionHasNoErrors();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.99']);
+        $this->ambil()->assertUnauthorized();
+        $this->assertSame(1, LogApi::where('hasil', LogApi::ALAMAT_DITOLAK)->count());
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10']);
+        $this->ambil()->assertOk();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7']);
+        $this->ambil()->assertOk();
+    }
+
+    public function test_batas_alamat_menolak_isian_yang_bukan_alamat(): void
+    {
+        foreach (['bukan-alamat', '10.0.0.1/99', '10.0.0.999'] as $isian) {
+            $this->actingAs($this->admin)
+                ->put(route('administrasi.mappalus.alamat'), ['alamat_ip' => $isian])
+                ->assertSessionHasErrors('alamat.0');
+        }
+
+        $this->assertSame([], app(AksesMappalus::class)->daftarAlamat());
+    }
+
+    public function test_produksi_menolak_permintaan_tanpa_https(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $this->withToken($this->token)->getJson('http://pangi.test/api/v1/mappalus/nominatif')->assertUnauthorized();
+        $this->withToken($this->token)->getJson('https://pangi.test/api/v1/mappalus/nominatif')->assertOk();
+    }
+
+    public function test_permintaan_berlebihan_dibatasi_termasuk_tebakan_token(): void
+    {
+        foreach (range(1, 30) as $tebakan) {
+            $this->ambil(token: "tebakan-{$tebakan}")->assertUnauthorized();
+        }
+
+        $this->ambil()->assertTooManyRequests();
+    }
+
+    public function test_peramban_dari_asal_lain_tidak_dapat_membaca_balasan(): void
+    {
+        config(['cors.allowed_origins' => ['https://dashboard.contoh.test']]);
+
+        $this->withToken($this->token)
+            ->getJson(route('api.v1.mappalus.nominatif'), ['Origin' => 'https://dashboard.contoh.test'])
+            ->assertOk()
+            ->assertHeaderMissing('Access-Control-Allow-Origin');
+    }
+
+    public function test_balasan_hanya_memuat_data_yang_diminta_dan_tidak_tersimpan_di_tembolok(): void
+    {
+        $usulan = $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan();
+
+        $balasan = $this->ambil()->assertOk();
+
+        $this->assertStringContainsString('no-store', (string) $balasan->headers->get('Cache-Control'));
+        $this->assertSame(
+            ['referensi', 'tim_kerja', 'kode_akun', 'total_nominal', 'keterangan', 'versi', 'status'],
+            array_keys($balasan->json('data.0')),
+        );
+        $this->assertStringNotContainsString((string) $usulan->user->nip, $balasan->getContent());
+    }
+
+    public function test_hanya_super_administrator_yang_mengelola(): void
     {
         $bendahara = User::factory()->create(['role' => User::ROLE_BENDAHARA]);
 
         $this->actingAs($bendahara)->get(route('administrasi.mappalus'))->assertForbidden();
-        $this->actingAs($bendahara)->post(route('administrasi.mappalus.sinkron'))->assertForbidden();
-        $this->actingAs($bendahara)->post(route('administrasi.mappalus.kirim-ulang', 'PJ-1'))->assertForbidden();
-        $this->actingAs($bendahara)->put(route('administrasi.mappalus.pengaturan'), ['mappalus_token' => 'lain'])->assertForbidden();
+        $this->actingAs($bendahara)->post(route('administrasi.mappalus.token.buat'))->assertForbidden();
+        $this->actingAs($bendahara)->delete(route('administrasi.mappalus.token.cabut'))->assertForbidden();
+        $this->actingAs($bendahara)->put(route('administrasi.mappalus.alamat'), ['alamat_ip' => '10.0.0.1'])->assertForbidden();
 
-        $this->actingAs($this->admin)->get(route('administrasi.mappalus'))->assertOk()->assertSee('Integrasi Mappalus');
+        $this->assertTrue(app(AksesMappalus::class)->tokenCocok($this->token));
     }
 
-    public function test_token_tersimpan_terenkripsi_dan_kolom_kosong_membiarkannya(): void
-    {
-        $simpan = fn (array $isian) => $this->actingAs($this->admin)
-            ->put(route('administrasi.mappalus.pengaturan'), ['mappalus_url' => self::ALAMAT] + $isian)
-            ->assertSessionHasNoErrors();
+    // ── Data yang tersedia ──
 
-        $simpan(['mappalus_token' => 'token-baru-dari-pengembang']);
-
-        $this->assertStringNotContainsString('token-baru-dari-pengembang', (string) DB::table('pengaturan')->where('kunci', Pengaturan::MAPPALUS_TOKEN)->value('nilai'));
-        $this->assertSame('token-baru-dari-pengembang', app(SinkronMappalus::class)->token());
-
-        $simpan([]);
-        $this->assertSame('token-baru-dari-pengembang', app(SinkronMappalus::class)->token());
-
-        $this->actingAs($this->admin)->get(route('administrasi.mappalus'))->assertDontSee('token-baru-dari-pengembang');
-
-        $simpan(['hapus_mappalus_token' => '1']);
-        $this->assertSame('', app(SinkronMappalus::class)->token());
-    }
-
-    public function test_pengiriman_otomatis_membutuhkan_alamat(): void
-    {
-        $this->actingAs($this->admin)
-            ->put(route('administrasi.mappalus.pengaturan'), ['mappalus_aktif' => '1', 'mappalus_url' => ''])
-            ->assertSessionHasErrors('mappalus_url');
-    }
-
-    public function test_tiap_pelaksana_dikirim_tersendiri_dengan_data_yang_diminta(): void
+    public function test_tiap_pelaksana_tersaji_tersendiri_dengan_data_yang_diminta(): void
     {
         $maya = $this->pelaksanaSelesai('Maya Sari');
         $rina = $this->pelaksanaSelesai('Rina Kartika');
         $this->nominatifBertandaTangan();
-        $this->mappalusMenerima();
-
-        $this->sinkronManual()->assertSessionHas('success', 'Sinkron selesai: 2 data berhasil, 0 gagal.');
 
         $jumlah = app(PenyusunNominatif::class)->baris(self::NO_TUGAS)->pluck('jumlah', 'nama');
 
-        Http::assertSentCount(2);
-        Http::assertSent(fn (Request $kiriman) => $kiriman->url() === self::ALAMAT
-            && $kiriman->method() === 'POST'
-            && $kiriman->hasHeader('Authorization', 'Bearer '.self::TOKEN)
-            && $kiriman->hasHeader('X-Api-Token', self::TOKEN)
-            && $kiriman->data() === [
+        $this->ambil()
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonFragment([
                 'referensi' => $maya->no_usulan,
                 'tim_kerja' => 'Tim OSDM',
                 'kode_akun' => '524111',
                 'total_nominal' => round($jumlah['Maya Sari'], 2),
                 'keterangan' => 'Maya Sari - '.self::NO_TUGAS,
-            ]);
-        Http::assertSent(fn (Request $kiriman) => $kiriman['referensi'] === $rina->no_usulan
-            && $kiriman['keterangan'] === 'Rina Kartika - '.self::NO_TUGAS);
-
-        $this->assertSame([SinkronMappalus::BERHASIL], array_values(array_unique($this->statusPerReferensi())));
+                'status' => 'baru',
+            ])
+            ->assertJsonFragment(['referensi' => $rina->no_usulan, 'keterangan' => 'Rina Kartika - '.self::NO_TUGAS]);
     }
 
-    public function test_nominatif_belum_bertanda_tangan_tidak_ikut(): void
+    public function test_tim_kerja_dan_kode_akun_yang_kosong_tidak_tersedia(): void
     {
         $this->pelaksanaSelesai();
-        app(PenyusunNominatif::class)->terbitkan(self::NO_TUGAS);
+        $daftar = $this->nominatifBertandaTangan();
 
-        $this->assertSame([], $this->statusPerReferensi());
+        foreach ([['id_tim_kerja' => null], ['id_akun_pembiayaan' => null]] as $kosong) {
+            $isian = $daftar->only('id_tim_kerja', 'id_akun_pembiayaan');
+            $daftar->update($kosong);
+
+            $this->ambil()->assertOk()->assertJsonCount(0, 'data');
+
+            $daftar->update($isian);
+        }
+
+        $this->ambil()->assertJsonCount(1, 'data');
     }
 
-    public function test_pelaksana_yang_belum_selesai_tidak_ikut(): void
+    public function test_nominatif_yang_belum_ditandatangani_tidak_tersedia(): void
+    {
+        $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan()->update(['ditandatangani_at' => null]);
+
+        $this->ambil()->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_pelaksana_yang_belum_selesai_tidak_tersedia(): void
     {
         $selesai = $this->pelaksanaSelesai();
         $this->nominatifBertandaTangan();
 
-        Usulan::factory()->create([
-            'no_tugas' => self::NO_TUGAS,
-            'status' => StatusUsulan::Disetujui->value,
-        ]);
+        Usulan::factory()->create(['no_tugas' => self::NO_TUGAS, 'status' => StatusUsulan::Disetujui->value]);
 
-        $this->assertSame([$selesai->no_usulan], array_keys($this->statusPerReferensi()));
+        $this->ambil()->assertJsonCount(1, 'data')->assertJsonPath('data.0.referensi', $selesai->no_usulan);
     }
 
-    public function test_yang_belum_berakun_atau_bertim_tidak_dikirim(): void
-    {
-        $usulan = $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan()->update(['id_tim_kerja' => null]);
-        Http::fake();
-
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::BELUM_LENGKAP], $this->statusPerReferensi());
-
-        app(SinkronMappalus::class)->sinkron();
-
-        Http::assertNothingSent();
-    }
-
-    /** Pencegah data ganda: yang sudah diterima tidak terkirim lagi, oleh siapa pun. */
-    public function test_data_yang_sudah_diterima_tidak_terkirim_dua_kali(): void
-    {
-        $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-        $this->mappalusMenerima();
-
-        app(SinkronMappalus::class)->sinkron($this->admin);
-        app(SinkronMappalus::class)->sinkron($this->admin);
-        $this->artisan('pangi:sinkron-mappalus');
-
-        Http::assertSentCount(1);
-        $this->assertSame(1, PengirimanMappalus::count());
-    }
-
-    public function test_kiriman_ditolak_tercatat_gagal_lalu_berhasil_saat_diulang(): void
-    {
-        $usulan = $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-
-        Http::fakeSequence(self::ALAMAT)
-            ->push(['pesan' => 'token salah'], 401)
-            ->push(['diterima' => true], 200);
-
-        $this->sinkronManual()->assertSessionHas('error', 'Sinkron selesai: 0 data berhasil, 1 gagal.');
-
-        $catatan = PengirimanMappalus::firstWhere('referensi', $usulan->no_usulan);
-
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::GAGAL], $this->statusPerReferensi());
-        $this->assertSame(401, $catatan->kode_http);
-        $this->assertStringContainsString('token salah', $catatan->pesan);
-
-        $this->sinkronManual()->assertSessionHas('success');
-
-        $catatan->refresh();
-
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::BERHASIL], $this->statusPerReferensi());
-        $this->assertSame(2, $catatan->percobaan);
-        $this->assertNull($catatan->pesan);
-        $this->assertNotNull($catatan->diterima_at);
-    }
-
-    /** Mappalus berupa aplikasi web yang menjawab 200 pada alamat apa pun. */
-    public function test_balasan_200_berupa_halaman_web_bukan_bukti_diterima(): void
-    {
-        $usulan = $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-
-        Http::fake([self::ALAMAT => Http::response('<!doctype html><title>Streamlit</title>', 200, ['Content-Type' => 'text/html'])]);
-
-        app(SinkronMappalus::class)->sinkron();
-
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::GAGAL], $this->statusPerReferensi());
-        $this->assertStringContainsString('bukan JSON', PengirimanMappalus::sole()->pesan);
-    }
-
-    public function test_sambungan_putus_menghentikan_antrean_tanpa_menandai_sisanya(): void
+    public function test_data_terbagi_per_halaman(): void
     {
         $this->pelaksanaSelesai('Maya Sari');
         $this->pelaksanaSelesai('Rina Kartika');
         $this->nominatifBertandaTangan();
 
-        Http::fake(fn () => throw new ConnectionException('Connection timed out'));
-
-        $hasil = app(SinkronMappalus::class)->sinkron();
-
-        $this->assertSame(['berhasil' => 0, 'gagal' => 1, 'sisa' => 1], $hasil);
-        $this->assertSame(1, PengirimanMappalus::count());
-        $this->assertEqualsCanonicalizing(
-            [SinkronMappalus::GAGAL, SinkronMappalus::SIAP],
-            array_values($this->statusPerReferensi()),
-        );
+        $this->ambil(['per_halaman' => 1])->assertJsonCount(1, 'data')->assertJsonPath('meta.halaman_terakhir', 2);
+        $this->ambil(['per_halaman' => 1, 'halaman' => 2])->assertJsonCount(1, 'data');
+        $this->ambil(['per_halaman' => 1, 'halaman' => 3])->assertJsonCount(0, 'data');
     }
 
-    public function test_data_yang_berubah_tidak_terkirim_sendiri_dan_dapat_dikirim_ulang(): void
+    // ── Pencatatan pengambilan ──
+
+    public function test_pengambilan_tercatat_dan_data_tetap_tersaji_sampai_dikonfirmasi(): void
     {
         $usulan = $this->pelaksanaSelesai();
         $this->nominatifBertandaTangan();
-        $this->mappalusMenerima();
 
-        app(SinkronMappalus::class)->sinkron();
+        $this->assertSame([$usulan->no_usulan => DataMappalus::BELUM_DIAMBIL], $this->statusPerReferensi());
+
+        $baris = $this->ambil()->json('data');
+        $this->ambil()->assertJsonCount(1, 'data');
+
+        $catatan = PengambilanMappalus::sole();
+
+        $this->assertSame(2, $catatan->jumlah_diambil);
+        $this->assertNotNull($catatan->pertama_diambil_at);
+        $this->assertSame([$usulan->no_usulan => DataMappalus::SUDAH_DIAMBIL], $this->statusPerReferensi());
+
+        $this->konfirmasi($baris)
+            ->assertOk()
+            ->assertExactJson(['dikonfirmasi' => [$usulan->no_usulan], 'ditolak' => []]);
+
+        $this->assertSame([$usulan->no_usulan => DataMappalus::DIKONFIRMASI], $this->statusPerReferensi());
+        $this->assertNotNull($catatan->fresh()->dikonfirmasi_at);
+
+        $this->ambil()->assertJsonCount(0, 'data');
+        $this->assertSame(2, $catatan->fresh()->jumlah_diambil);
+    }
+
+    public function test_konfirmasi_ulang_tidak_mengubah_apa_pun(): void
+    {
+        $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan();
+
+        $baris = $this->ambil()->json('data');
+        $this->konfirmasi($baris);
+        $waktu = PengambilanMappalus::sole()->dikonfirmasi_at;
+
+        $this->travel(1)->hours();
+        $this->konfirmasi($baris)->assertOk();
+
+        $this->assertEquals($waktu, PengambilanMappalus::sole()->dikonfirmasi_at);
+    }
+
+    public function test_konfirmasi_menolak_referensi_asing_dan_versi_lama(): void
+    {
+        $usulan = $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan();
+
+        $lama = $this->ambil()->json('data');
+        RincianBiaya::whereHas('keuangan', fn ($q) => $q->where('id_usulan', $usulan->id))->first()->increment('jumlah', 50_000);
+        $this->ambil();
+
+        $this->konfirmasi([...$lama, ['referensi' => 'PJ-ASING', 'versi' => str_repeat('a', 64)]])
+            ->assertOk()
+            ->assertExactJson(['dikonfirmasi' => [], 'ditolak' => [$usulan->no_usulan, 'PJ-ASING']]);
+
+        $this->assertFalse(PengambilanMappalus::sole()->pernahDikonfirmasi());
+    }
+
+    public function test_konfirmasi_memeriksa_bentuk_kiriman(): void
+    {
+        $tanpaAccept = fn (array $isi) => $this->withToken($this->token)
+            ->post(route('api.v1.mappalus.nominatif.konfirmasi'), $isi, ['Accept' => '*/*']);
+
+        $tanpaAccept([])->assertUnprocessable()->assertJsonValidationErrors('data');
+        $tanpaAccept(['data' => [['referensi' => 'PJ-1', 'versi' => 'pendek']]])->assertUnprocessable();
+        $tanpaAccept(['data' => array_fill(0, 201, ['referensi' => 'PJ-1', 'versi' => str_repeat('a', 64)])])->assertUnprocessable();
+    }
+
+    public function test_data_yang_berubah_sesudah_dikonfirmasi_tersaji_lagi_tanpa_catatan_ganda(): void
+    {
+        $usulan = $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan();
+
+        $this->konfirmasi($this->ambil()->json('data'));
 
         RincianBiaya::whereHas('keuangan', fn ($q) => $q->where('id_usulan', $usulan->id))->first()->increment('jumlah', 50_000);
 
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::BERUBAH], $this->statusPerReferensi());
+        $this->assertSame([$usulan->no_usulan => DataMappalus::BERUBAH], $this->statusPerReferensi());
 
-        app(SinkronMappalus::class)->sinkron();
-        Http::assertSentCount(1);
+        $baris = $this->ambil()->assertJsonPath('data.0.status', 'berubah')->json('data');
 
-        $this->actingAs($this->admin)
-            ->post(route('administrasi.mappalus.kirim-ulang', $usulan->no_usulan))
-            ->assertSessionHas('success', "Data {$usulan->no_usulan} diterima Mappalus.");
+        $this->konfirmasi($baris)->assertJsonPath('dikonfirmasi.0', $usulan->no_usulan);
 
-        Http::assertSentCount(2);
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::BERHASIL], $this->statusPerReferensi());
-        $this->assertSame(1, PengirimanMappalus::count());
+        $this->assertSame(1, PengambilanMappalus::count());
+        $this->assertSame([$usulan->no_usulan => DataMappalus::DIKONFIRMASI], $this->statusPerReferensi());
     }
 
-    public function test_data_yang_sudah_berhasil_tidak_dapat_dikirim_ulang(): void
-    {
-        $usulan = $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-        $this->mappalusMenerima();
-
-        app(SinkronMappalus::class)->sinkron();
-
-        $this->actingAs($this->admin)
-            ->post(route('administrasi.mappalus.kirim-ulang', $usulan->no_usulan))
-            ->assertSessionHas('error', "Data {$usulan->no_usulan} tidak perlu dikirim ulang.");
-
-        Http::assertSentCount(1);
-    }
-
-    public function test_tanda_tangan_dicabut_menandai_data_ditarik_dan_memperingatkan_ppk(): void
+    public function test_tanda_tangan_dicabut_mengabarkan_data_ditarik_dan_memperingatkan_ppk(): void
     {
         $usulan = $this->pelaksanaSelesai();
         $daftar = $this->nominatifBertandaTangan();
-        $this->mappalusMenerima();
 
-        app(SinkronMappalus::class)->sinkron();
+        $this->konfirmasi($this->ambil()->json('data'));
 
         $this->actingAs($this->ppk)
             ->delete(route('persetujuan.nominatif.batal-tanda-tangan', $daftar), ['alasan' => 'Nominal uang harian keliru.'])
-            ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, '1 data pelaksananya sudah diterima Mappalus'));
+            ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, '1 data pelaksananya sudah diambil Mappalus'));
 
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::DITARIK], $this->statusPerReferensi());
+        $this->assertSame([$usulan->no_usulan => DataMappalus::DITARIK], $this->statusPerReferensi());
+        $this->ambil()->assertJsonCount(0, 'data')->assertJsonPath('ditarik', [$usulan->no_usulan]);
 
         $this->actingAs($this->ppk)->put(route('persetujuan.nominatif.tanda-tangan', $daftar));
 
-        $this->assertSame([$usulan->no_usulan => SinkronMappalus::BERHASIL], $this->statusPerReferensi());
+        $this->assertSame([$usulan->no_usulan => DataMappalus::DIKONFIRMASI], $this->statusPerReferensi());
+        $this->ambil()->assertJsonPath('ditarik', []);
     }
 
-    public function test_perintah_terjadwal_diam_selama_tidak_diaktifkan(): void
+    // ── Halaman ──
+
+    public function test_halaman_menunjukkan_data_yang_sudah_diambil_dan_dapat_disaring(): void
     {
-        $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-        Http::fake();
-
-        $this->artisan('pangi:sinkron-mappalus')->assertSuccessful();
-
-        Http::assertNothingSent();
-    }
-
-    public function test_pengiriman_otomatis_berhenti_pada_batas_percobaan_tetapi_manual_tetap_jalan(): void
-    {
-        $usulan = $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-        Pengaturan::simpan([Pengaturan::MAPPALUS_AKTIF => '1']);
-
-        Http::fake([self::ALAMAT => Http::response(['pesan' => 'sedang perawatan'], 503)]);
-
-        foreach (range(1, SinkronMappalus::MAKS_PERCOBAAN_OTOMATIS + 2) as $putaran) {
-            $this->artisan('pangi:sinkron-mappalus')->assertSuccessful();
-        }
-
-        Http::assertSentCount(SinkronMappalus::MAKS_PERCOBAAN_OTOMATIS);
-
-        $this->sinkronManual();
-
-        Http::assertSentCount(SinkronMappalus::MAKS_PERCOBAAN_OTOMATIS + 1);
-        $this->assertSame(SinkronMappalus::MAKS_PERCOBAAN_OTOMATIS + 1, PengirimanMappalus::firstWhere('referensi', $usulan->no_usulan)->percobaan);
-    }
-
-    public function test_sinkron_ditolak_tanpa_token_atau_saat_sinkron_lain_berjalan(): void
-    {
-        $this->pelaksanaSelesai();
-        $this->nominatifBertandaTangan();
-        Http::fake();
-
-        $kunci = Cache::lock('sinkron-mappalus', 60);
-        $kunci->get();
-        $this->sinkronManual()->assertSessionHas('error', 'Sinkron lain sedang berjalan. Coba lagi beberapa saat lagi.');
-        $kunci->release();
-
-        Pengaturan::simpanRahasia(Pengaturan::MAPPALUS_TOKEN, '');
-        $this->sinkronManual()->assertSessionHas('error', 'Isi dulu alamat API dan token dari pengembang Mappalus.');
-
-        Http::assertNothingSent();
-    }
-
-    public function test_tombol_sinkron_mati_saat_antrean_kosong(): void
-    {
-        $this->actingAs($this->admin)
-            ->get(route('administrasi.mappalus'))
-            ->assertSee('Sinkron Sekarang (0)')
-            ->assertSee('kosong: true', false);
-    }
-
-    public function test_halaman_membedakan_status_dan_dapat_disaring(): void
-    {
-        $usulan = $this->pelaksanaSelesai('Maya Sari');
+        $maya = $this->pelaksanaSelesai('Maya Sari');
         $this->pelaksanaSelesai('Rina Kartika');
         $this->nominatifBertandaTangan();
 
-        Http::fake([self::ALAMAT => Http::sequence()
-            ->push(['diterima' => true], 200)
-            ->push(['pesan' => 'ditolak'], 422)]);
-
-        app(SinkronMappalus::class)->sinkron();
+        $baris = collect($this->ambil()->json('data'));
+        $this->konfirmasi($baris->where('referensi', $maya->no_usulan)->values()->all());
 
         $this->actingAs($this->admin)
             ->get(route('administrasi.mappalus'))
-            ->assertSee('data-baris-mappalus="berhasil"', false)
-            ->assertSee('data-baris-mappalus="gagal"', false)
-            ->assertSee('Kirim Ulang')
-            ->assertSee('Sinkron Sekarang (1)')
-            ->assertSee('kosong: false', false);
+            ->assertSee('data-baris-mappalus="dikonfirmasi"', false)
+            ->assertSee('data-baris-mappalus="sudah_diambil"', false)
+            ->assertSee('1× diambil')
+            ->assertSee('/api/v1/mappalus/nominatif');
 
         $this->actingAs($this->admin)
-            ->get(route('administrasi.mappalus', ['status' => SinkronMappalus::GAGAL]))
-            ->assertDontSee('data-baris-mappalus="berhasil"', false)
-            ->assertSee('data-baris-mappalus="gagal"', false);
+            ->get(route('administrasi.mappalus', ['status' => DataMappalus::SUDAH_DIAMBIL]))
+            ->assertDontSee('data-baris-mappalus="dikonfirmasi"', false)
+            ->assertSee('Rina Kartika - '.self::NO_TUGAS);
 
         $this->actingAs($this->admin)
-            ->get(route('administrasi.mappalus', ['cari' => $usulan->no_usulan]))
+            ->get(route('administrasi.mappalus', ['cari' => $maya->no_usulan]))
             ->assertSee('Maya Sari - '.self::NO_TUGAS)
             ->assertDontSee('Rina Kartika - '.self::NO_TUGAS);
+    }
+
+    public function test_halaman_memisahkan_yang_belum_bertim_kerja_atau_berakun(): void
+    {
+        $this->pelaksanaSelesai();
+        $this->nominatifBertandaTangan()->update(['id_tim_kerja' => null]);
+
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.mappalus'))
+            ->assertSee('1 pelaksana belum ikut karena tim kerja atau kode akunnya belum diisi.')
+            ->assertSee(route('pembebanan-anggaran'))
+            ->assertDontSee('data-baris-mappalus', false);
+    }
+
+    public function test_ekspor_excel_memuat_seluruh_saringan_dan_catatan_pengambilan(): void
+    {
+        $maya = $this->pelaksanaSelesai('Maya Sari');
+        $rina = $this->pelaksanaSelesai('Rina Kartika');
+        $this->nominatifBertandaTangan();
+
+        $baris = collect($this->ambil()->json('data'));
+        $this->konfirmasi($baris->where('referensi', $maya->no_usulan)->values()->all());
+
+        $semua = $this->isiEkspor();
+
+        foreach (['DATA INTEGRASI MAPPALUS', 'Maya Sari - '.self::NO_TUGAS, 'Rina Kartika - '.self::NO_TUGAS, 'Tim OSDM', '524111', 'Dikonfirmasi', 'Sudah Diambil'] as $teks) {
+            $this->assertStringContainsString($teks, $semua);
+        }
+
+        $dikonfirmasi = $this->isiEkspor(['status' => DataMappalus::DIKONFIRMASI]);
+
+        $this->assertStringContainsString($maya->no_usulan, $dikonfirmasi);
+        $this->assertStringNotContainsString($rina->no_usulan, $dikonfirmasi);
+    }
+
+    public function test_ekspor_excel_hanya_untuk_super_administrator(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_BENDAHARA]))
+            ->get(route('administrasi.mappalus.ekspor'))
+            ->assertForbidden();
+    }
+
+    public function test_riwayat_memuat_permintaan_yang_ditolak_tanpa_token_utuh(): void
+    {
+        $this->ambil(token: 'token-tebakan-yang-cukup-panjang')->assertUnauthorized();
+
+        $this->actingAs($this->admin)
+            ->get(route('administrasi.mappalus'))
+            ->assertSee('1 ditolak · 7 hari')
+            ->assertSee('Token ditolak')
+            ->assertDontSee('token-tebakan-yang-cukup-panjang');
+    }
+
+    public function test_pengaturan_lama_tidak_lagi_dipakai(): void
+    {
+        $this->assertFalse(defined(Pengaturan::class.'::MAPPALUS_URL'));
     }
 }

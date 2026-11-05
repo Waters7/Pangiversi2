@@ -3,52 +3,59 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
-use App\Models\Pengaturan;
+use App\Models\LogApi;
+use App\Services\AksesMappalus;
 use App\Services\AuditService;
-use App\Services\SinkronMappalus;
+use App\Services\DataMappalus;
+use App\Services\RekapArsipXlsx;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\View\View;
 
 /**
  * Integrasi Mappalus — bagian Administrasi Sistem bagi super administrator:
- * alamat dan token dari pengembang Mappalus, status kiriman tiap pelaksana,
- * dan tombol sinkron manual.
+ * token dan batas alamat API, data yang tersedia beserta yang sudah diambil,
+ * dan riwayat permintaan Mappalus.
  */
 class MappalusController extends Controller
 {
     private const BARIS_PER_HALAMAN = 25;
 
-    public function __construct(private SinkronMappalus $sinkron, private AuditService $audit) {}
+    private const BARIS_RIWAYAT = 20;
+
+    private const JALUR_API = '/api/v1/mappalus/%';
+
+    public function __construct(
+        private DataMappalus $data,
+        private AksesMappalus $akses,
+        private AuditService $audit,
+    ) {}
 
     public function index(Request $request): View
     {
         $this->pastikanAdmin($request);
 
-        $semua = $this->sinkron->baris();
-        $status = array_key_exists((string) $request->input('status'), SinkronMappalus::LABEL) ? $request->input('status') : null;
-        $cari = trim((string) $request->input('cari'));
+        $semua = $this->data->baris();
+        $integrasi = $this->ikutIntegrasi($semua);
+        $tampil = $this->saring($integrasi, $request);
 
-        $tampil = $semua
-            ->when($status, fn (Collection $baris) => $baris->where('status', $status))
-            ->when($cari !== '', fn (Collection $baris) => $baris->filter(
-                fn (array $item) => str_contains(mb_strtolower($item['data']['keterangan'].' '.$item['data']['referensi']), mb_strtolower($cari))
-            ))
-            ->values();
-
-        $halaman = (int) max(1, $request->integer('page', 1));
+        $halaman = max(1, $request->integer('page', 1));
+        $tokenBaru = $request->session()->get('token_mappalus_baru');
 
         return view('administrasi.mappalus', [
-            'pengaturan' => $this->sinkron->pengaturan(),
-            'siap' => $this->sinkron->siap(),
-            'status' => $status,
-            'cari' => $cari,
-            'jumlah' => $semua->countBy('status')->all(),
-            'total' => $semua->count(),
-            'antrean' => $semua->whereIn('status', [SinkronMappalus::SIAP, SinkronMappalus::GAGAL])->count(),
+            'token' => $this->akses->keadaanToken(),
+            'tokenBaru' => $tokenBaru ? Crypt::decryptString($tokenBaru) : null,
+            'alamat' => $this->akses->daftarAlamat(),
+            'status' => $this->statusTerpilih($request),
+            'cari' => trim((string) $request->input('cari')),
+            'jumlah' => $integrasi->countBy('status')->all(),
+            'total' => $integrasi->count(),
+            'belumLengkap' => $semua->count() - $integrasi->count(),
             'baris' => new LengthAwarePaginator(
                 $tampil->forPage($halaman, self::BARIS_PER_HALAMAN)->values(),
                 $tampil->count(),
@@ -56,100 +63,126 @@ class MappalusController extends Controller
                 $halaman,
                 ['path' => $request->url(), 'query' => $request->query()],
             ),
+            'riwayat' => LogApi::where('jalur', 'like', self::JALUR_API)->latest('id')->limit(self::BARIS_RIWAYAT)->get(),
+            'ditolakTujuhHari' => LogApi::where('jalur', 'like', self::JALUR_API)
+                ->sejak(now()->subDays(7))
+                ->where('hasil', '!=', LogApi::DITERIMA)
+                ->count(),
         ]);
     }
 
     /**
-     * Simpan alamat dan token dari pengembang Mappalus. Kolom token yang
-     * kosong berarti token tersimpan dibiarkan.
+     * Seluruh baris pada saringan yang sedang dipilih, bukan hanya satu halaman.
      */
-    public function simpan(Request $request): RedirectResponse
+    public function ekspor(Request $request, RekapArsipXlsx $rekap): Response
     {
         $this->pastikanAdmin($request);
 
-        $data = $request->validate([
-            'mappalus_aktif' => ['nullable', 'boolean'],
-            'mappalus_url' => ['nullable', 'url:http,https', 'max:255', Rule::requiredIf($request->boolean('mappalus_aktif'))],
-            'mappalus_token' => ['nullable', 'string', 'max:500', 'regex:/^\S+$/'],
-            'hapus_mappalus_token' => ['nullable', 'boolean'],
-        ], [
-            'mappalus_url.required' => 'Alamat API wajib diisi bila pengiriman otomatis diaktifkan.',
-            'mappalus_url.url' => 'Alamat API harus berupa URL lengkap yang diawali http:// atau https://.',
-            'mappalus_token.regex' => 'Token tidak boleh memuat spasi.',
-        ]);
+        $berkas = $rekap->mappalus($this->saring($this->ikutIntegrasi($this->data->baris()), $request))->keString();
 
-        Pengaturan::simpan([
-            Pengaturan::MAPPALUS_AKTIF => $request->boolean('mappalus_aktif') ? '1' : '0',
-            Pengaturan::MAPPALUS_URL => trim((string) ($data['mappalus_url'] ?? '')),
+        return response($berkas, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="Integrasi-Mappalus-'.now()->format('Y-m-d').'.xlsx"',
+            'Content-Length' => (string) strlen($berkas),
         ]);
+    }
 
-        if ($request->boolean('hapus_mappalus_token')) {
-            Pengaturan::simpanRahasia(Pengaturan::MAPPALUS_TOKEN, '');
-        } elseif (filled($data['mappalus_token'] ?? null)) {
-            Pengaturan::simpanRahasia(Pengaturan::MAPPALUS_TOKEN, $data['mappalus_token']);
-        }
+    /**
+     * Terbitkan token baru. Tokennya tampil sekali pada halaman berikutnya;
+     * selama menunggu di sesi ia dienkripsi, sebab sesinya tersimpan di
+     * basis data.
+     */
+    public function buatToken(Request $request): RedirectResponse
+    {
+        $this->pastikanAdmin($request);
+
+        $sebelumnya = $this->akses->terbuka();
+        $token = $this->akses->buatToken();
+
+        $this->audit->catat(AuditLog::AKSI_PENGGUNA, $sebelumnya ? 'Token API Mappalus diganti.' : 'Token API Mappalus dibuat.');
+
+        return redirect()->route('administrasi.mappalus')
+            ->with('token_mappalus_baru', Crypt::encryptString($token))
+            ->with('success', 'Token baru terbit. Salin sekarang; token ini tidak dapat ditampilkan lagi.');
+    }
+
+    public function cabutToken(Request $request): RedirectResponse
+    {
+        $this->pastikanAdmin($request);
+
+        $this->akses->cabutToken();
+
+        $this->audit->catat(AuditLog::AKSI_PENGGUNA, 'Token API Mappalus dicabut.');
+
+        return redirect()->route('administrasi.mappalus')->with('success', 'Token dicabut. API Mappalus tertutup sampai token baru dibuat.');
+    }
+
+    /**
+     * Simpan alamat yang boleh memanggil API, satu alamat IP atau CIDR per baris.
+     */
+    public function simpanAlamat(Request $request): RedirectResponse
+    {
+        $this->pastikanAdmin($request);
+
+        $alamat = collect(preg_split('/[\s,]+/', (string) $request->input('alamat_ip'), flags: PREG_SPLIT_NO_EMPTY))->unique()->values();
+
+        $request->merge(['alamat' => $alamat->all()]);
+        $request->validate(['alamat' => ['array', 'max:50'], 'alamat.*' => [$this->aturanAlamat()]]);
+
+        $this->akses->simpanDaftarAlamat($alamat->all());
 
         $this->audit->catat(
             AuditLog::AKSI_PENGGUNA,
-            'Pengaturan integrasi Mappalus diubah; pengiriman otomatis '.($request->boolean('mappalus_aktif') ? 'aktif' : 'nonaktif').'.',
+            $alamat->isEmpty() ? 'Batas alamat API Mappalus dikosongkan.' : 'Batas alamat API Mappalus diubah: '.$alamat->implode(', ').'.',
         );
 
-        return redirect()->route('administrasi.mappalus')->with('success', 'Pengaturan Mappalus tersimpan.');
+        return redirect()->route('administrasi.mappalus')->with('success', 'Batas alamat tersimpan.');
     }
 
     /**
-     * Sinkron manual: kirim yang berstatus Siap Kirim dan Gagal.
+     * Pelaksana yang tim kerja dan kode akunnya belum diisi tidak ikut integrasi.
+     *
+     * @param  Collection<int, array<string, mixed>>  $baris
+     * @return Collection<int, array<string, mixed>>
      */
-    public function sinkronkan(Request $request): RedirectResponse
+    private function ikutIntegrasi(Collection $baris): Collection
     {
-        $this->pastikanAdmin($request);
-
-        if (! $this->sinkron->siap()) {
-            return back()->with('error', 'Isi dulu alamat API dan token dari pengembang Mappalus.');
-        }
-
-        $hasil = $this->sinkron->sinkron($request->user());
-
-        if ($hasil === null) {
-            return back()->with('error', 'Sinkron lain sedang berjalan. Coba lagi beberapa saat lagi.');
-        }
-
-        $ringkas = "{$hasil['berhasil']} data berhasil, {$hasil['gagal']} gagal".($hasil['sisa'] > 0 ? ", {$hasil['sisa']} belum terkirim" : '').'.';
-
-        $this->audit->catat(AuditLog::AKSI_PENGGUNA, "Sinkron manual Mappalus: {$ringkas}");
-
-        return back()->with($hasil['gagal'] > 0 ? 'error' : 'success', 'Sinkron selesai: '.$ringkas);
+        return $baris->reject(fn (array $item) => $item['status'] === DataMappalus::BELUM_LENGKAP);
     }
 
     /**
-     * Kirim ulang satu pelaksana yang gagal, atau yang datanya berubah
-     * sesudah diterima Mappalus.
+     * @param  Collection<int, array<string, mixed>>  $baris
+     * @return Collection<int, array<string, mixed>>
      */
-    public function kirimUlang(Request $request, string $referensi): RedirectResponse
+    private function saring(Collection $baris, Request $request): Collection
     {
-        $this->pastikanAdmin($request);
+        $status = $this->statusTerpilih($request);
+        $cari = mb_strtolower(trim((string) $request->input('cari')));
 
-        if (! $this->sinkron->siap()) {
-            return back()->with('error', 'Isi dulu alamat API dan token dari pengembang Mappalus.');
-        }
+        return $baris
+            ->when($status, fn (Collection $isi) => $isi->where('status', $status))
+            ->when($cari !== '', fn (Collection $isi) => $isi->filter(
+                fn (array $item) => str_contains(mb_strtolower($item['data']['keterangan'].' '.$item['data']['referensi']), $cari)
+            ))
+            ->values();
+    }
 
-        $catatan = $this->sinkron->kirimUlang($referensi, $request->user());
+    private function statusTerpilih(Request $request): ?string
+    {
+        return array_key_exists((string) $request->input('status'), DataMappalus::LABEL) ? $request->input('status') : null;
+    }
 
-        if ($catatan === null) {
-            return back()->with('error', "Data {$referensi} tidak perlu dikirim ulang.");
-        }
+    private function aturanAlamat(): Closure
+    {
+        return function (string $atribut, mixed $nilai, Closure $gagal): void {
+            [$ip, $prefiks] = array_pad(explode('/', (string) $nilai, 2), 2, null);
+            $batas = str_contains((string) $ip, ':') ? 128 : 32;
 
-        $berhasil = $catatan->sidik_diterima === $catatan->sidik;
-
-        $this->audit->catat(
-            AuditLog::AKSI_PENGGUNA,
-            "Data {$referensi} dikirim ulang ke Mappalus: ".($berhasil ? 'berhasil.' : "gagal. {$catatan->pesan}"),
-        );
-
-        return back()->with(
-            $berhasil ? 'success' : 'error',
-            $berhasil ? "Data {$referensi} diterima Mappalus." : "Data {$referensi} gagal terkirim: {$catatan->pesan}",
-        );
+            if (filter_var($ip, FILTER_VALIDATE_IP) === false
+                || ($prefiks !== null && (! ctype_digit($prefiks) || (int) $prefiks > $batas))) {
+                $gagal("Alamat {$nilai} bukan alamat IP atau CIDR yang sah.");
+            }
+        };
     }
 
     private function pastikanAdmin(Request $request): void

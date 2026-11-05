@@ -137,6 +137,19 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.59',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Verifikasi Rincian Biaya dan Daftar Riil mendahulukan berkas yang sudah dapat ditandatangani pada kelompok Siap Ditandatangani.',
+                    'Daftar nominatif terbit pada semua jalur begitu dokumen yang berlaku pada jalurnya ditandatangani PPK: rincian biaya, ditambah daftar riil pada perjalanan lintas pulau. Berkas pertanggungjawaban boleh menyusul.',
+                    'Menu Persetujuan menampilkan status pembayaran bendahara tiap pelaksana pada daftar nominatif.',
+                    'Integrasi Mappalus berubah: Mappalus mengambil sendiri datanya lewat API PANGI memakai token dari PANGI, hanya untuk pelaksana yang tim kerja dan kode akunnya sudah diisi. Halamannya mencatat data yang sudah diambil dan dikonfirmasi beserta riwayat permintaannya.',
+                    'Dokumen Perdin punya navigasi tahun, bulan, jalur, unit kerja, dan kelengkapan bagi tim keuangan, pimpinan, dan super administrator; pegawai biasa tetap terurut per bulan.',
+                    'Perjalanan luar kota lintas pulau kini ditanya ada atau tidaknya biaya akomodasi; bila tidak ada, bill hotel dan kuitansinya tidak ditagih.',
+                    'Export Excel pada Arsip Daftar Riil, Arsip Rincian Lengkap, List Daftar Nominatif, dan Integrasi Mappalus.',
+                ],
+            ],
+            [
                 'versi' => '2.5.58',
                 'tanggal' => '5 November 2026',
                 'butir' => [

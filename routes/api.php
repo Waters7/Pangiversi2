@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\DashboardEksekutifController;
+use App\Http\Controllers\Api\MappalusController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,4 +29,16 @@ Route::middleware(['token.api', 'throttle:60,1'])
             Route::get('/pegawai', [DashboardEksekutifController::class, 'pegawai'])->name('pegawai');
             Route::get('/tahun-anggaran', [DashboardEksekutifController::class, 'tahunAnggaran'])->name('tahun-anggaran');
         });
+    });
+
+/*
+| Khusus Mappalus, dengan tokennya sendiri. Pembatas berjalan lebih dulu supaya
+| tebakan token ikut dihitung, bukan hanya permintaan yang lolos.
+*/
+Route::middleware(['throttle:30,1', 'token.mappalus'])
+    ->prefix('v1/mappalus')
+    ->name('api.v1.mappalus.')
+    ->group(function (): void {
+        Route::get('/nominatif', [MappalusController::class, 'index'])->name('nominatif');
+        Route::post('/nominatif/konfirmasi', [MappalusController::class, 'konfirmasi'])->name('nominatif.konfirmasi');
     });

@@ -102,6 +102,7 @@ enum PeranPengguna: string
             self::Pimpinan => [
                 ...$dasar,
                 Kemampuan::MelihatSemuaUsulan,
+                Kemampuan::MelihatSemuaDokumen,
                 Kemampuan::MelihatKeuangan,
                 Kemampuan::MelihatJadwalPerjalanan,
                 Kemampuan::MelihatDashboardEksekutif,
@@ -150,6 +151,7 @@ enum PeranPengguna: string
             // dan merekalah yang menyatakan nominalnya sudah benar.
             self::TimKeuangan => [
                 ...$dasar,
+                Kemampuan::MelihatSemuaDokumen,
                 Kemampuan::MelihatKeuangan,
                 Kemampuan::MengelolaBiaya,
                 Kemampuan::MemvalidasiBiaya,

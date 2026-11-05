@@ -8,12 +8,16 @@
 
     <x-flash />
 
-    <div class="mb-6">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div class="min-w-0">
         <h1 class="text-xl font-bold text-slate-800">Rincian Biaya Lengkap Tanda Tangan</h1>
         <p class="text-xs text-slate-400 mt-0.5">
             Rincian biaya perjalanan dinas yang sudah ditandatangani pelaksana dan PPK.
             Sejak itu dokumennya terkunci dan tidak berubah lagi, siap dicetak untuk lampiran.
         </p>
+        </div>
+
+        <x-tombol-ekspor :tautan="route('laporan.rincian-lengkap.ekspor', request()->query())" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">

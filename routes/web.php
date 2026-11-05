@@ -380,11 +380,14 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:melihat-arsip-perjadin')->prefix('laporan')->group(function () {
         Route::get('/daftar-riil', [LaporanController::class, 'daftarRiil'])->name('laporan.daftar-riil');
+        Route::get('/daftar-riil/ekspor', [LaporanController::class, 'eksporDaftarRiil'])->name('laporan.daftar-riil.ekspor');
 
         // Rincian biaya yang tanda tangannya sudah lengkap — dokumen yang
         // sah sebagai dasar pembayaran dan tidak berubah lagi.
         Route::get('/rincian-lengkap', [LaporanController::class, 'rincianLengkap'])->name('laporan.rincian-lengkap');
+        Route::get('/rincian-lengkap/ekspor', [LaporanController::class, 'eksporRincianLengkap'])->name('laporan.rincian-lengkap.ekspor');
         Route::get('/nominatif', [LaporanController::class, 'nominatif'])->name('laporan.nominatif');
+        Route::get('/nominatif/ekspor', [LaporanController::class, 'eksporNominatif'])->name('laporan.nominatif.ekspor');
 
         // Cetak dan penetapan akun pembiayaan terbuka bagi seluruh pembaca
         // arsip: PPK, tim keuangan, maupun Tim SDM.
@@ -484,12 +487,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/integrasi/jadwal', [IntegrasiDataController::class, 'simpanJadwal'])->name('administrasi.integrasi.jadwal');
         Route::post('/integrasi/kirim', [IntegrasiDataController::class, 'kirimSekarang'])->name('administrasi.integrasi.kirim');
 
-        // Integrasi Mappalus (super administrator): daftar nominatif bertanda
-        // tangan dikirim per pelaksana, dengan status dan sinkron manual.
+        // Integrasi Mappalus (super administrator): token API, batas alamat,
+        // serta data yang tersedia dan yang sudah diambil Mappalus.
         Route::get('/mappalus', [MappalusController::class, 'index'])->name('administrasi.mappalus');
-        Route::put('/mappalus/pengaturan', [MappalusController::class, 'simpan'])->name('administrasi.mappalus.pengaturan');
-        Route::post('/mappalus/sinkron', [MappalusController::class, 'sinkronkan'])->name('administrasi.mappalus.sinkron');
-        Route::post('/mappalus/kirim-ulang/{referensi}', [MappalusController::class, 'kirimUlang'])->name('administrasi.mappalus.kirim-ulang');
+        Route::get('/mappalus/ekspor', [MappalusController::class, 'ekspor'])->name('administrasi.mappalus.ekspor');
+        Route::post('/mappalus/token', [MappalusController::class, 'buatToken'])->name('administrasi.mappalus.token.buat');
+        Route::delete('/mappalus/token', [MappalusController::class, 'cabutToken'])->name('administrasi.mappalus.token.cabut');
+        Route::put('/mappalus/alamat', [MappalusController::class, 'simpanAlamat'])->name('administrasi.mappalus.alamat');
 
         // Pemantauan Server (super administrator): ukuran aplikasi di
         // peladen dan peringatan WhatsApp saat aplikasi tidak dapat diakses.

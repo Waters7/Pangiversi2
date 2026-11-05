@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JenisPerjadin;
 use App\Enums\Kemampuan;
 use App\Models\AuditLog;
 use App\Models\Notifikasi;
+use App\Models\UnitKerja;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AuditService;
@@ -14,16 +16,18 @@ use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PenagihDokumen;
-use App\Services\PenerbitNominatif;
 use App\Services\PengingatDokumen;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class DokumenController extends Controller
 {
+    private const BARIS_PER_HALAMAN = 25;
+
     public function __construct(
         private AuditService $audit,
         private NotifikasiService $notifikasi,
@@ -31,7 +35,6 @@ class DokumenController extends Controller
         private DokService $dokService,
         private PenagihDokumen $penagih,
         private PengingatDokumen $pengingat,
-        private PenerbitNominatif $penerbitNominatif,
     ) {}
 
     public function index(Request $request)
@@ -39,6 +42,17 @@ class DokumenController extends Controller
         $lihatSemua = $request->user()->punyaKemampuan(Kemampuan::MelihatSemuaDokumen);
         $bantuUnggah = $request->user()->punyaKemampuan(Kemampuan::MembantuUnggahDokumen);
         $cari = $request->input('cari');
+
+        // Navigasi hanya bagi yang melihat seluruh perjalanan. Pelaksana cukup
+        // mendapati perjalanannya sendiri, terurut per bulan.
+        $jalur = $lihatSemua ? JenisPerjadin::dari($request->input('jalur')) : null;
+        $daftarUnit = $lihatSemua ? UnitKerja::orderBy('nama')->get(['id', 'nama']) : collect();
+        $unit = $daftarUnit->firstWhere('id', $request->integer('unit'))?->id;
+        $tahun = $lihatSemua ? $request->input('tahun') : null;
+        $bulan = $lihatSemua ? $request->input('bulan') : null;
+        $kelengkapan = $lihatSemua && in_array($request->input('kelengkapan'), ['lengkap', 'belum'], true)
+            ? $request->input('kelengkapan')
+            : null;
 
         // Relasi yang dibaca penagih berkas ikut dimuat sekaligus, supaya kolom
         // kelengkapan tidak menanyai basis data per baris.
@@ -50,8 +64,43 @@ class DokumenController extends Controller
                 ->orWhere('no_tugas', 'like', "%{$cari}%")
                 ->orWhere('lokasi', 'like', "%{$cari}%")
                 ->orWhereHas('user', fn ($u) => $u->where('nama', 'like', "%{$cari}%"))))
+            ->when($jalur, fn ($q) => $q->padaJalur($jalur))
+            ->when($unit, fn ($q) => $q->whereHas('user', fn ($u) => $u->where('id_unit', $unit)))
             ->orderByDesc('tanggal_mulai')
             ->get();
+
+        $bulanBerangkat = fn (Usulan $item) => Carbon::parse($item->tanggal_mulai);
+        $tahunTersedia = $usulan->map(fn (Usulan $item) => $bulanBerangkat($item)->year)->unique()->sortDesc()->values();
+        $padaTahun = $usulan->when($tahun, fn ($isi) => $isi->filter(fn (Usulan $item) => $bulanBerangkat($item)->year === (int) $tahun));
+        $jumlahBulan = $padaTahun->countBy(fn (Usulan $item) => $bulanBerangkat($item)->month);
+
+        $usulan = $padaTahun
+            ->when($bulan, fn ($isi) => $isi->filter(fn (Usulan $item) => $bulanBerangkat($item)->month === (int) $bulan))
+            ->values();
+
+        // Berkas yang belum diunggah tiap perjalanan, untuk kolom statusnya.
+        $berkasKurang = $usulan->mapWithKeys(fn (Usulan $item) => [$item->id => $this->penagih->berkasKurang($item)]);
+
+        $usulan = $usulan
+            ->when($kelengkapan, fn ($isi) => $isi->filter(
+                fn (Usulan $item) => ($berkasKurang[$item->id] === []) === ($kelengkapan === 'lengkap')
+            ))
+            ->values();
+
+        // Seluruh perjalanan dapat ribuan baris; perjalanan sendiri tidak.
+        $halaman = null;
+
+        if ($lihatSemua) {
+            $nomorHalaman = max(1, $request->integer('page', 1));
+            $halaman = new LengthAwarePaginator(
+                $usulan->forPage($nomorHalaman, self::BARIS_PER_HALAMAN)->values(),
+                $usulan->count(),
+                self::BARIS_PER_HALAMAN,
+                $nomorHalaman,
+                ['path' => $request->url(), 'query' => $request->query()],
+            );
+            $usulan = $halaman->getCollection();
+        }
 
         // Dikelompokkan menurut bulan keberangkatan, lalu menurut tanggalnya
         // di dalam tiap bulan — arsip dicari berdasarkan kapan perjalanannya,
@@ -62,12 +111,12 @@ class DokumenController extends Controller
                 fn (Usulan $item) => Carbon::parse($item->tanggal_mulai)->toDateString()
             ));
 
-        // Berkas yang belum diunggah tiap perjalanan, untuk kolom statusnya.
-        $berkasKurang = $usulan->mapWithKeys(fn (Usulan $item) => [$item->id => $this->penagih->berkasKurang($item)]);
-
         // Peran yang melihat dokumen seluruh perjalanan — super administrator
         // dan yang diberi hak akses menu Dokumen — mendapati pelaksananya.
-        return view('dokumen.dokumen', compact('usulan', 'perBulan', 'cari', 'lihatSemua', 'bantuUnggah', 'berkasKurang'));
+        return view('dokumen.dokumen', compact(
+            'usulan', 'perBulan', 'cari', 'lihatSemua', 'bantuUnggah', 'berkasKurang', 'halaman',
+            'jalur', 'unit', 'daftarUnit', 'tahun', 'bulan', 'kelengkapan', 'tahunTersedia', 'jumlahBulan',
+        ));
     }
 
     public function show(Usulan $usulan)
@@ -157,10 +206,6 @@ class DokumenController extends Controller
             // Begitu seluruh berkas lengkap, bendahara diberi tahu bahwa
             // pelunasan sisa 20% sudah dapat diproses.
             $this->bendahara->berkasLengkap($usulan->fresh('dokumen', 'keuangan', 'user'));
-
-            // Pada perjalanan lintas pulau berkas yang baru lengkap sesudah
-            // tanda tangan PPK menerbitkan daftar nominatifnya.
-            $this->penerbitNominatif->terbitkan($usulan->fresh());
 
             return redirect()->route('dokumen.show', $usulan->no_usulan)->with('success', 'Dokumen berhasil diunggah.');
         } else {

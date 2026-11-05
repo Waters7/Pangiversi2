@@ -34,6 +34,7 @@
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
         <x-tabel-nominatif :baris="$baris" :total="$total" />
+        <x-pembayaran-nominatif :baris="$baris" class="mt-3" />
         <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
     </div>
 

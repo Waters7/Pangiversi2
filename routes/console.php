@@ -22,12 +22,6 @@ Schedule::command('pangi:kirim-integrasi')
     ->everyMinute()
     ->withoutOverlapping();
 
-// Daftar nominatif bertanda tangan ke Mappalus; berhenti sendiri bila
-// pengiriman otomatis pada menu Integrasi Mappalus tidak aktif.
-Schedule::command('pangi:sinkron-mappalus')
-    ->everyFifteenMinutes()
-    ->withoutOverlapping();
-
 // Ukuran aplikasi dicatat tiap malam untuk menu Pemantauan Server.
 // Pemeriksaan kesehatan (pangi:pantau-server) sengaja tidak di sini: ia
 // dipasang sebagai cron tersendiri karena penjadwal ini ikut berhenti saat

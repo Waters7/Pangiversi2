@@ -262,8 +262,8 @@ class PenagihDokumen
     }
 
     /**
-     * Pelaksana luar kota dalam satu provinsi yang menyatakan tidak ada biaya
-     * penginapan tidak ditagih bill hotel maupun kuitansinya.
+     * Pelaksana luar kota yang menyatakan tidak ada biaya akomodasi tidak
+     * ditagih bill hotel maupun kuitansinya.
      */
     private function tanpaPenginapan(Usulan $usulan, ?Dokumen $dokumen): bool
     {

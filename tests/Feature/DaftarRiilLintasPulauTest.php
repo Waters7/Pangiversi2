@@ -10,7 +10,6 @@ use App\Models\DaftarRiil;
 use App\Models\KategoriPerjadin;
 use App\Models\Keuangan;
 use App\Models\PesertaUsulan;
-use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
 use App\Services\PenyusunNominatif;
@@ -177,16 +176,6 @@ class DaftarRiilLintasPulauTest extends TestCase
 
         $this->assertNotNull(DaftarNominatif::firstWhere('no_tugas', self::NO_TUGAS));
         $this->assertDatabaseHas('notifikasi', ['id_user' => $this->ppk->id, 'judul' => 'Daftar nominatif menunggu tanda tangan']);
-    }
-
-    public function test_lintas_pulau_tetap_menunggu_daftar_riil_dan_berkas_lengkap(): void
-    {
-        $usulan = $this->usulan(JenisPerjadin::LuarKota);
-        $usulan->keuangan->rincianBiaya()->create(RincianBiaya::factory()->raw(['jumlah' => 500_000, 'kategori' => KategoriBiaya::UangHarian->value]));
-
-        $this->sahkanRincian($usulan);
-
-        $this->assertNull(DaftarNominatif::firstWhere('no_tugas', self::NO_TUGAS));
     }
 
     public function test_transport_lokal_lama_jalur_lain_dipindahkan_bila_belum_disikapi(): void

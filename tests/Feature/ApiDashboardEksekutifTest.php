@@ -269,7 +269,7 @@ class ApiDashboardEksekutifTest extends TestCase
     public function test_api_tidak_menyediakan_jalur_yang_mengubah_data(): void
     {
         $metode = collect(app('router')->getRoutes()->getRoutes())
-            ->filter(fn ($rute) => str_starts_with($rute->uri(), 'api/'))
+            ->filter(fn ($rute) => str_starts_with($rute->uri(), 'api/v1/dashboard-eksekutif'))
             ->flatMap(fn ($rute) => $rute->methods())
             ->unique()
             ->values();

@@ -159,6 +159,7 @@
 
                 <div class="p-4">
                     <x-tabel-nominatif :baris="$baris" />
+                    <x-pembayaran-nominatif :baris="$baris" class="mt-3" />
                     <x-nominatif-menunggu :menunggu="$menunggu" class="mt-3" />
                 </div>
             </div>

@@ -64,17 +64,36 @@ class TanpaPenginapanTest extends TestCase
         return app(PenagihDokumen::class)->berkasKurang($usulan->fresh());
     }
 
-    public function test_hanya_luar_kota_dalam_provinsi_yang_ditanya(): void
+    public function test_kedua_jalur_luar_kota_ditanya_biaya_akomodasi(): void
     {
-        $this->actingAs($this->pelaksana)
-            ->get(route('dokumen.show', $this->usulan(JenisPerjadin::LuarKotaDalamProvinsi)))
-            ->assertOk()
-            ->assertSee('Apakah ada biaya penginapan?');
+        foreach ([JenisPerjadin::LuarKotaDalamProvinsi, JenisPerjadin::LuarKota] as $jalur) {
+            $this->actingAs($this->pelaksana)
+                ->get(route('dokumen.show', $this->usulan($jalur)))
+                ->assertOk()
+                ->assertSee('Apakah ada biaya akomodasi?');
+        }
+    }
 
-        $this->actingAs($this->pelaksana)
-            ->get(route('dokumen.show', $this->usulan(JenisPerjadin::LuarKota)))
-            ->assertOk()
-            ->assertDontSee('Apakah ada biaya penginapan?');
+    /** Berkas lintas pulau yang belum menjawab tetap ditagih seperti semula. */
+    public function test_lintas_pulau_tanpa_akomodasi_tidak_ditagih_dan_yang_ada_tetap_ditagih(): void
+    {
+        $usulan = $this->usulan(JenisPerjadin::LuarKota);
+        $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
+
+        $this->simpanAkomodasi($usulan, ['penginapan_ada' => '0'])->assertSessionHasNoErrors();
+        $this->assertNotContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
+
+        $this->simpanAkomodasi($usulan, ['penginapan_ada' => '1'])->assertSessionHasErrors('bill_hotel');
+
+        $this->simpanAkomodasi($usulan, [
+            'penginapan_ada' => '1',
+            'bill_hotel' => UploadedFile::fake()->create('bill.pdf', 40, 'application/pdf'),
+            'bill_hotel_no_transaksi' => 'TRX-1',
+            'bill_hotel_nominal' => 750_000,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertTrue($usulan->dokumen()->first()->penginapan_ada);
+        $this->assertNotContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
     }
 
     public function test_tanpa_penginapan_bill_hotel_dan_kuitansi_tidak_ditagih(): void
@@ -124,11 +143,11 @@ class TanpaPenginapanTest extends TestCase
         $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
     }
 
-    public function test_luar_kota_lintas_pulau_tetap_wajib_bill_hotel(): void
+    public function test_luar_kota_lintas_pulau_tanpa_jawaban_tetap_wajib_bill_hotel(): void
     {
         $usulan = $this->usulan(JenisPerjadin::LuarKota);
 
-        $this->simpanAkomodasi($usulan, ['penginapan_ada' => '0'])->assertSessionHasErrors('bill_hotel');
+        $this->simpanAkomodasi($usulan, [])->assertSessionHasErrors('bill_hotel');
         $this->assertContains('Bill hotel / kuitansi hotel', $this->berkasKurang($usulan));
     }
 }

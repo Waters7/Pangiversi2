@@ -8,12 +8,16 @@
 
     <x-flash />
 
-    <div class="mb-6">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div class="min-w-0">
         <h1 class="text-xl font-bold text-slate-800">List Daftar Riil</h1>
         <p class="text-xs text-slate-400 mt-0.5">
             Daftar pengeluaran riil seluruh pelaksana. Berkas dapat diunduh setelah
             ditandatangani pelaksana dan PPK.
         </p>
+        </div>
+
+        <x-tombol-ekspor :tautan="route('laporan.daftar-riil.ekspor', request()->query())" />
     </div>
 
     <form method="GET" action="{{ route('laporan.daftar-riil') }}" class="mb-5">

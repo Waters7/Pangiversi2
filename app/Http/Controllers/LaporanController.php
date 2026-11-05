@@ -17,8 +17,10 @@ use App\Services\KertasCetak;
 use App\Services\PembebananNominatif;
 use App\Services\PengaturanDokumen;
 use App\Services\PenulisNominatifXlsx;
+use App\Services\PenulisXlsx;
 use App\Services\PenyusunNominatif;
 use App\Services\QrCodeService;
+use App\Services\RekapArsipXlsx;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -145,6 +147,44 @@ class LaporanController extends Controller
         $tahun = $request->input('tahun');
         $bulan = $request->input('bulan');
 
+        ['semua' => $semua, 'daftar' => $daftar] = $this->arsipRincianLengkap($request);
+
+        return view('laporan.rincian-lengkap', [
+            'daftar' => $daftar->groupBy(fn (array $b) => $b['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal'),
+            'cari' => $cari,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'tahunTersedia' => $semua->pluck('tanggal')->filter()
+                ->map(fn ($w) => $w->year)->unique()->sortDesc()->values(),
+            'jumlahBulan' => $semua
+                ->when($tahun, fn ($k) => $k->filter(fn (array $b) => $b['tanggal']?->year === (int) $tahun))
+                ->pluck('tanggal')->filter()->countBy(fn ($w) => $w->month),
+            'jumlahBerkas' => $daftar->count(),
+            'totalNilai' => $daftar->sum(fn (array $b) => $b['total']),
+        ]);
+    }
+
+    public function eksporRincianLengkap(Request $request, RekapArsipXlsx $rekap): Response
+    {
+        $periode = $this->labelPeriode($request->input('tahun'), $request->input('bulan'));
+
+        return $this->unduhXlsx(
+            $rekap->rincianLengkap($this->arsipRincianLengkap($request)['daftar'], $periode),
+            'Arsip-Rincian-Lengkap-'.$periode,
+        );
+    }
+
+    /**
+     * Rincian biaya lengkap tanda tangan, seluruhnya dan yang lolos saringan.
+     *
+     * @return array{semua: Collection<int, array<string, mixed>>, daftar: Collection<int, array<string, mixed>>}
+     */
+    private function arsipRincianLengkap(Request $request): array
+    {
+        $cari = $request->input('cari');
+        $tahun = $request->input('tahun');
+        $bulan = $request->input('bulan');
+
         // Daftar riil yang nol tidak menunggu tanda tangan siapa pun; yang
         // menentukan lengkapnya adalah rincian biayanya.
         $semua = DaftarRiil::with('usulan.user', 'usulan.keuangan.rincianBiaya', 'peserta', 'ppk')
@@ -177,19 +217,7 @@ class LaporanController extends Controller
             ->when($bulan, fn ($k) => $k->filter(fn (array $b) => $b['tanggal']?->month === (int) $bulan))
             ->values();
 
-        return view('laporan.rincian-lengkap', [
-            'daftar' => $daftar->groupBy(fn (array $b) => $b['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal'),
-            'cari' => $cari,
-            'tahun' => $tahun,
-            'bulan' => $bulan,
-            'tahunTersedia' => $semua->pluck('tanggal')->filter()
-                ->map(fn ($w) => $w->year)->unique()->sortDesc()->values(),
-            'jumlahBulan' => $semua
-                ->when($tahun, fn ($k) => $k->filter(fn (array $b) => $b['tanggal']?->year === (int) $tahun))
-                ->pluck('tanggal')->filter()->countBy(fn ($w) => $w->month),
-            'jumlahBerkas' => $daftar->count(),
-            'totalNilai' => $daftar->sum(fn (array $b) => $b['total']),
-        ]);
+        return ['semua' => $semua, 'daftar' => $daftar];
     }
 
     /**
@@ -206,6 +234,52 @@ class LaporanController extends Controller
     ];
 
     public function daftarRiil(Request $request)
+    {
+        $cari = $request->input('cari');
+        $tahap = $request->input('tahap');
+        $tahun = $request->input('tahun');
+        $bulan = $request->input('bulan');
+
+        ['semua' => $semua, 'daftar' => $daftar] = $this->arsipDaftarRiil($request);
+
+        $jumlah = collect(self::TAHAP_RIIL)
+            ->map(fn (string $label, string $kunci) => $semua->where('tahap', $kunci)->count())
+            ->all();
+
+        return view('laporan.daftar-riil', [
+            'daftar' => $daftar->groupBy(fn (array $baris) => $baris['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal'),
+            'cari' => $cari,
+            'tahap' => $tahap,
+            'labelTahap' => self::TAHAP_RIIL,
+            'jumlah' => $jumlah,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'tahunTersedia' => $semua->pluck('tanggal')->filter()
+                ->map(fn (Carbon $waktu) => $waktu->year)->unique()->sortDesc()->values(),
+            'jumlahBulan' => $semua
+                ->when($tahun, fn ($koleksi) => $koleksi->filter(
+                    fn (array $baris) => $baris['tanggal']?->year === (int) $tahun
+                ))
+                ->pluck('tanggal')->filter()->countBy(fn (Carbon $waktu) => $waktu->month),
+        ]);
+    }
+
+    public function eksporDaftarRiil(Request $request, RekapArsipXlsx $rekap): Response
+    {
+        $periode = $this->labelPeriode($request->input('tahun'), $request->input('bulan'));
+
+        return $this->unduhXlsx(
+            $rekap->daftarRiil($this->arsipDaftarRiil($request)['daftar'], self::TAHAP_RIIL, $periode),
+            'Arsip-Daftar-Riil-'.$periode,
+        );
+    }
+
+    /**
+     * Daftar pengeluaran riil, seluruhnya dan yang lolos saringan.
+     *
+     * @return array{semua: Collection<int, array<string, mixed>>, daftar: Collection<int, array<string, mixed>>}
+     */
+    private function arsipDaftarRiil(Request $request): array
     {
         $cari = $request->input('cari');
         $tahap = $request->input('tahap');
@@ -231,10 +305,6 @@ class LaporanController extends Controller
             ->sortByDesc(fn (array $baris) => $baris['tanggal'])
             ->values();
 
-        $jumlah = collect(self::TAHAP_RIIL)
-            ->map(fn (string $label, string $kunci) => $semua->where('tahap', $kunci)->count())
-            ->all();
-
         $daftar = $semua
             ->when($tahap, fn ($koleksi) => $koleksi->where('tahap', $tahap))
             ->when($tahun, fn ($koleksi) => $koleksi->filter(
@@ -243,25 +313,9 @@ class LaporanController extends Controller
             ->when($bulan, fn ($koleksi) => $koleksi->filter(
                 fn (array $baris) => $baris['tanggal']?->month === (int) $bulan
             ))
-            ->values()
-            ->groupBy(fn (array $baris) => $baris['tanggal']?->translatedFormat('F Y') ?? 'Tanpa Tanggal');
+            ->values();
 
-        return view('laporan.daftar-riil', [
-            'daftar' => $daftar,
-            'cari' => $cari,
-            'tahap' => $tahap,
-            'labelTahap' => self::TAHAP_RIIL,
-            'jumlah' => $jumlah,
-            'tahun' => $tahun,
-            'bulan' => $bulan,
-            'tahunTersedia' => $semua->pluck('tanggal')->filter()
-                ->map(fn (Carbon $waktu) => $waktu->year)->unique()->sortDesc()->values(),
-            'jumlahBulan' => $semua
-                ->when($tahun, fn ($koleksi) => $koleksi->filter(
-                    fn (array $baris) => $baris['tanggal']?->year === (int) $tahun
-                ))
-                ->pluck('tanggal')->filter()->countBy(fn (Carbon $waktu) => $waktu->month),
-        ]);
+        return ['semua' => $semua, 'daftar' => $daftar];
     }
 
     /**
@@ -300,6 +354,90 @@ class LaporanController extends Controller
      * beserta siapa saja pelaksana yang sudah menandatangani berkasnya.
      */
     public function nominatif(Request $request, PenyusunNominatif $penyusun, PembebananNominatif $pembebanan)
+    {
+        $penyusun->terbitkanYangSiap();
+
+        $cari = $request->input('cari');
+
+        [
+            'semua' => $semua,
+            'berakun' => $berakun,
+            'tampil' => $tampil,
+            'tanggal' => $tanggal,
+            'cocokStatus' => $cocokStatus,
+            'akun' => $akun,
+            'status' => $status,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+        ] = $this->saringNominatif($request);
+
+        // Barisnya dimuat sekali untuk seluruh surat tugas yang tampil, bukan
+        // satu rangkaian kueri per daftar.
+        $baris = $penyusun->barisBanyak($tampil->pluck('no_tugas'));
+        $tandaTangan = $penyusun->tandaTanganBanyak($tampil->pluck('no_tugas'));
+
+        $daftar = $tampil
+            ->map(fn (DaftarNominatifModel $item) => [
+                'nominatif' => $item,
+                'baris' => $baris->get($item->no_tugas) ?? collect(),
+                'tandaTangan' => $tandaTangan->get($item->no_tugas) ?? collect(),
+                'periode' => $tanggal($item)?->translatedFormat('F Y') ?? 'Tanpa Tanggal',
+            ])
+            ->values()
+            ->groupBy('periode');
+
+        return view('laporan.nominatif', [
+            'daftar' => $daftar,
+            'akun' => $akun,
+            'cari' => $cari,
+            'status' => $status,
+            'pilihanStatus' => self::STATUS_NOMINATIF,
+            'jumlahStatus' => collect(self::STATUS_NOMINATIF)->map(
+                fn (string $label, string $kunci) => $berakun->filter(
+                    fn (DaftarNominatifModel $item) => $cocokStatus($item, $kunci)
+                )->count()
+            ),
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            // Hanya tahun yang benar-benar berisi yang ditawarkan, dan
+            // hitungan bulannya mengikuti akun yang sedang dilihat.
+            'tahunTersedia' => $berakun->map($tanggal)->filter()
+                ->map(fn ($waktu) => $waktu->year)->unique()->sortDesc()->values(),
+            'jumlahBulan' => $berakun
+                ->when($tahun, fn ($koleksi) => $koleksi->filter(
+                    fn (DaftarNominatifModel $item) => $tanggal($item)?->year === (int) $tahun
+                ))
+                ->map($tanggal)->filter()->countBy(fn ($waktu) => $waktu->month),
+            'pilihanAkun' => AkunPembiayaan::pilihan(),
+            'pilihanKategori' => KategoriPembiayaan::pilihan(),
+            'alokasi' => $pembebanan->untukDaftar($tampil->filter(fn (DaftarNominatifModel $item) => $item->sudahDikirim())),
+            'jumlahBelumBerakun' => $semua->whereNull('id_akun_pembiayaan')->count(),
+        ]);
+    }
+
+    public function eksporNominatif(Request $request, PenyusunNominatif $penyusun, RekapArsipXlsx $rekap): Response
+    {
+        $penyusun->terbitkanYangSiap();
+
+        $tampil = $this->saringNominatif($request)['tampil'];
+        $baris = $penyusun->barisBanyak($tampil->pluck('no_tugas'));
+        $periode = $this->labelPeriode($request->input('tahun'), $request->input('bulan'));
+
+        return $this->unduhXlsx(
+            $rekap->nominatif($tampil->map(fn (DaftarNominatifModel $item) => [
+                'nominatif' => $item,
+                'baris' => $baris->get($item->no_tugas) ?? collect(),
+            ]), $periode),
+            'List-Daftar-Nominatif-'.$periode,
+        );
+    }
+
+    /**
+     * Daftar nominatif menurut saringan halaman.
+     *
+     * @return array<string, mixed>
+     */
+    private function saringNominatif(Request $request): array
     {
         $cari = $request->input('cari');
 
@@ -346,48 +484,7 @@ class LaporanController extends Controller
                 fn (DaftarNominatifModel $item) => $tanggal($item)?->month === (int) $bulan
             ));
 
-        // Barisnya dimuat sekali untuk seluruh surat tugas yang tampil, bukan
-        // satu rangkaian kueri per daftar.
-        $baris = $penyusun->barisBanyak($tampil->pluck('no_tugas'));
-        $tandaTangan = $penyusun->tandaTanganBanyak($tampil->pluck('no_tugas'));
-
-        $daftar = $tampil
-            ->map(fn (DaftarNominatifModel $item) => [
-                'nominatif' => $item,
-                'baris' => $baris->get($item->no_tugas) ?? collect(),
-                'tandaTangan' => $tandaTangan->get($item->no_tugas) ?? collect(),
-                'periode' => $tanggal($item)?->translatedFormat('F Y') ?? 'Tanpa Tanggal',
-            ])
-            ->values()
-            ->groupBy('periode');
-
-        return view('laporan.nominatif', [
-            'daftar' => $daftar,
-            'akun' => $akun,
-            'cari' => $cari,
-            'status' => $status,
-            'pilihanStatus' => self::STATUS_NOMINATIF,
-            'jumlahStatus' => collect(self::STATUS_NOMINATIF)->map(
-                fn (string $label, string $kunci) => $berakun->filter(
-                    fn (DaftarNominatifModel $item) => $cocokStatus($item, $kunci)
-                )->count()
-            ),
-            'tahun' => $tahun,
-            'bulan' => $bulan,
-            // Hanya tahun yang benar-benar berisi yang ditawarkan, dan
-            // hitungan bulannya mengikuti akun yang sedang dilihat.
-            'tahunTersedia' => $berakun->map($tanggal)->filter()
-                ->map(fn ($waktu) => $waktu->year)->unique()->sortDesc()->values(),
-            'jumlahBulan' => $berakun
-                ->when($tahun, fn ($koleksi) => $koleksi->filter(
-                    fn (DaftarNominatifModel $item) => $tanggal($item)?->year === (int) $tahun
-                ))
-                ->map($tanggal)->filter()->countBy(fn ($waktu) => $waktu->month),
-            'pilihanAkun' => AkunPembiayaan::pilihan(),
-            'pilihanKategori' => KategoriPembiayaan::pilihan(),
-            'alokasi' => $pembebanan->untukDaftar($tampil->filter(fn (DaftarNominatifModel $item) => $item->sudahDikirim())),
-            'jumlahBelumBerakun' => $semua->whereNull('id_akun_pembiayaan')->count(),
-        ]);
+        return compact('semua', 'berakun', 'tampil', 'tanggal', 'cocokStatus', 'akun', 'status', 'tahun', 'bulan');
     }
 
     /**
@@ -548,15 +645,19 @@ class LaporanController extends Controller
         // sehingga berkas untuk beberapa pegawai tidak saling tertukar.
         $judul = $pegawai ? $pegawai->nama.' — '.$periode : $periode;
 
-        $berkas = $this->nominatif->susun($usulan, $judul, $pegawai)->keString();
+        return $this->unduhXlsx(
+            $this->nominatif->susun($usulan, $judul, $pegawai),
+            'Daftar-Nominatif-'.($pegawai ? Str::slug($pegawai->nama).'-' : '').$periode,
+        );
+    }
 
-        $nama = 'Daftar-Nominatif-'
-            .($pegawai ? Str::slug($pegawai->nama).'-' : '')
-            .str_replace(' ', '-', $periode).'.xlsx';
+    private function unduhXlsx(PenulisXlsx $xlsx, string $nama): Response
+    {
+        $berkas = $xlsx->keString();
 
         return response($berkas, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="'.$nama.'"',
+            'Content-Disposition' => 'attachment; filename="'.str_replace(' ', '-', $nama).'.xlsx"',
             'Content-Length' => (string) strlen($berkas),
         ]);
     }

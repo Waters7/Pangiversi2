@@ -514,8 +514,8 @@
 
             @if ($minta(\App\Enums\BerkasLpj::BillHotel) || $minta(\App\Enums\BerkasLpj::Kuitansi))
             @php
-                // Luar kota dalam satu provinsi kerap tanpa menginap: ditanya dulu
-                // supaya yang tidak menginap tidak ditagih bill hotel dan kuitansinya.
+                // Perjalanan luar kota ditanya dulu supaya yang tanpa biaya akomodasi
+                // tidak ditagih bill hotel dan kuitansinya.
                 $tanyaPenginapan = $usulan->tanyaPenginapan() && ! $dokumen?->penginapanTermasukPenyelenggaraan();
                 $adaPenginapan = old('penginapan_ada', $dokumen?->tanpaPenginapan() ? '0' : '1') !== '0';
             @endphp
@@ -543,7 +543,7 @@
                     <div class="p-6 space-y-5">
                         @if ($tanyaPenginapan)
                         <div data-tanya-penginapan>
-                            <p class="text-sm font-semibold text-slate-700 mb-2">Apakah ada biaya penginapan?</p>
+                            <p class="text-sm font-semibold text-slate-700 mb-2">Apakah ada biaya akomodasi?</p>
                             <div class="flex flex-wrap gap-3">
                                 <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
                                        :class="! adaPenginapan ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
@@ -559,7 +559,7 @@
                                 </label>
                             </div>
                             <p x-show="! adaPenginapan" x-cloak class="mt-2 text-xs text-slate-500 leading-relaxed">
-                                Tanpa biaya penginapan, bill hotel dan kuitansinya tidak perlu diunggah, dan uang penginapan
+                                Tanpa biaya akomodasi, bill hotel dan kuitansinya tidak perlu diunggah, dan uang penginapan
                                 tidak masuk rincian biaya.
                                 @if (filled($dokumen?->bill_hotel))
                                     <strong class="text-amber-700">Bill hotel yang sudah tersimpan dilepas begitu disimpan.</strong>

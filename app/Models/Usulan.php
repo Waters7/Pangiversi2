@@ -145,13 +145,14 @@ class Usulan extends Model
     }
 
     /**
-     * Luar kota dalam satu provinsi kerap tanpa menginap, jadi pelaksananya
-     * ditanya dulu ada atau tidaknya biaya penginapan sebelum ditagih bill
-     * hotel dan kuitansinya.
+     * Perjalanan luar kota tidak selalu berbiaya akomodasi, jadi pelaksananya
+     * ditanya dulu ada atau tidaknya sebelum ditagih bill hotel dan
+     * kuitansinya. Tanpa jawaban dianggap ada, sehingga berkas lama tetap
+     * ditagih seperti semula.
      */
     public function tanyaPenginapan(): bool
     {
-        return $this->jalur() === JenisPerjadin::LuarKotaDalamProvinsi;
+        return in_array($this->jalur(), [JenisPerjadin::LuarKotaDalamProvinsi, JenisPerjadin::LuarKota], true);
     }
 
     /**

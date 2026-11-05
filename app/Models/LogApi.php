@@ -24,6 +24,8 @@ class LogApi extends Model
 
     public const TERTUTUP = 'tertutup';
 
+    public const ALAMAT_DITOLAK = 'alamat_ditolak';
+
     /** Catatan lebih tua dari ini dibersihkan penjadwal. */
     public const SIMPAN_HARI = 90;
 
@@ -80,6 +82,7 @@ class LogApi extends Model
         return match ($this->hasil) {
             self::DITERIMA => 'Diterima',
             self::DITOLAK => 'Token ditolak',
+            self::ALAMAT_DITOLAK => 'Alamat ditolak',
             default => 'API tertutup',
         };
     }
@@ -88,7 +91,7 @@ class LogApi extends Model
     {
         return match ($this->hasil) {
             self::DITERIMA => 'bg-emerald-100 text-emerald-700',
-            self::DITOLAK => 'bg-red-100 text-red-700',
+            self::DITOLAK, self::ALAMAT_DITOLAK => 'bg-red-100 text-red-700',
             default => 'bg-slate-100 text-slate-600',
         };
     }

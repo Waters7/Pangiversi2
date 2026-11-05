@@ -59,15 +59,17 @@ class Pengaturan extends Model
     public const KUNCI_ANTHROPIC = 'kunci_api_anthropic';
 
     /**
-     * Pengiriman daftar nominatif ke Mappalus (menu Integrasi Mappalus):
-     * sakelar pengiriman otomatis, alamat API, dan token dari pengembangnya
-     * (rahasia, terenkripsi).
+     * API yang dipanggil Mappalus (menu Integrasi Mappalus): sidik tokennya,
+     * bukan tokennya sendiri, empat karakter terakhir untuk mengenalinya,
+     * waktu dibuat, dan alamat IP yang diizinkan, satu per baris.
      */
-    public const MAPPALUS_AKTIF = 'mappalus_aktif';
+    public const MAPPALUS_TOKEN_SIDIK = 'mappalus_token_sidik';
 
-    public const MAPPALUS_URL = 'mappalus_url';
+    public const MAPPALUS_TOKEN_UJUNG = 'mappalus_token_ujung';
 
-    public const MAPPALUS_TOKEN = 'mappalus_token';
+    public const MAPPALUS_TOKEN_DIBUAT = 'mappalus_token_dibuat';
+
+    public const MAPPALUS_ALAMAT_IP = 'mappalus_alamat_ip';
 
     /**
      * Pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan
@@ -125,8 +127,6 @@ class Pengaturan extends Model
         self::INTEGRASI_JADWAL => 'harian',
         self::INTEGRASI_JAM => '06:00',
         self::INTEGRASI_HARI => '1',
-        self::MAPPALUS_AKTIF => '0',
-        self::MAPPALUS_URL => 'https://mappalus.poltekkes-manado.ac.id/',
         self::PERINGATAN_AKTIF => '0',
         self::PERINGATAN_ULANG_MENIT => '60',
         self::WA_GATEWAY => 'fonnte',

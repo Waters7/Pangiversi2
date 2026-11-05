@@ -261,8 +261,8 @@ class DokService
         // dan bill hotelnya tidak dapat dinyatakan tidak ada.
         $nominalTerkunci = $dokumen?->bill_hotel_nominal > 0 && $this->kunci->rincianBiaya($usulan) !== null;
 
-        // Luar kota dalam satu provinsi ditanya dulu ada atau tidaknya biaya
-        // penginapan; bila tidak ada, bill hotel dan kuitansinya tidak ditagih.
+        // Perjalanan luar kota ditanya dulu ada atau tidaknya biaya akomodasi;
+        // bila tidak ada, bill hotel dan kuitansinya tidak ditagih.
         // Tanpa jawaban dianggap ada, seperti sebelum pertanyaan ini dibuat.
         if ($usulan->tanyaPenginapan() && ! $tanpaBillHotel && ! $nominalTerkunci) {
             $request->validate(['penginapan_ada' => ['nullable', 'in:0,1']]);
