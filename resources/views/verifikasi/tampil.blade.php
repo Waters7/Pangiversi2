@@ -15,6 +15,10 @@
         $pelaksana = $jenis === 'pelaksana';
         $perNominatif = $jenis === 'nominatif';
 
+        // Rincian biaya dan daftar riil bertanda tangan sendiri-sendiri pada
+        // satu baris berkas; yang tampil milik jalur pemilik kode ini.
+        $jalurBerkas ??= null;
+
         $usulan = $bendahara ? $keuangan?->usulan : $daftar?->usulan;
 
         // Daftar nominatif menaungi seluruh usulan pada satu surat tugas,
@@ -33,7 +37,7 @@
             'bendahara' => $keuangan?->pembayarBendahara,
             'pelaksana' => $daftar?->peserta,
             'nominatif' => $nominatif?->ppk,
-            default => $daftar?->ppk,
+            default => $jalurBerkas?->ppk(),
         };
 
         $peranPenandatangan = match ($jenis) {
@@ -44,9 +48,9 @@
 
         $kodeSah = match ($jenis) {
             'bendahara' => $keuangan?->kode_konfirmasi_bayar,
-            'pelaksana' => $daftar?->kode_konfirmasi,
+            'pelaksana' => $jalurBerkas?->kodeKonfirmasi(),
             'nominatif' => $nominatif?->kode_verifikasi,
-            default => $daftar?->kode_verifikasi,
+            default => $jalurBerkas?->kodeVerifikasi(),
         };
 
         $labelKode = match ($jenis) {
@@ -57,9 +61,9 @@
 
         $waktu = match ($jenis) {
             'bendahara' => $keuangan?->dikonfirmasi_bayar_at,
-            'pelaksana' => $daftar?->disetujui_pegawai_at,
+            'pelaksana' => $jalurBerkas?->waktu('disetujui'),
             'nominatif' => $nominatif?->ditandatangani_at,
-            default => $daftar?->ditandatangani_at,
+            default => $jalurBerkas?->waktu('ditandatangani'),
         };
 
         $labelWaktu = match ($jenis) {
@@ -109,6 +113,13 @@
                         <div>
                             <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nomor Surat Tugas</dt>
                             <dd class="font-bold text-slate-800 mt-0.5">{{ $nominatif?->no_tugas ?? '—' }}</dd>
+                        </div>
+                    @endif
+
+                    @if ($jalurBerkas)
+                        <div>
+                            <dt class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Dokumen</dt>
+                            <dd class="font-bold text-slate-800 mt-0.5">{{ $jalurBerkas->nama() }}</dd>
                         </div>
                     @endif
 

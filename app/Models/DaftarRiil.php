@@ -98,7 +98,8 @@ class DaftarRiil extends Model
 
     /**
      * Nominal rincian biaya perjalanan dinas: seluruh komponen kecuali
-     * transport lokal, yang sudah pindah ke daftar pengeluaran riil.
+     * transport lokal perjalanan lintas pulau, yang dipertanggungjawabkan
+     * pada daftar pengeluaran riil.
      */
     public function totalRincianBiaya(): float
     {

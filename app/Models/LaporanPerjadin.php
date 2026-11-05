@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BagianLaporan;
 use App\Enums\StatusLaporanPerjadin;
+use App\Enums\StatusTindakLanjut;
 use App\Services\FormatLaporanPerjadin;
 use App\Services\PustakaBerkasBersama;
 use App\Services\PustakaSuratTugas;
@@ -204,6 +205,30 @@ class LaporanPerjadin extends Model
         $isi = $this->{$bagian->kolom()};
 
         return filled($isi) ? (string) $isi : null;
+    }
+
+    /**
+     * Baris rencana tindak lanjut untuk formulir: kiriman terakhir bila
+     * penyimpanannya ditolak, selain itu yang tersimpan, sedikitnya satu baris.
+     *
+     * @param  array<int, array<string, mixed>>|null  $kiriman
+     * @return list<array{uraian: string, penanggung_jawab: string, target_selesai: string, status: string}>
+     */
+    public function barisTindakLanjutFormulir(?array $kiriman = null): array
+    {
+        $baris = $this->tindakLanjut->map(fn (TindakLanjut $tindak) => [
+            'uraian' => $tindak->uraian,
+            'penanggung_jawab' => $tindak->penanggung_jawab,
+            'target_selesai' => $tindak->target_selesai?->toDateString(),
+            'status' => $tindak->status->value,
+        ])->all();
+
+        return array_map(fn (array $isi) => [
+            'uraian' => (string) ($isi['uraian'] ?? ''),
+            'penanggung_jawab' => (string) ($isi['penanggung_jawab'] ?? ''),
+            'target_selesai' => (string) ($isi['target_selesai'] ?? ''),
+            'status' => (string) ($isi['status'] ?? StatusTindakLanjut::Rencana->value),
+        ], array_values($kiriman ?? $baris) ?: [[]]);
     }
 
     /** Foto dokumentasi satu bagian, bila ada. */

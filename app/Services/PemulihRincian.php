@@ -52,6 +52,11 @@ class PemulihRincian
             return true;
         }
 
+        // Nota jalur lain tercatat sebagai baris rincian biaya, di atas.
+        if (! $usulan->memakaiDaftarRiil()) {
+            return false;
+        }
+
         $notaTercatat = $usulan->daftarRiil
             ->flatMap->rincian
             ->where('sumber', RincianDaftarRiil::SUMBER_DOKUMEN)
@@ -98,6 +103,15 @@ class PemulihRincian
 
         if ($this->kunci->rincianBiaya($usulan) || $this->kunci->daftarRiil($usulan)) {
             return ["{$baris->count()} baris transport lokal tidak dipindah — berkasnya sudah ditandatangani"];
+        }
+
+        // Jalur tanpa daftar riil: barisnya memang tempatnya di rincian biaya,
+        // hanya kategorinya yang disesuaikan supaya ikut terhitung.
+        if (! $usulan->memakaiDaftarRiil()) {
+            $baris->each->update(['kategori' => KategoriBiaya::TransportLokalRincian->value]);
+            $usulan->keuangan?->hitungTotal();
+
+            return ["{$baris->count()} baris transport lokal ditetapkan sebagai rincian biaya"];
         }
 
         $catatan = [];

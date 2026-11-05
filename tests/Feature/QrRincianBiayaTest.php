@@ -11,10 +11,11 @@ use App\Models\PesertaUsulan;
 use App\Models\RincianBiaya;
 use App\Models\User;
 use App\Models\Usulan;
-use App\Services\QrCodeService;
+use App\Services\JalurPersetujuan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -91,6 +92,22 @@ class QrRincianBiayaTest extends TestCase
         $daftar->tandaTangani($this->ppk);
 
         return $daftar->fresh();
+    }
+
+    /** Rincian biaya sah tanpa daftar riil: perjalanan tanpa transport lokal. */
+    private function rincianDitandatangani(): JalurPersetujuan
+    {
+        $berkas = DaftarRiil::factory()->create([
+            'id_usulan' => $this->usulan->id,
+            'id_peserta' => $this->peserta->id,
+            'total_riil' => 0,
+        ]);
+
+        $berkas->kirimKePegawai();
+        $berkas->jalurRincian()->setujui();
+        $berkas->jalurRincian()->tandaTangani($this->ppk);
+
+        return $berkas->fresh()->jalurRincian();
     }
 
     private function lunasi(): Keuangan
@@ -239,6 +256,69 @@ class QrRincianBiayaTest extends TestCase
         $this->assertStringContainsString('keabsahan tanda tangan PPK', $html);
     }
 
+    /**
+     * Perjalanan tanpa transport lokal hanya bertanda tangan pada rincian
+     * biayanya. Dulu cetakan mencari tanda tangan daftar riil, sehingga
+     * rincian yang sudah sah tercetak tanpa QR dan tanpa tanggal PPK.
+     */
+    public function test_rincian_tanpa_daftar_riil_tetap_mencetak_qr_kedua_penandatangan(): void
+    {
+        $jalur = $this->rincianDitandatangani();
+        $html = $this->renderRincian();
+
+        $this->assertSame(2, substr_count($html, 'data:image/png;base64,'));
+        $this->assertStringContainsString($jalur->kodeKonfirmasi(), $html);
+        $this->assertStringContainsString($jalur->kodeVerifikasi(), $html);
+        $this->assertStringContainsString('Manado, '.now()->translatedFormat('d F Y'), $html);
+    }
+
+    public function test_qr_pelaksana_terbit_begitu_pelaksana_menandatangani_rincian(): void
+    {
+        $berkas = DaftarRiil::factory()->create([
+            'id_usulan' => $this->usulan->id,
+            'id_peserta' => $this->peserta->id,
+            'total_riil' => 0,
+        ]);
+        $berkas->kirimKePegawai();
+        $berkas->jalurRincian()->setujui();
+
+        $html = $this->renderRincian();
+
+        $this->assertSame(1, substr_count($html, 'data:image/png;base64,'));
+        $this->assertStringContainsString($berkas->fresh()->jalurRincian()->kodeKonfirmasi(), $html);
+    }
+
+    /** QR pada rincian biaya harus dapat dipindai: kodenya dikenali halaman verifikasi. */
+    public function test_kode_rincian_biaya_dapat_diverifikasi(): void
+    {
+        $jalur = $this->rincianDitandatangani();
+
+        $this->get(route('verifikasi.tampil', $jalur->kodeVerifikasi()))
+            ->assertOk()
+            ->assertSee('Dokumen Terverifikasi')
+            ->assertSee('Rincian Biaya Perjalanan Dinas')
+            ->assertSee($this->ppk->nama)
+            ->assertSee($this->usulan->no_usulan);
+
+        $this->get(route('verifikasi.tampil', $jalur->kodeKonfirmasi()))
+            ->assertOk()
+            ->assertSee('Dokumen Terverifikasi')
+            ->assertSee('Pelaksana Perjalanan Dinas')
+            ->assertSee($this->peserta->nama);
+    }
+
+    public function test_kode_rincian_yang_tanda_tangannya_dicabut_tidak_lagi_sah(): void
+    {
+        $jalur = $this->rincianDitandatangani();
+        $kode = $jalur->kodeVerifikasi();
+
+        $jalur->batalkanTandaTangan();
+
+        $this->get(route('verifikasi.tampil', $kode))
+            ->assertOk()
+            ->assertSee('Dokumen Tidak Terverifikasi');
+    }
+
     public function test_qr_ppk_isinya_sama_dengan_qr_daftar_riil(): void
     {
         $daftar = $this->daftarRiilDitandatangani();
@@ -304,31 +384,21 @@ class QrRincianBiayaTest extends TestCase
      * Render templat cetaknya dengan data yang sama seperti controller,
      * agar isinya dapat diperiksa tanpa membongkar berkas PDF.
      */
+    /**
+     * HTML rincian dari data yang benar-benar diserahkan controller, supaya
+     * pemilihan tanda tangannya ikut teruji — teks di dalam PDF terkompresi.
+     */
     private function renderRincian(): string
     {
-        $usulan = $this->usulan->fresh(['user.unit', 'kegiatan', 'keuangan.rincianBiaya', 'peserta']);
-        $keuangan = $usulan->keuangan;
-        $qr = app(QrCodeService::class);
+        $data = null;
+        View::composer('keuangan.cetak-rincian', function ($view) use (&$data): void {
+            $data ??= $view->getData();
+        });
 
-        $daftar = DaftarRiil::where('id_peserta', $this->peserta->id)->sudahDitandatangani()->first();
+        $this->actingAs($this->bendahara)
+            ->get(route('keuangan.cetak-rincian', [$this->usulan, 'peserta' => $this->peserta->id]))
+            ->assertOk();
 
-        return view('keuangan.cetak-rincian', [
-            'usulan' => $usulan,
-            'peserta' => $this->peserta,
-            'rincianPerKategori' => $keuangan->rincianBiaya->groupBy(fn ($i) => $i->kategori->value),
-            'total' => (float) $keuangan->rincianBiaya->sum('jumlah'),
-            'transportLokal' => collect(),
-            'totalTransportLokal' => 0.0,
-            'totalKeseluruhan' => (float) $keuangan->rincianBiaya->sum('jumlah'),
-            'dibayarkan' => (float) $keuangan->uang_muka,
-            'terbilang' => 'satu juta lima ratus sembilan puluh ribu rupiah',
-            'bendahara' => $this->bendahara,
-            'ppk' => $this->ppk,
-            'daftarRiil' => $daftar,
-            'keuangan' => $keuangan,
-            'qrPelaksana' => $daftar?->urlKonfirmasi() ? $qr->dataUri($daftar->urlKonfirmasi(), 180) : null,
-            'qrPpk' => $daftar?->urlVerifikasi() ? $qr->dataUri($daftar->urlVerifikasi(), 180) : null,
-            'qrBendahara' => $keuangan?->urlKonfirmasiBayar() ? $qr->dataUri($keuangan->urlKonfirmasiBayar(), 180) : null,
-        ])->render();
+        return view('keuangan.cetak-rincian', $data)->render();
     }
 }

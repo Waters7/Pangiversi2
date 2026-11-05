@@ -653,7 +653,10 @@
             $bolehHapusTransport = $canEditRincian && app(\App\Services\PenguncianBerkas::class)->daftarRiil($usulan) === null;
         @endphp
 
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        {{-- Hanya perjalanan lintas pulau yang memakai Daftar Pengeluaran Riil;
+             jalur lain mencatat transport lokalnya sebagai baris rincian biaya. --}}
+        @if ($usulan->memakaiDaftarRiil() || $barisTransport->isNotEmpty())
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden" data-transport-lokal-riil>
             <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -748,6 +751,7 @@
                 </table>
             </div>
         </div>
+        @endif
 
         {{-- ── RIWAYAT PEMBAYARAN ── --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

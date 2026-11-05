@@ -14,8 +14,8 @@ use App\Services\KertasCetak;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
 use App\Services\PenagihDokumen;
+use App\Services\PenerbitNominatif;
 use App\Services\PengingatDokumen;
-use App\Services\PenguncianBerkas;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,7 +31,7 @@ class DokumenController extends Controller
         private DokService $dokService,
         private PenagihDokumen $penagih,
         private PengingatDokumen $pengingat,
-        private PenguncianBerkas $kunci,
+        private PenerbitNominatif $penerbitNominatif,
     ) {}
 
     public function index(Request $request)
@@ -108,11 +108,8 @@ class DokumenController extends Controller
         abort_unless($request->user()->bolehMengunggahDokumen($usulan), 403);
         abort_if($usulan->status === 'selesai' && ! $request->user()->isAdmin(), 403, 'Usulan sudah selesai, dokumen tidak dapat diubah.');
 
-        // Tiket, nota, dan bill hotel adalah sumber angka pada kedua
-        // dokumen. Mengubahnya setelah ditandatangani akan menggeser
-        // nilai yang sudah disetujui, jadi ditutup di sini.
-        $this->kunci->pastikanUnggahanTerbuka($usulan);
-
+        // Berkas tetap dapat diunggah sesudah dokumen ditandatangani; nominal
+        // yang sudah tercantum dijaga DokService supaya angkanya tidak bergeser.
         $type = $request->input('section', '');
 
         $result = $this->dokService->store($request, $usulan, $type);
@@ -160,6 +157,10 @@ class DokumenController extends Controller
             // Begitu seluruh berkas lengkap, bendahara diberi tahu bahwa
             // pelunasan sisa 20% sudah dapat diproses.
             $this->bendahara->berkasLengkap($usulan->fresh('dokumen', 'keuangan', 'user'));
+
+            // Pada perjalanan lintas pulau berkas yang baru lengkap sesudah
+            // tanda tangan PPK menerbitkan daftar nominatifnya.
+            $this->penerbitNominatif->terbitkan($usulan->fresh());
 
             return redirect()->route('dokumen.show', $usulan->no_usulan)->with('success', 'Dokumen berhasil diunggah.');
         } else {

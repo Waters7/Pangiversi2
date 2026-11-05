@@ -115,8 +115,10 @@
 
             @foreach (KategoriBiaya::urutanCetak() as $kategori)
                 @php
+                    // Kelompok transportasi lokal memuat keduanya: dari daftar riil
+                    // pada perjalanan lintas pulau, dari rincian biaya pada jalur lain.
                     $baris = $kategori === KategoriBiaya::TransportLokal
-                        ? $transportLokal
+                        ? collect($transportLokal)->concat($rincianPerKategori->get(KategoriBiaya::TransportLokalRincian->value) ?? [])
                         : ($rincianPerKategori->get($kategori->value) ?? collect());
                 @endphp
 
@@ -130,7 +132,7 @@
                 @foreach ($baris as $item)
                     @php $nomor++; @endphp
 
-                    @if ($kategori === KategoriBiaya::TransportLokal)
+                    @if (! $item instanceof \App\Models\RincianBiaya)
                         {{-- Nominal dari nota pelaksana lewat Daftar Pengeluaran Riil,
                              dibayarkan saat pelunasan — bagian dari biaya perjalanan,
                              jadi tercantum di sini. --}}
@@ -161,7 +163,7 @@
                     @endif
                 @endforeach
 
-                @if ($kategori === KategoriBiaya::TransportLokal)
+                @if ($kategori === KategoriBiaya::TransportLokal && $transportLokal->isNotEmpty())
                     <tr class="subjumlah">
                         <td></td>
                         <td>Subtotal transportasi lokal (Daftar Pengeluaran Riil)</td>
@@ -193,7 +195,7 @@
          kotak QR bertinggi tetap, jabatan, nama, NIP — supaya keduanya
          sejajar entah QR-nya sudah terbit atau belum. --}}
     @php
-        $tanggalPelaksana ??= $daftarRiil?->rincian_disetujui_at ?? $daftarRiil?->disetujui_pegawai_at;
+        $tanggalPelaksana ??= $tandaTangan['waktu_pelaksana'];
         $tanggalBendahara = $keuangan?->dikonfirmasi_bayar_at
             ?? ($keuangan?->tanggal_pelunasan ? \Carbon\Carbon::parse($keuangan->tanggal_pelunasan) : null);
     @endphp
@@ -229,7 +231,7 @@
                 Sebesar Rp {{ number_format($totalKeseluruhan, 0, ',', '.') }}
                 <div class="kotak-ttd">
                     @if ($qrPelaksana && $dok->tampil('qr'))
-                        {{-- Kode yang sama dengan QR pelaksana pada daftar pengeluaran riil --}}
+                        {{-- Tanda tangan pelaksana atas rincian biaya ini --}}
                         <img src="{{ $qrPelaksana }}" alt="QR konfirmasi pelaksana" class="qr">
                     @endif
                 </div>
@@ -237,11 +239,10 @@
                 <span class="nama">{{ $peserta?->nama ?? $usulan->user?->nama }}</span><br>
                 NIP : {{ $peserta?->nip ?? $usulan->user?->nip ?? '-' }}
                 @if ($qrPelaksana && $dok->tampil('qr'))
-                    <br><span class="kode-qr">{{ $daftarRiil->kode_konfirmasi }}</span>
+                    <br><span class="kode-qr">{{ $tandaTangan['kode_pelaksana'] }}</span>
                     <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Nominal dikonfirmasi pelaksana pada
-                        {{ $daftarRiil->disetujui_pegawai_at?->translatedFormat('d F Y, H:i') }} WITA,
-                        dan daftar pengeluaran riilnya sudah ditandatangani PPK.
+                        {{ $tandaTangan['waktu_pelaksana']?->translatedFormat('d F Y, H:i') }} WITA.
                     </p>
                 @endif
             </td>
@@ -265,21 +266,21 @@
             <td class="kolom kolom-ppk">
                 {{-- Tanggal PPK menandatangani menurut sistem; sebelum itu
                      bertitik, bukan tanggal cetak yang bisa menyesatkan. --}}
-                Manado, {{ $daftarRiil?->ditandatangani_at?->translatedFormat('d F Y') ?? '……………………' }}<br>
+                Manado, {{ $tandaTangan['waktu_ppk']?->translatedFormat('d F Y') ?? '……………………' }}<br>
                 Pejabat Pembuat Komitmen,
                 <div class="kotak-ttd">
                     @if ($qrPpk && $dok->tampil('qr'))
-                        {{-- Kode yang sama dengan QR PPK pada daftar pengeluaran riil --}}
+                        {{-- Tanda tangan PPK atas rincian biaya ini --}}
                         <img src="{{ $qrPpk }}" alt="QR verifikasi PPK" class="qr">
                     @endif
                 </div>
-                <span class="nama">{{ $daftarRiil?->ppk?->nama ?? $ppk?->nama ?? '……………………………' }}</span><br>
-                NIP : {{ $daftarRiil?->ppk?->nip ?? $ppk?->nip ?? '…………………………' }}
+                <span class="nama">{{ $tandaTangan['ppk']?->nama ?? $ppk?->nama ?? '……………………………' }}</span><br>
+                NIP : {{ $tandaTangan['ppk']?->nip ?? $ppk?->nip ?? '…………………………' }}
                 @if ($qrPpk && $dok->tampil('qr'))
-                    <br><span class="kode-qr">{{ $daftarRiil->kode_verifikasi }}</span>
+                    <br><span class="kode-qr">{{ $tandaTangan['kode_ppk'] }}</span>
                     <p class="catatan-qr" @if (! $dok->tampil('catatan_qr')) style="display:none" @endif>
                         Ditandatangani secara elektronik pada
-                        {{ $daftarRiil->ditandatangani_at?->translatedFormat('d F Y, H:i') }} WITA.<br>
+                        {{ $tandaTangan['waktu_ppk']?->translatedFormat('d F Y, H:i') }} WITA.<br>
                         Pindai QR untuk memeriksa keabsahan tanda tangan PPK.
                     </p>
                 @endif

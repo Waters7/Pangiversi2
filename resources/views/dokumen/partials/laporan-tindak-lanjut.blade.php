@@ -1,7 +1,21 @@
 {{-- Rencana tindak lanjut: daftar berulang yang dikelola Alpine lewat
      variabel "tindak" pada formulirnya. Variabel: $terkunci, $statusTindakLanjut,
      dan $keterangan (opsional, teks di bawah judul). --}}
-<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+     x-data="{
+        /** Barisnya diatur Alpine, jadi dipulihkan lewat datanya, bukan lewat isiannya. */
+        dariDraf(isi) {
+            const baris = {};
+
+            Object.entries(isi).forEach(([nama, nilai]) => {
+                const cocok = nama.match(/^tindak_lanjut\[(\d+)\]\[(\w+)\]$/);
+                if (cocok) { (baris[cocok[1]] ??= { uraian: '', penanggung_jawab: '', target_selesai: '', status: 'rencana' })[cocok[2]] = nilai; }
+            });
+
+            if (Object.keys(baris).length > 0) { this.tindak = Object.values(baris); }
+        },
+     }"
+     @draf-dipulihkan.window="dariDraf($event.detail)">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
         <div>
             <h3 class="font-bold text-slate-800 text-sm">Rencana Tindak Lanjut</h3>

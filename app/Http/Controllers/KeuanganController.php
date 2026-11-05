@@ -30,6 +30,7 @@ use App\Services\PenguncianBerkas;
 use App\Services\QrCodeService;
 use App\Services\RingkasanPembayaran;
 use App\Services\SinkronBiayaDokumen;
+use App\Services\TautanVerifikasi;
 use App\Services\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -297,7 +298,7 @@ class KeuanganController extends Controller
 
         // Standar biaya dipakai untuk mengisi otomatis satuan dan harga di form rincian.
         $komponenBiaya = KomponenBiaya::aktif()->orderBy('nama')->get();
-        $kategoriBiaya = KategoriBiaya::untukTimKeuangan();
+        $kategoriBiaya = KategoriBiaya::untukTimKeuangan($usulan->memakaiDaftarRiil());
 
         // Siapa membayar komponen mana — untuk tabel status bayar dan kartu
         // ringkasan bendahara — serta baris berkas yang dihapus tim keuangan.
@@ -343,18 +344,13 @@ class KeuanganController extends Controller
             ? $usulan->peserta->firstWhere('id', $request->integer('peserta'))
             : $usulan->peserta->firstWhere('peran', 'ketua');
 
-        // Konfirmasi pelaksana baru dicetak setelah PPK menandatangani daftar
-        // riilnya, dan isinya sama persis dengan QR pada daftar riil tersebut.
-        $daftarRiil = $peserta
-            ? DaftarRiil::where('id_peserta', $peserta->id)->sudahDitandatangani()->first()
-            : null;
-
-        // Daftar riil peserta ini pada tahap mana pun: sumber transport lokal
-        // yang ikut tercetak — dokumen rincian biaya memuat seluruh biaya
-        // perjalanan — dan tanggal pelaksana menyetujui rinciannya.
+        // Berkas peserta ini pada tahap mana pun: sumber transport lokal yang
+        // ikut tercetak — dokumen rincian biaya memuat seluruh biaya
+        // perjalanan — dan tanda tangan atas rincian biayanya.
         $berkasPeserta = $peserta
             ? DaftarRiil::with('rincian')->where('id_peserta', $peserta->id)->where('id_usulan', $usulan->id)->first()
             : null;
+        $tandaTangan = $this->tandaTanganRincian($berkasPeserta);
         $transportLokal = $berkasPeserta?->rincian ?? collect();
         $totalTransportLokal = (float) ($berkasPeserta?->total_riil ?? $transportLokal->sum('nominal'));
         $totalKeseluruhan = $total + $totalTransportLokal;
@@ -391,20 +387,52 @@ class KeuanganController extends Controller
             'terbilang' => $this->terbilang->konversi($totalKeseluruhan),
             'bendahara' => User::where('role', User::ROLE_BENDAHARA)->first(),
             'ppk' => User::where('role', User::ROLE_PPK)->first(),
-            'daftarRiil' => $daftarRiil,
+            'tandaTangan' => $tandaTangan,
             'keuangan' => $keuangan,
-            'qrPelaksana' => $daftarRiil?->urlKonfirmasi()
-                ? $this->qrCode->dataUri($daftarRiil->urlKonfirmasi(), 180)
-                : null,
-            'qrPpk' => $daftarRiil?->urlVerifikasi()
-                ? $this->qrCode->dataUri($daftarRiil->urlVerifikasi(), 180)
-                : null,
+            'qrPelaksana' => $this->qrTandaTangan($tandaTangan['kode_pelaksana']),
+            'qrPpk' => $this->qrTandaTangan($tandaTangan['kode_ppk']),
             'qrBendahara' => $keuangan?->urlKonfirmasiBayar()
                 ? $this->qrCode->dataUri($keuangan->urlKonfirmasiBayar(), 180)
                 : null,
         ])->setPaper(app(PengaturanDokumen::class)->untuk(DokumenCetak::RincianBiaya)->kertas());
 
         return $pdf->download("Rincian-Biaya_{$usulan->no_usulan}.pdf");
+    }
+
+    /**
+     * Tanda tangan yang tercetak pada rincian biaya.
+     *
+     * Rincian biaya punya jalur tanda tangannya sendiri. Dulu cetakan ini
+     * meminjam tanda tangan daftar riil, sehingga perjalanan tanpa transport
+     * lokal — yang daftar riilnya tidak pernah ditandatangani — tidak pernah
+     * mendapat QR walau rinciannya sudah sah. Tiap QR terbit begitu
+     * pemiliknya menandatangani; berkas lama yang hanya bertanda tangan pada
+     * daftar riil tetap memakai tanda tangan itu.
+     *
+     * @return array{kode_pelaksana: ?string, waktu_pelaksana: mixed, kode_ppk: ?string, waktu_ppk: mixed, ppk: ?User}
+     */
+    private function tandaTanganRincian(?DaftarRiil $berkas): array
+    {
+        $jalur = $berkas?->jalurRincian();
+        $riil = $berkas?->sudah_ditandatangani ? $berkas : null;
+
+        $disetujui = $jalur?->sudahDisetujui() ? $jalur : null;
+        $disahkan = $jalur?->sudahDitandatangani() ? $jalur : null;
+
+        return [
+            'kode_pelaksana' => $disetujui?->kodeKonfirmasi() ?? $riil?->kode_konfirmasi,
+            'waktu_pelaksana' => $disetujui?->waktu('disetujui') ?? $riil?->disetujui_pegawai_at,
+            'kode_ppk' => $disahkan?->kodeVerifikasi() ?? $riil?->kode_verifikasi,
+            'waktu_ppk' => $disahkan?->waktu('ditandatangani') ?? $riil?->ditandatangani_at,
+            'ppk' => $disahkan?->ppk() ?? $riil?->ppk,
+        ];
+    }
+
+    private function qrTandaTangan(?string $kode): ?string
+    {
+        $alamat = app(TautanVerifikasi::class)->untuk($kode);
+
+        return $alamat ? $this->qrCode->dataUri($alamat, 180) : null;
     }
 
     /**
@@ -420,9 +448,10 @@ class KeuanganController extends Controller
         $this->kunci->pastikanRincianTerbuka($usulan);
 
         $request->validate(...$this->aturanRincianKeuangan($request));
+        $this->sesuaikanKategoriDenganJalur($request, $usulan);
 
-        // Transport lokal dicatat pada Daftar Pengeluaran Riil pelaksana,
-        // bukan sebagai baris rincian biaya.
+        // Pada perjalanan lintas pulau transport lokal dicatat pada Daftar
+        // Pengeluaran Riil pelaksana, bukan sebagai baris rincian biaya.
         if ($request->input('kategori') === KategoriBiaya::TransportLokal->value) {
             $this->transportLokal->tambah($usulan, $request->komponen, (float) ($request->volume * $request->harga_satuan));
 
@@ -492,6 +521,7 @@ class KeuanganController extends Controller
         $dariBerkas = $rincian->dariDokumen();
 
         $request->validate(...$this->aturanRincianKeuangan($request, $dariBerkas));
+        $this->sesuaikanKategoriDenganJalur($request, $usulan);
 
         // Dipindah ke transport lokal: barisnya pindah ke Daftar Pengeluaran
         // Riil, tidak lagi tersembunyi di rincian biaya.
@@ -1176,7 +1206,7 @@ class KeuanganController extends Controller
 
         return [
             [
-                'kategori' => ['required', Rule::in(array_keys(KategoriBiaya::options()))],
+                'kategori' => ['required', Rule::in([...array_keys(KategoriBiaya::options()), KategoriBiaya::TransportLokalRincian->value])],
                 'komponen' => ['required', 'string', 'max:255'],
                 'volume' => ['required', 'integer', 'min:1'],
                 'satuan' => ['required', 'string', 'max:50'],
@@ -1194,6 +1224,12 @@ class KeuanganController extends Controller
                 'isian_pelaksana.in' => 'Pilihan tiket pelaksana tidak dikenali.',
             ],
         ];
+    }
+
+    /** Transport lokal mengikuti jalur perjalanannya, apa pun kiriman formulirnya. */
+    private function sesuaikanKategoriDenganJalur(Request $request, Usulan $usulan): void
+    {
+        $request->merge(['kategori' => KategoriBiaya::dari($request->input('kategori'))->untukJalur($usulan->memakaiDaftarRiil())->value]);
     }
 
     private function pastikanRincianMilikUsulan(Usulan $usulan, RincianBiaya $rincian): void

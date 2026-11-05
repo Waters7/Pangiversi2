@@ -6,8 +6,10 @@ use App\Enums\ArahTiket;
 use App\Enums\IsianBiaya;
 use App\Enums\RuasTransport;
 use App\Models\Dokumen;
+use App\Models\NotaTransport;
 use App\Models\Usulan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -19,6 +21,7 @@ class DokService
         private SinkronBiayaDokumen $sinkron,
         private PemegangNominal $pemegang,
         private PustakaBerkasBersama $pustaka,
+        private PenguncianBerkas $kunci,
     ) {}
 
     /**
@@ -69,6 +72,10 @@ class DokService
         // yang sama tidak tercatat dua kali pada rincian biaya.
         $hargaDariKeuangan = $this->pemegang->ditetapkanKeuangan($usulan, IsianBiaya::dariArah($arah));
 
+        // Harga yang sudah tercantum pada rincian bertanda tangan tidak berubah
+        // lagi; berkas dan keterangan tiketnya tetap dapat dilengkapi.
+        $hargaTerkunci = $tiket->harga !== null && $this->kunci->rincianBiaya($usulan) !== null;
+
         // Tiket bernomor sama yang invoicenya sudah diunggah rekan serombongan:
         // invoice itu yang dipakai dan unggahannya terkunci supaya tidak
         // tertimpa berkas lain — kecuali bagi pengunggah aslinya. Boarding
@@ -84,7 +91,7 @@ class DokService
             'kode_booking' => ['required', 'string', 'max:50'],
             // Harga yang dicatat adalah yang tertera pada tiket, sudah termasuk
             // pajak — bukan tarif dasar, supaya cocok dengan bukti bayarnya.
-            'harga' => $hargaDariKeuangan ? ['nullable'] : ['required', 'numeric', 'min:0'],
+            'harga' => $hargaDariKeuangan || $hargaTerkunci ? ['nullable'] : ['required', 'numeric', 'min:0'],
             'boarding_pass' => [
                 $tiket->boarding_pass ? 'nullable' : 'required',
                 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048',
@@ -102,6 +109,8 @@ class DokService
 
         if ($hargaDariKeuangan) {
             $data['harga'] = null;
+        } elseif ($hargaTerkunci) {
+            $data['harga'] = $tiket->harga;
         }
 
         foreach (['boarding_pass' => 'dokumen/boarding-pass', 'invoice' => 'dokumen/invoice-tiket'] as $kolom => $folder) {
@@ -133,6 +142,12 @@ class DokService
     private function simpanNota(Request $request, Usulan $usulan): bool
     {
         $tersimpan = $usulan->notaTransport->keyBy('urutan');
+
+        // Nominal nota yang sudah tercantum pada dokumen bertanda tangan tidak
+        // berubah dan notanya tidak dicabut; buktinya tetap dapat dilengkapi.
+        if ($this->kunci->notaTransport($usulan)) {
+            $this->pertahankanNominalNota($request, $tersimpan);
+        }
 
         // Dalam kota hanya satu ruas — transport lokalnya; luar kota empat
         // ruas dari rumah sampai kembali ke rumah.
@@ -219,6 +234,20 @@ class DokService
         return true;
     }
 
+    /**
+     * @param  Collection<int, NotaTransport>  $tersimpan
+     */
+    private function pertahankanNominalNota(Request $request, Collection $tersimpan): void
+    {
+        $ruas = $request->input('ruas', []);
+
+        foreach ($tersimpan->filter(fn (NotaTransport $nota) => $nota->nominal !== null) as $urutan => $nota) {
+            $ruas[$urutan] = ['nominal' => (float) $nota->nominal, 'keterangan' => $nota->keterangan];
+        }
+
+        $request->merge(['ruas' => $ruas]);
+    }
+
     // ── Seksi 4: akomodasi dan bukti biaya ──
 
     private function simpanAkomodasi(Request $request, Usulan $usulan): bool
@@ -228,10 +257,14 @@ class DokService
         // Penginapan yang sudah termasuk biaya penyelenggaraan tidak berbill hotel.
         $tanpaBillHotel = (bool) $dokumen?->penginapanTermasukPenyelenggaraan();
 
+        // Nominal penginapan pada rincian bertanda tangan tidak berubah lagi,
+        // dan bill hotelnya tidak dapat dinyatakan tidak ada.
+        $nominalTerkunci = $dokumen?->bill_hotel_nominal > 0 && $this->kunci->rincianBiaya($usulan) !== null;
+
         // Luar kota dalam satu provinsi ditanya dulu ada atau tidaknya biaya
         // penginapan; bila tidak ada, bill hotel dan kuitansinya tidak ditagih.
         // Tanpa jawaban dianggap ada, seperti sebelum pertanyaan ini dibuat.
-        if ($usulan->tanyaPenginapan() && ! $tanpaBillHotel) {
+        if ($usulan->tanyaPenginapan() && ! $tanpaBillHotel && ! $nominalTerkunci) {
             $request->validate(['penginapan_ada' => ['nullable', 'in:0,1']]);
 
             if ((string) $request->input('penginapan_ada') === '0') {
@@ -285,9 +318,11 @@ class DokService
                 'penginapan_ada' => $usulan->tanyaPenginapan() && ! $tanpaBillHotel ? true : null,
             ], fn ($nilai) => $nilai !== null) + [
                 'bill_hotel_no_transaksi' => $request->input('bill_hotel_no_transaksi') ?: null,
-                'bill_hotel_nominal' => ! $nominalDariKeuangan && $request->filled('bill_hotel_nominal')
-                    ? (float) $request->input('bill_hotel_nominal')
-                    : null,
+                'bill_hotel_nominal' => match (true) {
+                    $nominalTerkunci => $dokumen->bill_hotel_nominal,
+                    ! $nominalDariKeuangan && $request->filled('bill_hotel_nominal') => (float) $request->input('bill_hotel_nominal'),
+                    default => null,
+                },
             ]);
 
         return true;
@@ -332,6 +367,20 @@ class DokService
     private function simpanPenyelenggaraan(Request $request, Usulan $usulan): bool
     {
         $dokumen = $this->dokumen($usulan);
+
+        // Biaya yang sudah tercantum pada rincian bertanda tangan tidak berubah
+        // lagi, dan tidak dapat dinyatakan tidak ada; buktinya tetap dapat dilengkapi.
+        $nominalTerkunci = $dokumen?->adaPenyelenggaraan() && $dokumen->penyelenggaraan_nominal > 0
+            && $this->kunci->rincianBiaya($usulan) !== null;
+
+        if ($nominalTerkunci) {
+            $request->merge([
+                'penyelenggaraan_ada' => '1',
+                'penyelenggaraan_nominal' => (float) $dokumen->penyelenggaraan_nominal,
+                'penyelenggaraan_termasuk_penginapan' => $dokumen->penyelenggaraan_termasuk_penginapan ? '1' : '0',
+            ]);
+        }
+
         $ada = (string) $request->input('penyelenggaraan_ada') === '1';
 
         // Nominal yang ditetapkan tim keuangan tidak diisi pelaksana lagi;

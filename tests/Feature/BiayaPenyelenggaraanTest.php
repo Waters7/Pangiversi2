@@ -345,7 +345,7 @@ class BiayaPenyelenggaraanTest extends TestCase
             'totalTransportLokal' => (float) ($daftarRiil?->total_riil ?? 0),
             'totalKeseluruhan' => $total + (float) ($daftarRiil?->total_riil ?? 0),
             'terbilang' => app(Terbilang::class)->konversi($total),
-            'daftarRiil' => $daftarRiil,
+            'tandaTangan' => ['kode_pelaksana' => null, 'waktu_pelaksana' => null, 'kode_ppk' => null, 'waktu_ppk' => null, 'ppk' => null],
             'ppk' => null,
             'bendahara' => null,
             'keuangan' => $usulan->keuangan,

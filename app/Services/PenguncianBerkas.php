@@ -14,9 +14,13 @@ use App\Models\Usulan;
  * yang menumpang di atasnya semuanya menunjuk nilai yang sama.
  *
  * Kelas ini memusatkan aturan penguncian itu supaya seluruh titik ubah —
- * unggahan pelaksana, penyuntingan tim keuangan, penyelarasan otomatis —
- * memakai jawaban yang sama. Menjawab null berarti boleh diubah; menjawab
- * kalimat berarti terkunci, sekaligus menyebutkan jalan membukanya.
+ * nominal pada formulir pelaksana, penyuntingan tim keuangan, penyelarasan
+ * otomatis — memakai jawaban yang sama. Menjawab null berarti boleh diubah;
+ * menjawab kalimat berarti terkunci, sekaligus menyebutkan jalan membukanya.
+ *
+ * Yang dikunci nominalnya, bukan berkasnya: boarding pass, nota, dan bukti
+ * lain tetap dapat diunggah sesudah dokumen ditandatangani, sebab berkas
+ * pertanggungjawaban kerap baru lengkap setelah rincian biayanya disahkan.
  */
 class PenguncianBerkas
 {
@@ -37,16 +41,26 @@ class PenguncianBerkas
     }
 
     /**
-     * Alasan unggahan pelaksana terkunci, atau null.
+     * Alasan penyelarasan nominal pelaksana ditahan, atau null.
      *
      * Tiket, nota, dan bill hotel adalah sumber kedua dokumen sekaligus,
      * jadi salah satu dokumen yang sudah ditandatangani sudah cukup untuk
-     * menguncinya — mengubah sumbernya akan menggeser angka pada dokumen
+     * menahannya — mengubah sumbernya akan menggeser angka pada dokumen
      * yang sudah disetujui.
      */
     public function unggahanPelaksana(Usulan $usulan): ?string
     {
         return $this->rincianBiaya($usulan) ?? $this->daftarRiil($usulan);
+    }
+
+    /**
+     * Alasan nominal nota transport terkunci, atau null: nota mengalir ke
+     * daftar riil pada perjalanan lintas pulau, dan ke rincian biaya pada
+     * jalur lain, jadi dokumen itulah yang menguncinya.
+     */
+    public function notaTransport(Usulan $usulan): ?string
+    {
+        return $usulan->memakaiDaftarRiil() ? $this->daftarRiil($usulan) : $this->rincianBiaya($usulan);
     }
 
     /**
@@ -61,11 +75,6 @@ class PenguncianBerkas
     public function pastikanRiilTerbuka(Usulan $usulan): void
     {
         abort_if((bool) ($pesan = $this->daftarRiil($usulan)), 403, $pesan ?? '');
-    }
-
-    public function pastikanUnggahanTerbuka(Usulan $usulan): void
-    {
-        abort_if((bool) ($pesan = $this->unggahanPelaksana($usulan)), 403, $pesan ?? '');
     }
 
     private function berkas(Usulan $usulan): ?DaftarRiil

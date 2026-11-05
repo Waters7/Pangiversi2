@@ -22,6 +22,8 @@
            tindakan orang lain lebih mendesak daripada catatan sendiri. --}}
       <x-antrean-kerja :antrean="$antrean" />
 
+      <x-tanda-tangan-saya :dokumen="$tandaTanganSaya" />
+
       {{-- Pengingat batas laporan. Muncul hanya bila memang ada yang
            tertagih, supaya tidak jadi hiasan yang diabaikan. --}}
       @if ($perluLaporan->isNotEmpty())

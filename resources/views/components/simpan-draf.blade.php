@@ -1,6 +1,8 @@
 @props([
     'kunci',
     'bolehPulihkan' => true,
+    'versi' => null,
+    'tersimpan' => false,
 ])
 
 {{-- Simpan isian formulir sementara di peramban pengguna.
@@ -13,11 +15,20 @@
 
      Berkas unggahan tidak ikut tersimpan: peramban tidak mengizinkannya,
      dan menampilkan nama berkas yang sebenarnya sudah hilang justru
-     menyesatkan. --}}
+     menyesatkan.
+
+     Formulir yang isinya juga tersimpan di server mengirim $versi (penanda
+     isi server saat halaman dibuka) dan $tersimpan (server baru saja
+     menerima isiannya). Drafnya bertahan melewati pengiriman, sebab sesi yang
+     habis membuang kirimannya dan membawa pengguna ke halaman masuk. Draf
+     hanya dipulihkan bila dibuat dari isi server yang sama, supaya tidak
+     menimpa isian yang lebih baru. --}}
 <div class="contents"
      x-data="{
         kunci: 'pangi-draf-{{ $kunci }}',
         bolehPulihkan: {{ $bolehPulihkan ? 'true' : 'false' }},
+        versi: {{ Js::from($versi) }},
+        tersimpan: {{ $tersimpan ? 'true' : 'false' }},
         dipulihkan: false,
         adaBerkas: false,
         jeda: null,
@@ -36,28 +47,42 @@
             );
         },
 
-        simpan() {
+        isian() {
             const isi = {};
-            this.kolom().forEach((el) => { if (el.value) { isi[el.name] = el.value; } });
+            this.kolom().forEach((el) => { if (el.value || this.versi !== null) { isi[el.name] = el.value; } });
+
+            return isi;
+        },
+
+        simpan() {
+            const isi = this.isian();
 
             try {
                 if (Object.keys(isi).length === 0) {
                     localStorage.removeItem(this.kunci);
                     return;
                 }
-                localStorage.setItem(this.kunci, JSON.stringify({ waktu: Date.now(), isi }));
+                localStorage.setItem(this.kunci, JSON.stringify({ waktu: Date.now(), versi: this.versi, isi }));
             } catch (e) { /* penyimpanan diblokir; formulirnya tetap jalan */ }
         },
 
-        pulihkan() {
+        /** Draf yang masih berlaku, atau null. */
+        bacaDraf() {
             let simpanan = null;
-            try { simpanan = localStorage.getItem(this.kunci); } catch (e) { return; }
-            if (! simpanan) { return; }
+            try { simpanan = localStorage.getItem(this.kunci); } catch (e) { return null; }
+            if (! simpanan) { return null; }
 
             let draf;
-            try { draf = JSON.parse(simpanan); } catch (e) { this.hapus(); return; }
+            try { draf = JSON.parse(simpanan); } catch (e) { this.hapus(); return null; }
 
-            if (! draf?.isi || Date.now() - (draf.waktu ?? 0) > this.batasUsia) { this.hapus(); return; }
+            if (! draf?.isi || Date.now() - (draf.waktu ?? 0) > this.batasUsia) { this.hapus(); return null; }
+
+            return draf;
+        },
+
+        pulihkan() {
+            const draf = this.bacaDraf();
+            if (! draf) { return; }
 
             let terisi = 0;
             this.kolom().forEach((el) => {
@@ -69,6 +94,28 @@
 
             if (terisi === 0) { return; }
 
+            this.tandaiDipulihkan();
+        },
+
+        /** Isian yang belum terkirim menggantikan isi server yang menjadi dasarnya. */
+        pulihkanAtasIsiServer() {
+            const draf = this.bacaDraf();
+            if (! draf) { return; }
+
+            if (draf.versi !== this.versi || JSON.stringify(draf.isi) === JSON.stringify(this.isian())) {
+                this.hapus();
+                return;
+            }
+
+            this.kolom().forEach((el) => {
+                if (draf.isi[el.name] !== undefined) { el.value = draf.isi[el.name]; }
+            });
+
+            this.$dispatch('draf-dipulihkan', draf.isi);
+            this.tandaiDipulihkan();
+        },
+
+        tandaiDipulihkan() {
             this.dipulihkan = true;
             this.adaBerkas = Array.from(this.formulir().elements).some((el) => el.type === 'file');
         },
@@ -79,12 +126,24 @@
 
         buang() {
             this.hapus();
+
+            if (this.versi !== null) {
+                window.location.reload();
+                return;
+            }
+
             this.kolom().forEach((el) => { el.value = ''; });
             this.dipulihkan = false;
         },
 
         mulai() {
-            if (this.bolehPulihkan) { this.pulihkan(); }
+            if (this.tersimpan) {
+                this.hapus();
+            } else if (this.bolehPulihkan && this.versi !== null) {
+                this.$nextTick(() => this.pulihkanAtasIsiServer());
+            } else if (this.bolehPulihkan) {
+                this.pulihkan();
+            }
 
             const tunda = () => {
                 clearTimeout(this.jeda);
@@ -93,7 +152,7 @@
 
             this.formulir().addEventListener('input', tunda);
             this.formulir().addEventListener('change', tunda);
-            this.formulir().addEventListener('submit', () => this.hapus());
+            this.formulir().addEventListener('submit', () => (this.versi === null ? this.hapus() : this.simpan()));
         },
      }"
      x-init="mulai()">
@@ -106,11 +165,12 @@
         <div class="min-w-0 flex-1">
             <p class="text-sm text-amber-800">
                 Isian yang belum sempat terkirim sudah dipulihkan dari peramban ini.
+                <span x-show="versi !== null">Isian ini belum tersimpan di server sebelum tombol simpan ditekan.</span>
                 <span x-show="adaBerkas">Berkas unggahan perlu dipilih ulang.</span>
             </p>
             <button type="button" @click="buang()"
-                    class="mt-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2">
-                Kosongkan formulir
+                    class="mt-1 text-xs font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+                    x-text="versi === null ? 'Kosongkan formulir' : 'Buang dan pakai isian yang tersimpan'">
             </button>
         </div>
     </div>

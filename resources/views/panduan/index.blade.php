@@ -510,7 +510,9 @@
                 pakai laporannya lewat kotak <strong>Pakai laporan rekan setugas</strong> di atas judul laporan: pilih
                 laporannya dari daftar tarik-turun — hanya laporan yang memenuhi syarat yang tampil — lalu judul, bagian A–E, status hasil, tindak lanjut, dan fotonya disalin ke laporan Anda — masih
                 dapat disesuaikan, dan tetap Anda kirim serta tandatangani sendiri. <strong>Simpan Draf</strong> menyimpan isinya tanpa mengirim, jadi
-                laporan boleh dicicil. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
+                laporan boleh dicicil. Foto yang melebihi batas ditolak tanpa mengganggu isian lain. Bila sesi Anda
+                habis sebelum tersimpan, masuk kembali dan buka formulirnya di peramban yang sama: isian yang
+                belum tersimpan pulih sendiri, lalu tekan Simpan Draf lagi. Laporan yang belum dikirim menahan berkas Anda dinyatakan lengkap.
                 Bila Anda sudah menyusun laporan lengkap — misalnya berfoto — unggah pada kolom
                 <strong>Berkas laporan</strong> (opsional; PDF, Word, JPG, atau PNG, maks. 10 MB). Isian di
                 formulir tetap diisi karena itulah yang dikonfirmasi pimpinan; berkasnya ikut terbuka bagi
@@ -537,9 +539,9 @@
                     <p>
                         Nota transport lokal hanya diminta pada perjalanan <strong>luar kota lintas pulau</strong>,
                         dan hanya untuk ruas yang <strong>bernominal</strong>; ruas tanpa biaya dikosongkan, dan
-                        perjalanan tanpa transport lokal sama sekali tetap dapat selesai. Jalur lain tidak memiliki
-                        transport lokal: daftar pengeluaran riilnya kosong, tidak perlu ditandatangani, dan berkasnya
-                        langsung dapat masuk daftar nominatif. Nominal tanpa nota <strong>tidak dapat diganti</strong>
+                        perjalanan tanpa transport lokal sama sekali tetap dapat selesai. Jalur lain tidak memakai
+                        daftar pengeluaran riil: transport lokalnya, bila ada, masuk rincian biaya, dan daftar
+                        nominatifnya terbit begitu rincian biaya ditandatangani PPK. Nominal tanpa nota <strong>tidak dapat diganti</strong>
                         — simpan seluruh bukti sejak hari keberangkatan.
                     </p>
                     <p class="mt-2">
@@ -576,8 +578,8 @@
                     </div>
                     <p class="p-4 text-xs text-slate-600 leading-relaxed">
                         Seluruh komponen biaya: tiket, uang harian, uang penginapan, dan biaya
-                        penyelenggaraan — ditambah <strong>transport lokal</strong> dari daftar riil sebagai
-                        kelompok tersendiri, ikut terjumlah.
+                        penyelenggaraan — ditambah <strong>transport lokal</strong> sebagai kelompok tersendiri,
+                        ikut terjumlah: dari daftar riil pada perjalanan lintas pulau, dicatat langsung pada jalur lain.
                     </p>
                 </div>
 
@@ -587,8 +589,8 @@
                         <p class="text-[11px] text-slate-400">Lampiran IX PMK 113/PMK.05/2012</p>
                     </div>
                     <p class="p-4 text-xs text-slate-600 leading-relaxed">
-                        Khusus <strong>transport lokal</strong> — biaya nyata yang tidak
-                        seluruhnya didukung bukti dan dinyatakan sendiri oleh pelaksana.
+                        Khusus <strong>transport lokal</strong> perjalanan luar kota lintas pulau — biaya nyata
+                        yang tidak seluruhnya didukung bukti dan dinyatakan sendiri oleh pelaksana.
                     </p>
                 </div>
             </div>
@@ -602,6 +604,8 @@
                 Begitu seluruh komponen divalidasi, berkas <strong>terkirim sendiri</strong> —
                 berstatus <strong>Sudah Dicek Tim Keuangan</strong> — dan pesan
                 <em>“Berkas menunggu tanda tangan Anda”</em> muncul di lonceng pemberitahuan.
+                Halaman muka juga menampilkannya pada panel <strong>Dokumen untuk Anda Tandatangani</strong>,
+                tertaut langsung ke dokumennya.
                 Menu <strong>Rincian Saya</strong> di sidebar memuat keduanya, masing-masing pada
                 submenunya sendiri. Tiap kartu berkas memuat panel <strong>Pemantauan Berkas</strong>:
                 seluruh tanda tangan — tim keuangan, Anda, PPK, konfirmasi Direktur atas laporan,
@@ -626,9 +630,10 @@
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="PPK membubuhkan tanda tangan" :terakhir="true">
-                Setelah Anda menyetujui, PPK menandatangani. Berkas yang sudah ditandatangani
+                Setelah Anda menyetujui, PPK menandatangani. Nominal pada dokumen yang sudah ditandatangani
                 <strong>terkunci</strong> — tidak dapat diubah lagi oleh siapa pun, termasuk tim
-                keuangan, supaya angka pada dokumen cetak selalu sama dengan angka di sistem.
+                keuangan, supaya angka pada dokumen cetak selalu sama dengan angka di sistem. Dokumen
+                pertanggungjawaban tetap dapat diunggah pada menu Dokumen; hanya nominalnya yang tidak ikut berubah.
             </x-panduan-langkah>
 
             <div class="mt-6 rounded-xl border border-amber-200 overflow-hidden">
@@ -721,14 +726,15 @@
 
             <x-panduan-langkah nomor="4" judul="Periksa transport lokal">
                 Submenu <strong>Periksa Transport Lokal</strong> memuat biaya transport yang
-                dinyatakan pelaksana pada daftar riilnya, beserta bukti yang dilampirkan. Transport
-                lokal yang Anda catat sendiri — kategori <strong>Transport Lokal</strong> pada Tambah
+                dinyatakan pelaksana pada daftar riilnya, beserta bukti yang dilampirkan. Pada perjalanan
+                luar kota lintas pulau, transport lokal yang Anda catat sendiri — kategori <strong>Transport Lokal</strong> pada Tambah
                 Komponen, atau memindah baris yang terlanjur ditulis sebagai Transport — masuk ke tabel
                 Transport Lokal (Daftar Pengeluaran Riil), bukan ke rincian biaya, dan dapat dihapus
                 dari tabel itu bila keliru. Nominal tiap ruas dapat dikoreksi lewat tombol
                 <strong>Ubah</strong> selama daftar riilnya belum disetujui pelaksana maupun disahkan PPK;
                 angka nota pelaksana tetap disebut, dan koreksinya bertahan sampai pelaksana mengubah
-                notanya sendiri.
+                notanya sendiri. Jalur lain tidak memakai daftar riil: kategori Transport Lokal menjadi baris
+                rincian biaya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="5" judul="Berkas terkirim sendiri ke pelaksana">
@@ -805,8 +811,8 @@
 
             <x-panduan-langkah nomor="4" judul="Verifikasi Daftar Nominatif">
                 Nominatif terbit sendiri per surat tugas begitu <em>satu</em> pelaksana di
-                bawahnya tuntas — rincian biaya dan daftar riilnya Anda tandatangani — dan hanya
-                memuat yang sudah tuntas. Yang belum tercantum disebut di bawah tabelnya dan
+                bawahnya tuntas — rincian biayanya Anda tandatangani, ditambah daftar riil dan kelengkapan
+                berkas pada perjalanan lintas pulau — dan hanya memuat yang sudah tuntas. Yang belum tercantum disebut di bawah tabelnya dan
                 bertambah sendiri setelah berkasnya Anda sahkan. Ketiga menu verifikasi
                 dikelompokkan per bulan dan tahun.
             </x-panduan-langkah>
@@ -814,7 +820,9 @@
             <x-panduan-langkah nomor="5" judul="Nominatif langsung terkirim ke tim keuangan" :terakhir="true">
                 Begitu Anda tandatangani, daftarnya otomatis terkirim ke tim keuangan sebagai dasar
                 pembayaran — tidak ada lagi tombol kirim terpisah. Tanda tangannya elektronik: cetakan nominatif memuat QR dan kode
-                verifikasi yang dapat dipindai siapa pun.
+                verifikasi yang dapat dipindai siapa pun. Bila ternyata ada kesalahan, tekan
+                <strong>Cabut Tanda Tangan</strong> dan tuliskan kesalahannya: daftarnya ditarik dari tim keuangan,
+                QR lamanya tidak berlaku, dan setelah dikoreksi Anda tandatangani ulang.
             </x-panduan-langkah>
 
             <div class="mt-6 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 leading-relaxed">
@@ -1157,7 +1165,13 @@
                     <strong>Integrasi Data</strong> memuat token API yang dibagikan ke aplikasi lain,
                     pemantauan setiap permintaan yang masuk beserta token yang dibawanya, dan
                     pengiriman data dashboard eksekutif terjadwal ke aplikasi tujuan — setiap
-                    perubahan dikonfirmasi lewat kotak dialog dan tercatat pada jejak audit.
+                    perubahan dikonfirmasi lewat kotak dialog dan tercatat pada jejak audit. Submenu
+                    <strong>Integrasi Mappalus</strong> mengirim daftar nominatif bertanda tangan ke Mappalus per
+                    pelaksana — tim kerja, kode akun, total nominal, serta nama pelaksana dan nomor surat tugas —
+                    memakai alamat API dan token dari pengembang Mappalus. Tiap baris berstatus Siap Kirim, Berhasil,
+                    Gagal, Berubah, Belum Lengkap, atau Ditarik. Yang sudah berhasil tidak terkirim dua kali;
+                    <strong>Sinkron Sekarang</strong> mengirim yang siap dan yang gagal, dan <strong>Kirim Ulang</strong>
+                    mengirim satu baris yang gagal atau berubah.
                 </x-panduan-langkah>
 
                 <x-panduan-langkah :nomor="$nomorLangkah++" judul="Pantau server dan ukuran aplikasi" :terakhir="! $boleh['jejakAudit']">

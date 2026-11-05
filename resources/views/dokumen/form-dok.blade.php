@@ -21,16 +21,18 @@
     $minta = fn (\App\Enums\BerkasLpj $berkas) => $berkasWajib->wajib($usulan, $berkas);
 
     // Tiket, nota, dan bill hotel adalah sumber angka pada rincian biaya
-    // dan daftar riil. Begitu salah satunya ditandatangani, sumbernya
-    // ikut terkunci supaya angka yang sudah disetujui tidak bergeser.
-    $alasanKunci = app(\App\Services\PenguncianBerkas::class)->unggahanPelaksana($usulan);
+    // dan daftar riil. Begitu dokumennya ditandatangani, nominal yang sudah
+    // tercantum terkunci supaya tidak bergeser; berkasnya tetap dapat diunggah.
+    $penguncian = app(\App\Services\PenguncianBerkas::class);
+    $kunciRincian = $penguncian->rincianBiaya($usulan) !== null;
+    $kunciNota = $penguncian->notaTransport($usulan) !== null;
+    $alasanKunci = $penguncian->unggahanPelaksana($usulan);
 
     // Dokumen pegawai lain hanya dapat diunggah peran yang ditugasi membantu
     // mengunggah; yang sekadar berhak melihat mendapati formulirnya terkunci.
     $milikSendiri = $usulan->id_user === auth()->id();
     $bolehUnggah = auth()->user()->bolehMengunggahDokumen($usulan);
-    $terkunci = $alasanKunci !== null
-        || ! $bolehUnggah
+    $terkunci = ! $bolehUnggah
         || ($usulan->status === 'selesai' && ! auth()->user()->isAdmin());
 
     // Komponen yang nominalnya sudah ditetapkan tim keuangan: kolom nominal
@@ -38,6 +40,7 @@
     $nominalKeuangan = app(\App\Services\PemegangNominal::class)->dariKeuangan($usulan);
     $penginapanKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::Penginapan->value] ?? null;
     $penyelenggaraanKeuangan = $nominalKeuangan[\App\Enums\IsianBiaya::Penyelenggaraan->value] ?? null;
+    $kunciPenyelenggaraan = $kunciRincian && $dokumen?->adaPenyelenggaraan() && $dokumen?->penyelenggaraan_nominal > 0;
 @endphp
 
 <div class="flex-1 px-4 md:px-8 py-7">
@@ -48,8 +51,11 @@
                 <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
             </svg>
             <div>
-                <p class="text-sm font-bold text-amber-800">Berkas terkunci</p>
-                <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">{{ $alasanKunci }}</p>
+                <p class="text-sm font-bold text-amber-800">Nominal terkunci — berkas tetap dapat diunggah</p>
+                <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                    {{ $alasanKunci }} Nominal yang sudah tercantum tidak berubah; boarding pass, nota, dan bukti lainnya
+                    tetap dapat diunggah dan dilengkapi.
+                </p>
             </div>
         </div>
     @endif
@@ -345,7 +351,7 @@
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Harga tiket <span class="text-red-500">*</span></label>
                                     <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
                                         <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                        <input type="number" name="harga" min="0" step="1" @disabled($terkunci)
+                                        <input type="number" name="harga" min="0" step="1" @disabled($terkunci || ($kunciRincian && $data?->harga !== null))
                                                value="{{ old('harga', $data?->harga ? (int) $data->harga : '') }}"
                                                class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
                                     </div>
@@ -448,7 +454,7 @@
                                         </label>
                                         <div class="flex items-stretch rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
                                             <span class="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                            <input type="number" name="ruas[{{ $ruas->value }}][nominal]" min="0" step="1" @disabled($terkunci)
+                                            <input type="number" name="ruas[{{ $ruas->value }}][nominal]" min="0" step="1" @disabled($terkunci || ($kunciNota && $baris?->nominal !== null))
                                                    x-model.number="nominal[{{ $ruas->value }}]"
                                                    value="{{ old("ruas.{$ruas->value}.nominal", $baris?->nominal ? (int) $baris->nominal : '') }}"
                                                    class="flex-1 min-w-0 px-3 py-2 text-sm border-0 focus:ring-0 focus:outline-none">
@@ -456,7 +462,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Keterangan</label>
-                                        <input type="text" name="ruas[{{ $ruas->value }}][keterangan]" @disabled($terkunci)
+                                        <input type="text" name="ruas[{{ $ruas->value }}][keterangan]" @disabled($terkunci || ($kunciNota && $baris?->nominal !== null))
                                                value="{{ old("ruas.{$ruas->value}.keterangan", $baris?->keterangan) }}"
                                                placeholder="{{ $dalamKota ? 'cth: ojek/taksi PP ke lokasi kegiatan' : 'cth: taksi bandara' }}"
                                                class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-teal-400 focus:border-transparent transition">
@@ -472,7 +478,7 @@
                                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
                                             <a href="{{ route('berkas.lihat', $baris->bukti) }}" target="_blank"
                                                class="text-xs font-semibold text-teal-600 hover:underline">Lihat berkas tersimpan →</a>
-                                            @unless ($terkunci)
+                                            @unless ($terkunci || $kunciNota)
                                                 {{-- Nota yang salah unggah dicabut bersama nominalnya. --}}
                                                 <label class="inline-flex items-center gap-1.5 text-xs text-red-600 cursor-pointer">
                                                     <input type="checkbox" name="ruas[{{ $ruas->value }}][hapus]" value="1"
@@ -542,13 +548,13 @@
                                 <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
                                        :class="! adaPenginapan ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
                                     <input type="radio" name="penginapan_ada" value="0" @change="adaPenginapan = false"
-                                           :checked="! adaPenginapan" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                           :checked="! adaPenginapan" @disabled($terkunci || ($kunciRincian && $dokumen?->bill_hotel_nominal > 0)) class="text-teal-500 focus:ring-teal-400">
                                     Tidak ada
                                 </label>
                                 <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
                                        :class="adaPenginapan ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
                                     <input type="radio" name="penginapan_ada" value="1" @change="adaPenginapan = true"
-                                           :checked="adaPenginapan" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                           :checked="adaPenginapan" @disabled($terkunci || ($kunciRincian && $dokumen?->bill_hotel_nominal > 0)) class="text-teal-500 focus:ring-teal-400">
                                     Ada
                                 </label>
                             </div>
@@ -591,7 +597,7 @@
                                     <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal</label>
                                     <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
                                         <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                        <input type="number" name="bill_hotel_nominal" min="0" step="1" @disabled($terkunci)
+                                        <input type="number" name="bill_hotel_nominal" min="0" step="1" @disabled($terkunci || ($kunciRincian && $dokumen?->bill_hotel_nominal > 0))
                                                value="{{ old('bill_hotel_nominal', $dokumen?->bill_hotel_nominal ? (int) $dokumen->bill_hotel_nominal : '') }}"
                                                class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
                                     </div>
@@ -682,13 +688,13 @@
                                 <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
                                        :class="! ada ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
                                     <input type="radio" name="penyelenggaraan_ada" value="0" @change="ada = false"
-                                           :checked="! ada" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                           :checked="! ada" @disabled($terkunci || $kunciPenyelenggaraan) class="text-teal-500 focus:ring-teal-400">
                                     Tidak ada
                                 </label>
                                 <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-semibold transition"
                                        :class="ada ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 text-slate-600'">
                                     <input type="radio" name="penyelenggaraan_ada" value="1" @change="ada = true"
-                                           :checked="ada" @disabled($terkunci) class="text-teal-500 focus:ring-teal-400">
+                                           :checked="ada" @disabled($terkunci || $kunciPenyelenggaraan) class="text-teal-500 focus:ring-teal-400">
                                     Ada
                                 </label>
                             </div>
@@ -704,7 +710,7 @@
                                         <label class="block text-sm font-semibold text-slate-700 mb-1.5">Nominal <span class="text-red-500">*</span></label>
                                         <div class="flex items-stretch rounded-xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-teal-400">
                                             <span class="px-3 py-2.5 text-sm text-slate-500 bg-slate-50 border-r border-slate-200">Rp</span>
-                                            <input type="number" name="penyelenggaraan_nominal" min="0" step="1" @disabled($terkunci)
+                                            <input type="number" name="penyelenggaraan_nominal" min="0" step="1" @disabled($terkunci || $kunciPenyelenggaraan)
                                                    value="{{ old('penyelenggaraan_nominal', $dokumen?->penyelenggaraan_nominal ? (int) $dokumen->penyelenggaraan_nominal : '') }}"
                                                    class="flex-1 min-w-0 px-3 py-2.5 text-sm border-0 focus:ring-0 focus:outline-none">
                                         </div>
@@ -741,7 +747,7 @@
                                  ditagih bill hotelnya dan tidak dibayarkan dua kali. --}}
                             <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
                                 <input type="hidden" name="penyelenggaraan_termasuk_penginapan" value="0">
-                                <input type="checkbox" name="penyelenggaraan_termasuk_penginapan" value="1" @disabled($terkunci)
+                                <input type="checkbox" name="penyelenggaraan_termasuk_penginapan" value="1" @disabled($terkunci || $kunciPenyelenggaraan)
                                        @checked(old('penyelenggaraan_termasuk_penginapan', $dokumen?->penyelenggaraan_termasuk_penginapan))
                                        class="mt-0.5 rounded text-teal-500 focus:ring-teal-400">
                                 <span class="text-sm text-slate-700">

@@ -8,7 +8,7 @@
     $idIsian = 'bagian-'.$bagian->value;
 @endphp
 
-<div data-bagian-laporan="{{ $bagian->value }}">
+<div data-bagian-laporan="{{ $bagian->value }}" data-unggahan>
     @if ($label ?? null)
         <label for="{{ $idIsian }}" class="block text-sm font-semibold text-slate-700 mb-1.5">
             {{ $label }}
@@ -44,7 +44,7 @@
         @unless ($terkunci)
             <label class="flex-1 min-w-[14rem]">
                 <span class="sr-only">Foto dokumentasi {{ $bagian->judul() }}</span>
-                <input type="file" name="dokumentasi[{{ $bagian->value }}]" accept=".jpg,.jpeg,.png"
+                <input type="file" name="dokumentasi[{{ $bagian->value }}]" accept=".jpg,.jpeg,.png" data-maks-mb="2"
                        class="w-full px-3 py-2 rounded-xl text-xs bg-white border {{ $errors->has('dokumentasi.'.$bagian->value) ? 'border-red-500' : 'border-slate-200' }}
                               file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200">
             </label>
@@ -55,6 +55,7 @@
             Dokumentasi opsional — foto JPG atau PNG, maks. 2 MB{{ $foto ? '; unggah lagi untuk mengganti' : '' }}. Tercetak pada halaman lampiran.
         </p>
     @endunless
+    <p class="text-red-500 text-xs mt-1" data-galat-unggahan hidden></p>
     @error('dokumentasi.'.$bagian->value)
         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
     @enderror

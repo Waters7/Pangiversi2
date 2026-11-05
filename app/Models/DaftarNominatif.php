@@ -95,8 +95,8 @@ class DaftarNominatif extends Model
     /**
      * Terbitkan kode verifikasi bila daftar ini belum punya.
      *
-     * Dipanggil saat PPK menandatangani; kodenya menetap agar QR pada
-     * cetakan lama tetap dapat diperiksa.
+     * Dipanggil saat PPK menandatangani; kodenya menetap selama tanda
+     * tangannya berlaku agar QR pada cetakan tetap dapat diperiksa.
      */
     public function terbitkanKodeVerifikasi(): void
     {
@@ -109,6 +109,21 @@ class DaftarNominatif extends Model
         } while (self::where('kode_verifikasi', $kode)->exists());
 
         $this->update(['kode_verifikasi' => $kode]);
+    }
+
+    /**
+     * Cabut tanda tangan PPK supaya daftarnya dapat dikoreksi. Kodenya ikut
+     * gugur, sehingga cetakan lama tidak lagi lolos verifikasi; penandatanganan
+     * ulang menerbitkan kode baru.
+     */
+    public function batalkanTandaTangan(): void
+    {
+        $this->update([
+            'id_ppk' => null,
+            'ditandatangani_at' => null,
+            'dikirim_at' => null,
+            'kode_verifikasi' => null,
+        ]);
     }
 
     public function sudahDikirim(): bool

@@ -218,10 +218,11 @@ class PenyusunNominatif
 
         $tiket = $this->jumlahKategori($rincian, KategoriBiaya::Transport);
 
-        // Kolom Transport diambil dari daftar pengeluaran riil, bukan dari
-        // rincian biaya: transport lokal memang dipertanggungjawabkan di
-        // sana sejak ia keluar dari Lampiran II.
-        $transport = (float) $usulan->daftarRiil->sum('total_riil');
+        // Kolom Transport: pada perjalanan lintas pulau diambil dari daftar
+        // pengeluaran riil, tempat transport lokal dipertanggungjawabkan;
+        // jalur lain mencatatnya sebagai baris rincian biaya.
+        $transport = (float) $usulan->daftarRiil->sum('total_riil')
+            + $this->jumlahKategori($rincian, KategoriBiaya::TransportLokalRincian);
         $harian = $this->rekapHarian($rincian, KategoriBiaya::UangHarian);
         $inap = $this->rekapHarian($rincian, KategoriBiaya::Penginapan);
         // Biaya penyelenggaraan tidak berkolom sendiri pada lembar nominatif;
@@ -346,15 +347,18 @@ class PenyusunNominatif
     }
 
     /**
-     * Seorang pelaksana tercantum pada daftar nominatif bila berkasnya
-     * lengkap dan kedua dokumennya — rincian biaya dan daftar riil — sudah
-     * ditandatangani PPK.
+     * Seorang pelaksana tercantum pada daftar nominatif begitu dokumennya
+     * ditandatangani PPK. Perjalanan lintas pulau menunggu rincian biaya dan
+     * daftar riilnya disahkan serta berkasnya lengkap, sebab daftar riil
+     * bersumber dari nota pelaksana. Jalur lain cukup rincian biayanya:
+     * berkas pertanggungjawabannya boleh menyusul sesudah itu.
      */
     public function usulanSiap(Usulan $usulan): bool
     {
         $usulan->loadMissing(self::RELASI_KELENGKAPAN);
 
-        return $this->penagih->lengkap($usulan) && $this->disahkanPpk($usulan);
+        return $this->disahkanPpk($usulan)
+            && (! $usulan->memakaiDaftarRiil() || $this->penagih->lengkap($usulan));
     }
 
     /**
@@ -434,6 +438,23 @@ class PenyusunNominatif
                 ['tanggal_tugas' => $usulan->first()?->spd?->tanggal_surat],
             ))
             ->values();
+    }
+
+    /**
+     * Terbitkan daftar surat tugas usulan ini bila pelaksananya sudah tuntas,
+     * tanpa menunggu PPK membuka antreannya.
+     *
+     * @return DaftarNominatif|null Daftar yang baru terbit pada panggilan ini.
+     */
+    public function terbitkanBilaSiap(Usulan $usulan): ?DaftarNominatif
+    {
+        if (blank($usulan->no_tugas) || ! $this->usulanSiap($usulan)) {
+            return null;
+        }
+
+        $daftar = $this->terbitkan($usulan->no_tugas);
+
+        return $daftar->wasRecentlyCreated ? $daftar : null;
     }
 
     public function terbitkan(string $noTugas): DaftarNominatif

@@ -46,15 +46,18 @@
     <form method="POST" action="{{ route('dokumen.laporan.update', $usulan->no_usulan) }}" enctype="multipart/form-data"
           x-data="{
             konfirmasiKirim: false,
-            tindak: {{ Js::from($laporan->tindakLanjut->map(fn ($t) => [
-                'uraian' => $t->uraian,
-                'penanggung_jawab' => $t->penanggung_jawab ?? '',
-                'target_selesai' => $t->target_selesai?->toDateString() ?? '',
-                'status' => $t->status->value,
-            ])->all() ?: [['uraian' => '', 'penanggung_jawab' => '', 'target_selesai' => '', 'status' => 'rencana']]) }},
+            tindak: {{ Js::from($laporan->barisTindakLanjutFormulir(old('tindak_lanjut'))) }},
           }">
         @csrf
         @method('PUT')
+
+        @unless ($terkunci)
+            <x-simpan-draf kunci="laporan-{{ $laporan->nomor_laporan }}"
+                           :versi="$laporan->updated_at?->getTimestamp() ?? 0"
+                           :tersimpan="session()->has('isian_tersimpan')"
+                           :boleh-pulihkan="! session()->hasOldInput()" />
+            <x-jaga-unggahan />
+        @endunless
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-5">

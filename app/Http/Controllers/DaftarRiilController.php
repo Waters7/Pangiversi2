@@ -13,6 +13,7 @@ use App\Services\AuditService;
 use App\Services\JalurPersetujuan;
 use App\Services\NotifikasiService;
 use App\Services\PemberitahuanBendahara;
+use App\Services\PenerbitNominatif;
 use App\Services\PengaturanDokumen;
 use App\Services\PengirimanBerkas;
 use App\Services\PenguncianBerkas;
@@ -30,6 +31,7 @@ class DaftarRiilController extends Controller
         private NotifikasiService $notifikasi,
         private QrCodeService $qrCode,
         private PenguncianBerkas $kunci,
+        private PenerbitNominatif $penerbitNominatif,
         private PengirimanBerkas $pengiriman,
         private PemberitahuanBendahara $bendahara,
     ) {}
@@ -360,6 +362,9 @@ class DaftarRiilController extends Controller
         // Tanda tangan terakhir atas berkas yang sudah lengkap: bendahara
         // diberi tahu bahwa perjadin ini tinggal dibayarkan.
         $this->bendahara->siapDilunasi($usulan->fresh(['keuangan', 'daftarRiil', 'user']));
+
+        // Tanda tangan ini kerap yang terakhir ditunggu daftar nominatif.
+        $this->penerbitNominatif->terbitkan($usulan->fresh());
 
         return back()->with('success', "{$jalur->nama()} {$peserta->nama} berhasil ditandatangani.");
     }

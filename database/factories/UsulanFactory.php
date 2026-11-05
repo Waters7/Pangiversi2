@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\JenisPerjadin;
 use App\Enums\StatusUsulan;
 use App\Models\KategoriPerjadin;
 use App\Models\Kegiatan;
@@ -51,7 +52,12 @@ class UsulanFactory extends Factory
             // Pakai jenis kegiatan yang sudah ada agar master data tidak terisi
             // nama acak; buat baru hanya bila tabelnya masih kosong.
             'id_kegiatan' => Kegiatan::inRandomOrder()->value('id') ?? Kegiatan::factory(),
-            'id_kategori_perjadin' => KategoriPerjadin::inRandomOrder()->value('id'),
+            // Bawaannya lintas pulau, jalur dengan alur terlengkap: jalur
+            // menentukan dokumen yang berlaku, jadi tidak diacak di sini.
+            'id_kategori_perjadin' => KategoriPerjadin::where('dalam_kota', false)
+                ->where('grup', '!=', JenisPerjadin::GRUP_SUPERVISI)
+                ->inRandomOrder()
+                ->value('id'),
             'id_tahun_anggaran' => TahunAnggaran::aktif()?->id,
         ];
     }

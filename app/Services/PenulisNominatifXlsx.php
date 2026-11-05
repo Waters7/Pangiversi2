@@ -271,7 +271,8 @@ class PenulisNominatifXlsx
 
         $nilai = [
             'tiket' => (float) $perKategori(KategoriBiaya::Transport)->sum('jumlah'),
-            'transport' => (float) $perKategori(KategoriBiaya::TransportLokal)->sum('jumlah'),
+            'transport' => (float) $perKategori(KategoriBiaya::TransportLokal)->sum('jumlah')
+                + (float) $perKategori(KategoriBiaya::TransportLokalRincian)->sum('jumlah'),
             'harian_hari' => (float) $harian->sum('volume'),
             'harian_satuan' => (float) ($harian->first()?->harga_satuan ?? 0),
             'harian_jumlah' => (float) $harian->sum('jumlah'),

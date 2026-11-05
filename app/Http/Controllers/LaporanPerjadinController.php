@@ -30,6 +30,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -43,6 +45,12 @@ use Illuminate\View\View;
  */
 class LaporanPerjadinController extends Controller
 {
+    /** Sepanjang kolom "tentang" pada tabel laporan. */
+    private const BATAS_TENTANG = 500;
+
+    /** Laporan yang ditempel dari Word bisa panjang; kolomnya bertipe TEXT, 64 KB. */
+    private const BATAS_URAIAN_BAGIAN = 30000;
+
     public function __construct(
         private AuditService $audit,
         private PenagihDokumen $penagih,
@@ -162,18 +170,10 @@ class LaporanPerjadinController extends Controller
             'tindak_lanjut.*.penanggung_jawab' => ['nullable', 'string', 'max:255'],
             'tindak_lanjut.*.target_selesai' => ['nullable', 'date'],
             'tindak_lanjut.*.status' => ['nullable', Rule::in(array_keys(StatusTindakLanjut::options()))],
-
-            // Berkas laporan opsional — melengkapi isian di atas, misalnya
-            // laporan lengkap berfoto yang sudah disusun pelaksana.
-            'berkas_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240'],
             'hapus_berkas_laporan' => ['nullable', 'boolean'],
-        ], [
-            'berkas_laporan.mimes' => 'Berkas laporan harus berupa PDF, Word, JPG, atau PNG.',
-            'berkas_laporan.max' => 'Ukuran berkas laporan paling besar 10 MB.',
         ]);
 
         $laporan = $this->laporan($usulan);
-        $this->simpanBerkasLaporan($request, $laporan);
 
         DB::transaction(function () use ($laporan, $data): void {
             $laporan->update([
@@ -205,15 +205,7 @@ class LaporanPerjadinController extends Controller
             $this->tulisTindakLanjut($laporan, $data['tindak_lanjut'] ?? []);
         });
 
-        // Menyimpan dan mengirim adalah satu langkah bagi pelaksana: isinya
-        // tersimpan, dinyatakan selesai, lalu langsung ke meja pimpinan.
-        if ($request->input('action') === 'kirim') {
-            return $this->selesaikanDanKirim($request, $usulan, $laporan->fresh());
-        }
-
-        return redirect()
-            ->route('dokumen.laporan.edit', $usulan->no_usulan)
-            ->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
+        return $this->simpanUnggahan($request, $usulan, $laporan);
     }
 
     /**
@@ -224,32 +216,27 @@ class LaporanPerjadinController extends Controller
     private function simpanFormatKemenkes(Request $request, Usulan $usulan): RedirectResponse
     {
         $aturan = [
-            'tentang' => ['nullable', 'string', 'max:500'],
+            'tentang' => ['nullable', 'string', 'max:'.self::BATAS_TENTANG],
             'id_status_hasil' => ['nullable', 'exists:status_hasil,id'],
             'tindak_lanjut' => ['array'],
             'tindak_lanjut.*.uraian' => ['nullable', 'string', 'max:2000'],
             'tindak_lanjut.*.penanggung_jawab' => ['nullable', 'string', 'max:255'],
             'tindak_lanjut.*.target_selesai' => ['nullable', 'date'],
             'tindak_lanjut.*.status' => ['nullable', Rule::in(array_keys(StatusTindakLanjut::options()))],
-            'berkas_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240'],
             'hapus_berkas_laporan' => ['nullable', 'boolean'],
         ];
 
         foreach (BagianLaporan::cases() as $bagian) {
-            $aturan["bagian.{$bagian->value}"] = ['nullable', 'string', 'max:10000'];
-            $aturan["dokumentasi.{$bagian->value}"] = ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'];
+            $aturan["bagian.{$bagian->value}"] = ['nullable', 'string', 'max:'.self::BATAS_URAIAN_BAGIAN];
             $aturan["hapus_dokumentasi.{$bagian->value}"] = ['nullable', 'boolean'];
         }
 
         $data = $request->validate($aturan, [
-            'dokumentasi.*.mimes' => 'Dokumentasi berupa foto JPG atau PNG.',
-            'dokumentasi.*.max' => 'Ukuran foto dokumentasi paling besar 2 MB.',
-            'berkas_laporan.mimes' => 'Berkas laporan harus berupa PDF, Word, JPG, atau PNG.',
-            'berkas_laporan.max' => 'Ukuran berkas laporan paling besar 10 MB.',
+            'tentang.max' => 'Judul "tentang" paling panjang :max karakter.',
+            'bagian.*.max' => 'Uraian satu bagian paling panjang :max karakter.',
         ]);
 
         $laporan = $this->laporan($usulan);
-        $this->simpanBerkasLaporan($request, $laporan);
 
         $isian = ['tentang' => filled($data['tentang'] ?? null) ? trim($data['tentang']) : null];
 
@@ -265,26 +252,72 @@ class LaporanPerjadinController extends Controller
             $this->tulisTindakLanjut($laporan, $data['tindak_lanjut'] ?? []);
         });
 
-        $this->simpanDokumentasi($request, $laporan);
+        return $this->simpanUnggahan($request, $usulan, $laporan);
+    }
 
+    /**
+     * Isian sudah tersimpan saat sampai di sini. Unggahan ditimbang
+     * sesudahnya dan terpisah: foto kamera ponsel kerap melebihi batas, dan
+     * satu foto yang ditolak tidak boleh membatalkan uraian yang sudah diketik.
+     * Laporan yang unggahannya ditolak tidak diteruskan ke pimpinan.
+     */
+    private function simpanUnggahan(Request $request, Usulan $usulan, LaporanPerjadin $laporan): RedirectResponse
+    {
+        $request->session()->flash('isian_tersimpan', true);
+
+        $aturan = ['berkas_laporan' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:10240']];
+
+        if ($laporan->formatKemenkes()) {
+            foreach (BagianLaporan::cases() as $bagian) {
+                $aturan["dokumentasi.{$bagian->value}"] = ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:2048'];
+            }
+        }
+
+        $ditolak = Validator::make($request->allFiles(), $aturan, [
+            'dokumentasi.*.mimes' => 'Dokumentasi berupa foto JPG atau PNG.',
+            'dokumentasi.*.max' => 'Ukuran foto dokumentasi paling besar 2 MB.',
+            'dokumentasi.*.uploaded' => 'Foto dokumentasi gagal terunggah, kemungkinan ukurannya terlalu besar.',
+            'berkas_laporan.mimes' => 'Berkas laporan harus berupa PDF, Word, JPG, atau PNG.',
+            'berkas_laporan.max' => 'Ukuran berkas laporan paling besar 10 MB.',
+            'berkas_laporan.uploaded' => 'Berkas laporan gagal terunggah, kemungkinan ukurannya terlalu besar.',
+        ])->errors();
+
+        $this->simpanBerkasLaporan($request, $laporan, $ditolak);
+
+        if ($laporan->formatKemenkes()) {
+            $this->simpanDokumentasi($request, $laporan, $ditolak);
+        }
+
+        $kembali = redirect()->route('dokumen.laporan.edit', $usulan->no_usulan);
+
+        if ($ditolak->isNotEmpty()) {
+            return $kembali->withErrors($ditolak)
+                ->with('error', 'Isi laporan sudah tersimpan, tetapi unggahan berikut ditolak. Perbaiki lalu unggah lagi.');
+        }
+
+        // Menyimpan dan mengirim adalah satu langkah bagi pelaksana: isinya
+        // tersimpan, dinyatakan selesai, lalu langsung ke meja pimpinan.
         if ($request->input('action') === 'kirim') {
             return $this->selesaikanDanKirim($request, $usulan, $laporan->fresh());
         }
 
-        return redirect()
-            ->route('dokumen.laporan.edit', $usulan->no_usulan)
-            ->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
+        return $kembali->with('success', 'Isi laporan tersimpan sebagai draf. Tekan Simpan & Kirim ke Pimpinan bila sudah lengkap.');
     }
 
     /**
      * Foto dokumentasi per bagian: yang diunggah menggantikan foto lama
-     * bagian itu, centang hapus melepasnya.
+     * bagian itu, centang hapus melepasnya. Foto yang ditolak tidak mengubah
+     * apa pun pada bagiannya.
      */
-    private function simpanDokumentasi(Request $request, LaporanPerjadin $laporan): void
+    private function simpanDokumentasi(Request $request, LaporanPerjadin $laporan, MessageBag $ditolak): void
     {
         $tersimpan = $laporan->dokumentasi()->get()->keyBy(fn (LaporanDokumentasi $foto) => $foto->bagian->value);
 
         foreach (BagianLaporan::cases() as $bagian) {
+            if ($ditolak->has("dokumentasi.{$bagian->value}")) {
+                continue;
+            }
+
             $lama = $tersimpan->get($bagian->value);
 
             if ($request->hasFile("dokumentasi.{$bagian->value}")) {
@@ -336,18 +369,25 @@ class LaporanPerjadinController extends Controller
      */
     private function isianAwal(Usulan $usulan): array
     {
+        // Uraian usulan tidak berbatas, sedangkan judul laporan berbatas:
+        // isian awal yang terlalu panjang akan menggagalkan tiap penyimpanan.
         return [
-            'tentang' => app(FormatLaporanPerjadin::class)->maksud($usulan),
+            'tentang' => mb_substr(app(FormatLaporanPerjadin::class)->maksud($usulan), 0, self::BATAS_TENTANG),
             BagianLaporan::Dasar->value => filled($usulan->no_tugas) ? 'Surat Tugas Nomor '.$usulan->no_tugas : '',
         ];
     }
 
     /**
      * Berkas laporan yang diunggah menggantikan yang lama; centang hapus
-     * melepasnya. Tanpa keduanya, berkas yang tersimpan dibiarkan.
+     * melepasnya. Tanpa keduanya, atau bila unggahannya ditolak, berkas yang
+     * tersimpan dibiarkan.
      */
-    private function simpanBerkasLaporan(Request $request, LaporanPerjadin $laporan): void
+    private function simpanBerkasLaporan(Request $request, LaporanPerjadin $laporan, MessageBag $ditolak): void
     {
+        if ($ditolak->has('berkas_laporan')) {
+            return;
+        }
+
         $lama = $laporan->berkas_laporan;
 
         if ($request->hasFile('berkas_laporan')) {

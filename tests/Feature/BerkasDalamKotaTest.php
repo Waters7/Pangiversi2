@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\BerkasLpj;
 use App\Enums\JenisPerjadin;
+use App\Enums\KategoriBiaya;
 use App\Enums\PeranPengguna;
 use App\Enums\RuasTransport;
 use App\Enums\StatusUsulan;
@@ -355,7 +356,7 @@ class BerkasDalamKotaTest extends TestCase
         $this->isiBerkasDalamKota($usulan);
 
         $usulan->peserta()->create(['id_user' => $this->pelaksana->id, 'nama' => $this->pelaksana->nama, 'peran' => 'ketua']);
-        app(SinkronBiayaDokumen::class)->selaraskanDaftarRiil($usulan->fresh());
+        app(SinkronBiayaDokumen::class)->selaraskan($usulan->fresh());
 
         $baris = collect($this->penagih()->checklist($usulan->fresh()))
             ->firstWhere('label', 'Nota Transportasi Lokal');
@@ -363,13 +364,15 @@ class BerkasDalamKotaTest extends TestCase
         $this->assertTrue($baris['terpenuhi']);
         $this->assertSame(['Transport lokal'], array_column($baris['berkas'], 'label'));
 
-        $daftar = DaftarRiil::firstWhere('id_usulan', $usulan->id);
+        // Perjalanan dalam kota tidak memakai daftar riil: notanya menjadi
+        // baris rincian biaya.
+        $this->assertNull(DaftarRiil::firstWhere('id_usulan', $usulan->id));
 
-        $this->assertSame(
-            ['Transport lokal — Kantor ke lokasi kegiatan'],
-            $daftar->rincian()->pluck('uraian')->all(),
-        );
-        $this->assertSame(75_000.0, (float) $daftar->fresh()->total_riil);
+        $baris = $usulan->fresh('keuangan.rincianBiaya')->keuangan->rincianBiaya
+            ->firstWhere('kategori', KategoriBiaya::TransportLokalRincian);
+
+        $this->assertSame('Transport lokal — Kantor ke lokasi kegiatan', $baris->komponen);
+        $this->assertSame(75_000.0, (float) $baris->jumlah);
     }
 
     // ── Master data dapat menyesuaikan ──

@@ -10,8 +10,10 @@ use Illuminate\Validation\ValidationException;
 /**
  * Transport lokal yang dicatat tim keuangan sendiri.
  *
- * Transport lokal tidak punya tempat di rincian biaya: ia dipertanggung-
- * jawabkan lewat Daftar Pengeluaran Riil pelaksana. Dulu baris rincian yang
+ * Pada perjalanan lintas pulau transport lokal tidak punya tempat di rincian
+ * biaya: ia dipertanggungjawabkan lewat Daftar Pengeluaran Riil pelaksana.
+ * Jalur lain tidak melewati kelas ini — transport lokalnya baris rincian
+ * biaya biasa (KategoriBiaya::TransportLokalRincian). Dulu baris rincian yang
  * dipindah ke kategori Transport Lokal tersembunyi dari tabel dan cetakan
  * — tampak hilang — padahal masih menambah total. Kini baris itu benar-benar
  * pindah ke daftar riil: tampil pada tabel Transport Lokal, pada Periksa

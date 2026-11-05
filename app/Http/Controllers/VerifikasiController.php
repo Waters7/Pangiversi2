@@ -6,6 +6,7 @@ use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\LaporanPerjadin;
+use App\Services\JalurPersetujuan;
 use Illuminate\View\View;
 
 /**
@@ -58,6 +59,7 @@ class VerifikasiController extends Controller
             if ($daftar) {
                 return view('verifikasi.tampil', [
                     'daftar' => $daftar,
+                    'jalurBerkas' => $this->jalurKode($daftar, $kode),
                     'keuangan' => null,
                     'nominatif' => null,
                     'jenis' => $jenis,
@@ -98,20 +100,35 @@ class VerifikasiController extends Controller
             ->first();
     }
 
+    /**
+     * Rincian biaya dan daftar riil menumpang satu baris berkas tetapi
+     * bertanda tangan sendiri-sendiri, jadi kodenya dicari pada kedua jalur.
+     * Kode hanya sah selama tanda tangan jalurnya masih berlaku.
+     */
     private function tandaTanganPpk(string $kode): ?DaftarRiil
     {
         return DaftarRiil::with(['usulan:id,no_usulan,created_at', 'ppk:id,nama,nip'])
-            ->where('kode_verifikasi', $kode)
-            ->sudahDitandatangani()
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('kode_verifikasi', $kode)->whereNotNull('ditandatangani_at'))
+                ->orWhere(fn ($w) => $w->where('rincian_kode_verifikasi', $kode)->whereNotNull('rincian_ditandatangani_at')))
             ->first();
     }
 
     private function tandaTanganPelaksana(string $kode): ?DaftarRiil
     {
         return DaftarRiil::with(['usulan:id,no_usulan,created_at', 'peserta:id,nama,nip'])
-            ->where('kode_konfirmasi', $kode)
-            ->whereNotNull('disetujui_pegawai_at')
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('kode_konfirmasi', $kode)->whereNotNull('disetujui_pegawai_at'))
+                ->orWhere(fn ($w) => $w->where('rincian_kode_konfirmasi', $kode)->whereNotNull('rincian_disetujui_at')))
             ->first();
+    }
+
+    /** Jalur dokumen pemilik kode ini: rincian biaya, atau daftar riil. */
+    private function jalurKode(DaftarRiil $daftar, string $kode): JalurPersetujuan
+    {
+        return $daftar->jalur(in_array($kode, [$daftar->rincian_kode_verifikasi, $daftar->rincian_kode_konfirmasi], true)
+            ? JalurPersetujuan::RINCIAN
+            : JalurPersetujuan::RIIL);
     }
 
     /**

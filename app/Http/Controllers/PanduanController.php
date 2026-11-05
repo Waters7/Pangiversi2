@@ -137,6 +137,19 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.58',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Dokumen pertanggungjawaban tetap dapat diunggah setelah PPK menandatangani rincian biaya; nominal yang sudah tercantum terkunci dan tidak ikut berubah.',
+                    'Daftar pengeluaran riil kini hanya untuk perjalanan luar kota lintas pulau. Jalur lain memasukkan transport lokal ke rincian biaya, dan daftar nominatifnya otomatis terbit begitu rincian biaya ditandatangani PPK.',
+                    'Halaman muka menampilkan panel Dokumen untuk Anda Tandatangani bagi setiap pengguna yang rincian biaya atau daftar riilnya sudah dikirim tim keuangan.',
+                    'Submenu baru Integrasi Mappalus: daftar nominatif bertanda tangan dikirim per pelaksana, dengan status berhasil atau gagal, pencegah data ganda, tombol Sinkron Sekarang, dan kirim ulang per baris.',
+                    'PPK dapat mencabut tanda tangan daftar nominatif yang keliru supaya dapat dikoreksi; Riwayat Tanda Tangan kini juga memuat tanda tangan rincian biaya.',
+                    'QR tanda tangan pada cetakan rincian biaya kini terbit walau perjalanannya tanpa daftar riil, dan halaman verifikasi mengenali kode rincian biaya.',
+                    'Simpan Draf laporan perjalanan dinas tidak lagi menghilangkan isian: foto yang ditolak tidak membatalkan uraian, dan isian yang belum tersimpan pulih dari peramban setelah sesi habis.',
+                ],
+            ],
+            [
                 'versi' => '2.5.57',
                 'tanggal' => '3 November 2026',
                 'butir' => [

@@ -140,6 +140,8 @@
                                     Tanda Tangani
                                 </button>
                             </form>
+                        @else
+                            <x-cabut-tanda-tangan-nominatif :nominatif="$nominatif" />
                         @endunless
                         @endcan
 

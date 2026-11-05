@@ -1,6 +1,6 @@
 {{-- Berkas laporan opsional: melengkapi isian laporan, misalnya laporan
      lengkap berfoto yang sudah disusun pelaksana. --}}
-<div>
+<div data-unggahan>
     <label for="berkas_laporan" class="block text-sm font-semibold text-slate-700 mb-1.5">
         Berkas laporan <span class="font-normal text-slate-400">— opsional</span>
     </label>
@@ -17,7 +17,7 @@
         </div>
     @endif
     @unless ($terkunci)
-        <input type="file" name="berkas_laporan" id="berkas_laporan" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+        <input type="file" name="berkas_laporan" id="berkas_laporan" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" data-maks-mb="10"
                class="w-full px-4 py-2.5 rounded-xl text-sm bg-white transition border {{ $errors->has('berkas_laporan') ? 'border-red-500' : 'border-slate-200' }}
                       file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200">
         <p class="text-xs text-slate-400 mt-1">
@@ -25,6 +25,7 @@
             atau PNG, maks. 10 MB. Isian di atas tetap diisi karena dikonfirmasi pimpinan.
         </p>
     @endunless
+    <p class="text-red-500 text-xs mt-1" data-galat-unggahan hidden></p>
     @error('berkas_laporan')
         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
     @enderror

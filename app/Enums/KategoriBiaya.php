@@ -12,7 +12,18 @@ enum KategoriBiaya: string
 
     case UangHarian = 'uang_harian';
 
+    /**
+     * Transport lokal perjalanan luar kota lintas pulau. Bukan baris rincian
+     * biaya: ia dipertanggungjawabkan lewat Daftar Pengeluaran Riil.
+     */
     case TransportLokal = 'transport_lokal';
+
+    /**
+     * Transport lokal jalur lain, yang tidak memakai Daftar Pengeluaran Riil:
+     * baris rincian biaya biasa — ikut terhitung, tercetak, dan disahkan
+     * bersama rincian biayanya.
+     */
+    case TransportLokalRincian = 'transport_lokal_rincian';
 
     case Penginapan = 'penginapan';
 
@@ -26,7 +37,7 @@ enum KategoriBiaya: string
         return match ($this) {
             self::Transport => 'Transport',
             self::UangHarian => 'Uang Harian',
-            self::TransportLokal => 'Transport Lokal',
+            self::TransportLokal, self::TransportLokalRincian => 'Transport Lokal',
             self::Penginapan => 'Uang Penginapan',
             self::Penyelenggaraan => 'Biaya Penyelenggaraan',
             self::Lainnya => 'Biaya Lainnya',
@@ -41,7 +52,7 @@ enum KategoriBiaya: string
         return match ($this) {
             self::Transport => 1,
             self::UangHarian => 2,
-            self::TransportLokal => 3,
+            self::TransportLokal, self::TransportLokalRincian => 3,
             self::Penginapan => 4,
             self::Penyelenggaraan => 5,
             self::Lainnya => 6,
@@ -61,7 +72,7 @@ enum KategoriBiaya: string
         return match ($this) {
             self::Transport => 'bg-blue-100 text-blue-700',
             self::UangHarian => 'bg-teal-100 text-teal-700',
-            self::TransportLokal => 'bg-indigo-100 text-indigo-700',
+            self::TransportLokal, self::TransportLokalRincian => 'bg-indigo-100 text-indigo-700',
             self::Penginapan => 'bg-amber-100 text-amber-700',
             self::Penyelenggaraan => 'bg-rose-100 text-rose-700',
             self::Lainnya => 'bg-slate-100 text-slate-600',
@@ -85,24 +96,48 @@ enum KategoriBiaya: string
     /**
      * Pilihan kategori pada formulir tim keuangan.
      *
-     * Transport lokal tetap dapat dipilih, tetapi tidak menjadi baris rincian
+     * Pada perjalanan lintas pulau transport lokal tidak menjadi baris rincian
      * biaya: komponennya dicatat pada Daftar Pengeluaran Riil pelaksana,
-     * bersama nota transportasinya. Labelnya menyebut tujuan itu supaya
-     * tidak disangka hilang.
+     * bersama nota transportasinya, dan labelnya menyebut tujuan itu supaya
+     * tidak disangka hilang. Jalur lain mencatatnya sebagai baris rincian.
      *
      * @return array<string, string>
      */
-    public static function untukTimKeuangan(): array
+    public static function untukTimKeuangan(bool $memakaiDaftarRiil = true): array
     {
-        return array_merge(self::options(), [self::TransportLokal->value => self::TransportLokal->label().' → Daftar Riil']);
+        $pilihan = [];
+
+        foreach (self::options() as $nilai => $label) {
+            match (true) {
+                $nilai !== self::TransportLokal->value => $pilihan[$nilai] = $label,
+                $memakaiDaftarRiil => $pilihan[$nilai] = $label.' → Daftar Riil',
+                default => $pilihan[self::TransportLokalRincian->value] = $label,
+            };
+        }
+
+        return $pilihan;
     }
 
     /**
+     * Kategori transport lokal yang berlaku bagi jalur perjalanan, supaya
+     * kiriman formulir lama tidak salah masuk dokumen.
+     */
+    public function untukJalur(bool $memakaiDaftarRiil): self
+    {
+        return match ($this) {
+            self::TransportLokal, self::TransportLokalRincian => $memakaiDaftarRiil ? self::TransportLokal : self::TransportLokalRincian,
+            default => $this,
+        };
+    }
+
+    /**
+     * Kelompok pada dokumen rincian. Kedua transport lokal satu kelompok.
+     *
      * @return list<self>
      */
     public static function urutanCetak(): array
     {
-        $kategori = self::cases();
+        $kategori = array_filter(self::cases(), fn (self $item) => $item !== self::TransportLokalRincian);
 
         usort($kategori, fn (self $a, self $b) => $a->urutan() <=> $b->urutan());
 

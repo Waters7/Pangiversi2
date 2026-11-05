@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\KategoriBiaya;
+use App\Models\AuditLog;
 use App\Models\DaftarNominatif;
 use App\Models\DaftarRiil;
 use App\Models\Notifikasi;
+use App\Models\PengirimanMappalus;
 use App\Models\User;
 use App\Models\Usulan;
+use App\Services\AuditService;
+use App\Services\JalurPersetujuan;
 use App\Services\NotifikasiService;
 use App\Services\PenyusunNominatif;
 use Carbon\Carbon;
@@ -27,6 +31,7 @@ class PersetujuanPpkController extends Controller
     public function __construct(
         private PenyusunNominatif $penyusun,
         private NotifikasiService $notifikasi,
+        private AuditService $audit,
     ) {}
 
     /**
@@ -348,6 +353,45 @@ class PersetujuanPpkController extends Controller
         return back()->with('success', 'Daftar nominatif ditandatangani dan otomatis terkirim ke tim keuangan.');
     }
 
+    /**
+     * Cabut tanda tangan daftar nominatif yang ternyata keliru. Daftarnya
+     * ditarik dari tim keuangan dan kembali menunggu tanda tangan; akun, tim
+     * kerja, dan barisnya tetap, supaya yang dikoreksi hanya yang salah.
+     */
+    public function batalTandaTanganNominatif(Request $request, DaftarNominatif $nominatif): RedirectResponse
+    {
+        if (! $nominatif->sudahDitandatangani()) {
+            return back()->with('error', 'Daftar nominatif ini belum ditandatangani.');
+        }
+
+        $alasan = $request->validate(['alasan' => ['required', 'string', 'min:10', 'max:500']], [
+            'alasan.required' => 'Tuliskan kesalahan yang perlu dikoreksi.',
+            'alasan.min' => 'Tuliskan kesalahan yang perlu dikoreksi, sedikitnya :min karakter.',
+        ])['alasan'];
+
+        $nominatif->batalkanTandaTangan();
+
+        $this->audit->catat(
+            AuditLog::AKSI_DOKUMEN,
+            "Tanda tangan daftar nominatif surat tugas {$nominatif->no_tugas} dicabut: {$alasan}",
+        );
+
+        $this->notifikasi->kirimKePeran(
+            [User::ROLE_TIM_KEUANGAN],
+            'Tanda tangan daftar nominatif dicabut',
+            "Daftar nominatif surat tugas {$nominatif->no_tugas} ditarik PPK untuk dikoreksi: {$alasan}",
+            [
+                'tipe' => Notifikasi::TIPE_INFO,
+                'url' => route('laporan.nominatif'),
+            ],
+        );
+
+        $diterimaMappalus = PengirimanMappalus::where('id_nominatif', $nominatif->id)->whereNotNull('sidik_diterima')->count();
+
+        return back()->with('success', 'Tanda tangan dicabut. Daftar kembali menunggu tanda tangan dan QR pada cetakan lamanya tidak berlaku lagi.'
+            .($diterimaMappalus > 0 ? " {$diterimaMappalus} data pelaksananya sudah diterima Mappalus; periksa kembali setelah dikoreksi." : ''));
+    }
+
     // ── Riwayat tanda tangan ──
 
     /**
@@ -364,21 +408,15 @@ class PersetujuanPpkController extends Controller
             ? $request->input('jenis')
             : null;
 
-        $berkas = DaftarRiil::with('usulan', 'peserta', 'ppk')
-            ->whereNotNull('ditandatangani_at')
+        // Rincian biaya ditandatangani terpisah dari daftar riil, dan perjalanan
+        // tanpa transport lokal tidak punya daftar riil sama sekali.
+        $berkas = DaftarRiil::with('usulan.keuangan.rincianBiaya', 'peserta', 'rincian')
+            ->where(fn ($q) => $q->whereNotNull('ditandatangani_at')->orWhereNotNull('rincian_ditandatangani_at'))
             ->get()
-            ->map(fn (DaftarRiil $item) => [
-                'jenis' => 'berkas',
-                'label' => 'Rincian Biaya & Daftar Riil',
-                'nomor' => $item->usulan?->no_usulan ?? '—',
-                'keterangan' => $item->peserta?->nama,
-                'nilai' => (float) $item->total_riil,
-                'waktu' => $item->ditandatangani_at,
-                'ppk' => $item->ppk,
-                'tautan' => $item->usulan
-                    ? route('daftar-riil.cetak', [$item->usulan, $item->peserta])
-                    : null,
-            ]);
+            ->flatMap(fn (DaftarRiil $item) => [$item->jalurRincian(), $item->jalur()])
+            ->filter(fn (JalurPersetujuan $jalur) => $jalur->sudahDitandatangani())
+            ->map(fn (JalurPersetujuan $jalur) => $this->barisRiwayatBerkas($jalur))
+            ->values();
 
         $nominatif = DaftarNominatif::with('ppk')
             ->whereNotNull('ditandatangani_at')
@@ -410,6 +448,31 @@ class PersetujuanPpkController extends Controller
                 'nominatif' => $nominatif->count(),
             ],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function barisRiwayatBerkas(JalurPersetujuan $jalur): array
+    {
+        $item = $jalur->berkas();
+
+        $tautan = match (true) {
+            ! $item->usulan => null,
+            $jalur->jenis() === JalurPersetujuan::RINCIAN => route('keuangan.cetak-rincian', $item->usulan),
+            default => route('daftar-riil.cetak', [$item->usulan, $item->peserta]),
+        };
+
+        return [
+            'jenis' => 'berkas',
+            'label' => $jalur->nama(),
+            'nomor' => $item->usulan?->no_usulan ?? '—',
+            'keterangan' => $item->peserta?->nama,
+            'nilai' => $jalur->total(),
+            'waktu' => $jalur->waktu('ditandatangani'),
+            'ppk' => $jalur->ppk(),
+            'tautan' => $tautan,
+        ];
     }
 
     /**

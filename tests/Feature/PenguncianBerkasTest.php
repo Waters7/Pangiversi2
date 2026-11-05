@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ArahTiket;
 use App\Enums\StatusUsulan;
 use App\Models\DaftarRiil;
 use App\Models\Keuangan;
@@ -82,6 +83,15 @@ class PenguncianBerkasTest extends TestCase
         return DaftarRiil::firstWhere('id_usulan', $this->usulan->id)->fresh();
     }
 
+    private function rincianDisahkanPpk(): DaftarRiil
+    {
+        $berkas = $this->berkasSampaiKePelaksana();
+        $berkas->jalurRincian()->setujui();
+        $berkas->jalurRincian()->tandaTangani($this->ppk);
+
+        return $berkas->fresh();
+    }
+
     private function rincianDokumen(): RincianBiaya
     {
         return $this->usulan->fresh('keuangan.rincianBiaya')->keuangan->rincianBiaya
@@ -158,17 +168,110 @@ class PenguncianBerkasTest extends TestCase
 
     // ── Penguncian unggahan pelaksana ──
 
-    public function test_pelaksana_tidak_dapat_mengubah_berkas_yang_sudah_ditandatangani(): void
+    public function test_berkas_tetap_dapat_diunggah_setelah_ppk_menandatangani_rincian(): void
     {
-        $berkas = $this->berkasSampaiKePelaksana();
-        $berkas->jalur()->setujui();
+        $this->rincianDisahkanPpk();
 
         $this->actingAs($this->pelaksana)
             ->post(route('dokumen.store', $this->usulan), [
                 'section' => 'penugasan',
                 'sppd' => UploadedFile::fake()->create('sppd-baru.pdf', 40, 'application/pdf'),
             ])
-            ->assertForbidden();
+            ->assertSessionHas('success', 'Dokumen berhasil diunggah.');
+
+        $this->assertNotSame('dokumen/berkas.pdf', $this->usulan->dokumen()->first()->sppd);
+
+        $this->actingAs($this->pelaksana)
+            ->get(route('dokumen.show', $this->usulan))
+            ->assertOk()
+            ->assertSee('Nominal terkunci — berkas tetap dapat diunggah')
+            ->assertSee('Simpan Dokumen Penugasan');
+    }
+
+    /** Berkas boleh diganti, tetapi angka yang sudah disahkan tidak ikut bergeser. */
+    public function test_nominal_yang_tercantum_tidak_berubah_saat_berkas_diunggah_ulang(): void
+    {
+        $this->rincianDisahkanPpk();
+        $total = (float) $this->usulan->fresh('keuangan')->keuangan->total;
+
+        $this->actingAs($this->pelaksana)
+            ->post(route('dokumen.store', $this->usulan), [
+                'section' => 'tiket',
+                'arah' => ArahTiket::Pergi->value,
+                'kota_asal' => 'Manado',
+                'kota_tujuan' => 'Jakarta',
+                'nomor_tiket' => 'TKT-PERGI',
+                'kode_booking' => 'ABC123',
+                'harga' => 9_000_000,
+                'boarding_pass' => UploadedFile::fake()->create('boarding-baru.pdf', 40, 'application/pdf'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($this->pelaksana)
+            ->post(route('dokumen.store', $this->usulan), [
+                'section' => 'akomodasi',
+                'bill_hotel_no_transaksi' => 'TRX-0001',
+                'bill_hotel_nominal' => 9_000_000,
+                'bill_hotel' => UploadedFile::fake()->create('hotel-baru.pdf', 40, 'application/pdf'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(2_500_000.0, (float) $this->usulan->tiket()->firstWhere('arah', ArahTiket::Pergi->value)->harga);
+        $this->assertSame(850_000.0, (float) $this->usulan->dokumen()->first()->bill_hotel_nominal);
+        $this->assertNotSame('dokumen/boarding-pass.pdf', $this->usulan->tiket()->firstWhere('arah', ArahTiket::Pergi->value)->boarding_pass);
+        $this->assertSame($total, (float) $this->usulan->fresh('keuangan')->keuangan->total);
+    }
+
+    public function test_biaya_tercantum_tidak_dapat_dinyatakan_tidak_ada_setelah_rincian_disahkan(): void
+    {
+        $this->usulan->dokumen()->updateOrCreate(['id_usulan' => $this->usulan->id], [
+            'penyelenggaraan_ada' => true,
+            'penyelenggaraan_nominal' => 300_000,
+            'penyelenggaraan_bukti' => 'dokumen/bukti.pdf',
+        ]);
+        $this->rincianDisahkanPpk();
+
+        $this->actingAs($this->pelaksana)
+            ->post(route('dokumen.store', $this->usulan), ['section' => 'penyelenggaraan', 'penyelenggaraan_ada' => '0'])
+            ->assertSessionHasNoErrors();
+
+        $dokumen = $this->usulan->dokumen()->first();
+
+        $this->assertTrue((bool) $dokumen->penyelenggaraan_ada);
+        $this->assertSame(300_000.0, (float) $dokumen->penyelenggaraan_nominal);
+        $this->assertSame('dokumen/bukti.pdf', $dokumen->penyelenggaraan_bukti);
+    }
+
+    /** Nota mengalir ke daftar riil, jadi tanda tangan daftar riil yang menguncinya. */
+    public function test_nota_pada_daftar_riil_bertanda_tangan_tidak_berubah_dan_tidak_dicabut(): void
+    {
+        $berkas = $this->berkasSampaiKePelaksana();
+        $berkas->jalur()->setujui();
+
+        $this->actingAs($this->pelaksana)
+            ->post(route('dokumen.store', $this->usulan), [
+                'section' => 'nota',
+                'ruas' => [1 => ['nominal' => 999_000, 'hapus' => '1']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(150_000.0, (float) $this->usulan->notaTransport()->firstWhere('urutan', 1)->nominal);
+        $this->assertSame(150_000.0, (float) $berkas->fresh()->total_riil);
+    }
+
+    /** Rincian saja yang disahkan: nota yang menyusul masih masuk daftar riil. */
+    public function test_nota_tetap_dapat_diisi_saat_hanya_rincian_yang_disahkan(): void
+    {
+        $this->rincianDisahkanPpk();
+
+        $this->actingAs($this->pelaksana)
+            ->post(route('dokumen.store', $this->usulan), [
+                'section' => 'nota',
+                'ruas' => [1 => ['nominal' => 200_000]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(200_000.0, (float) DaftarRiil::firstWhere('id_usulan', $this->usulan->id)->total_riil);
     }
 
     /**

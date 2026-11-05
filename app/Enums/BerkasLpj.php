@@ -75,9 +75,9 @@ enum BerkasLpj: string
      * mengaturnya sendiri.
      *
      * Nota transport hanya ditagih pada perjalanan luar kota lintas pulau.
-     * Jalur lain tidak memiliki transport lokal, jadi daftar pengeluaran
-     * riilnya kosong — tidak perlu ditandatangani — dan berkasnya langsung
-     * dapat masuk daftar nominatif.
+     * Jalur lain tidak memakai daftar pengeluaran riil: transport lokalnya
+     * dicatat tim keuangan pada rincian biaya, dan daftar nominatifnya terbit
+     * begitu rincian biaya itu ditandatangani PPK.
      *
      * @return list<self>
      */

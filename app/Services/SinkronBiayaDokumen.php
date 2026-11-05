@@ -132,10 +132,16 @@ class SinkronBiayaDokumen
      */
     public function selaraskanDaftarRiil(Usulan $usulan): void
     {
+        // Nota jalur lain sudah menjadi baris rincian biaya.
+        if (! $usulan->memakaiDaftarRiil()) {
+            return;
+        }
+
         $daftar = $this->daftarRiilPelaksana($usulan);
 
-        // Daftar yang sudah ditandatangani tidak boleh berubah diam-diam.
-        if (! $daftar || $daftar->sudah_ditandatangani) {
+        // Daftar yang sudah ditandatangani — pelaksana maupun PPK — tidak boleh
+        // berubah diam-diam, walau buktinya masih dapat diunggah.
+        if (! $daftar || app(PenguncianBerkas::class)->daftarRiil($usulan)) {
             return;
         }
 
@@ -285,9 +291,21 @@ class SinkronBiayaDokumen
             );
         }
 
-        // Biaya transport lokal sengaja tidak masuk rincian biaya: ia
-        // dipertanggungjawabkan lewat Daftar Pengeluaran Riil, sesuai
-        // Lampiran IX PMK 113/2012. Lihat selaraskanDaftarRiil().
+        // Pada perjalanan lintas pulau transport lokal tidak masuk rincian
+        // biaya: ia dipertanggungjawabkan lewat Daftar Pengeluaran Riil, sesuai
+        // Lampiran IX PMK 113/2012 — lihat selaraskanDaftarRiil(). Jalur lain
+        // tidak memakai daftar itu, jadi notanya menjadi baris rincian biaya.
+        if (! $usulan->memakaiDaftarRiil()) {
+            foreach ($usulan->notaTransport->filter->terisi() as $nota) {
+                $baris['nota:'.$nota->urutan] = $this->baris(
+                    KategoriBiaya::TransportLokalRincian,
+                    $nota->label,
+                    'OK',
+                    (float) $nota->nominal,
+                    null,
+                );
+            }
+        }
 
         $dokumen = $usulan->dokumen->last();
 

@@ -27,6 +27,7 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LaporanPerjadinController;
 use App\Http\Controllers\LaporanPimpinanController;
 use App\Http\Controllers\LokasiTujuanController;
+use App\Http\Controllers\MappalusController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\ModulDalamPengembanganController;
 use App\Http\Controllers\NewsFeedEksekutifController;
@@ -231,6 +232,7 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('can:menandatangani-daftar-riil')->group(function () {
             Route::put('/nominatif/{nominatif}/tanda-tangan', [PersetujuanPpkController::class, 'tandaTanganiNominatif'])->name('persetujuan.nominatif.tanda-tangan');
+            Route::delete('/nominatif/{nominatif}/tanda-tangan', [PersetujuanPpkController::class, 'batalTandaTanganNominatif'])->name('persetujuan.nominatif.batal-tanda-tangan');
         });
     });
 
@@ -481,6 +483,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/integrasi', [IntegrasiDataController::class, 'index'])->name('administrasi.integrasi');
         Route::put('/integrasi/jadwal', [IntegrasiDataController::class, 'simpanJadwal'])->name('administrasi.integrasi.jadwal');
         Route::post('/integrasi/kirim', [IntegrasiDataController::class, 'kirimSekarang'])->name('administrasi.integrasi.kirim');
+
+        // Integrasi Mappalus (super administrator): daftar nominatif bertanda
+        // tangan dikirim per pelaksana, dengan status dan sinkron manual.
+        Route::get('/mappalus', [MappalusController::class, 'index'])->name('administrasi.mappalus');
+        Route::put('/mappalus/pengaturan', [MappalusController::class, 'simpan'])->name('administrasi.mappalus.pengaturan');
+        Route::post('/mappalus/sinkron', [MappalusController::class, 'sinkronkan'])->name('administrasi.mappalus.sinkron');
+        Route::post('/mappalus/kirim-ulang/{referensi}', [MappalusController::class, 'kirimUlang'])->name('administrasi.mappalus.kirim-ulang');
 
         // Pemantauan Server (super administrator): ukuran aplikasi di
         // peladen dan peringatan WhatsApp saat aplikasi tidak dapat diakses.

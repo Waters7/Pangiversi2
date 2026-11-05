@@ -154,6 +154,16 @@ class Usulan extends Model
         return $this->jalur() === JenisPerjadin::LuarKotaDalamProvinsi;
     }
 
+    /**
+     * Hanya perjalanan luar kota lintas pulau yang memakai Daftar Pengeluaran
+     * Riil beserta tanda tangannya. Jalur lain memasukkan transport lokalnya
+     * ke rincian biaya, jadi cukup rincian biaya itu yang disahkan.
+     */
+    public function memakaiDaftarRiil(): bool
+    {
+        return $this->jalur() === JenisPerjadin::LuarKota;
+    }
+
     /** Supervisi di dalam kota tidak berdasar SPD bertanda tangan. */
     public function butuhSpd(): bool
     {
