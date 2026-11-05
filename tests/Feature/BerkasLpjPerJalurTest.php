@@ -205,6 +205,30 @@ class BerkasLpjPerJalurTest extends TestCase
         );
     }
 
+    /** Ruas rumah dan bandara hanya ada pada perjalanan lintas pulau, walau pernah dicentang. */
+    public function test_nota_empat_ruas_khusus_lintas_pulau(): void
+    {
+        foreach ([JenisPerjadin::LuarKotaDalamProvinsi, JenisPerjadin::Supervisi] as $jalur) {
+            $this->atur()->simpan($jalur, ['sppd', 'nota_transport', 'laporan']);
+
+            $this->assertNotContains(BerkasLpj::NotaTransport, $this->atur()->untuk($jalur));
+        }
+
+        $this->atur()->simpan(JenisPerjadin::LuarKota, ['sppd', 'nota_transport', 'laporan']);
+        $this->assertContains(BerkasLpj::NotaTransport, $this->atur()->untuk(JenisPerjadin::LuarKota));
+
+        $usulan = $this->usulan('LK-NFB', JenisPerjadin::LuarKotaDalamProvinsi->value);
+
+        $this->actingAs($this->admin)
+            ->get(route('dokumen.show', $usulan))
+            ->assertOk()
+            ->assertDontSee('Rumah ke bandara');
+
+        $halaman = $this->actingAs($this->admin)->get(route('administrasi.berkas-lpj'))->assertOk();
+
+        $this->assertSame(2, substr_count($halaman->getContent(), 'name="berkas[nota_transport]"'));
+    }
+
     public function test_berkas_dapat_ditambahkan_pada_jalur_supervisi(): void
     {
         $usulan = $this->usulan('SV-LK', 'supervisi');

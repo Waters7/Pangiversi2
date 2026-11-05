@@ -30,7 +30,10 @@ class PengaturanBerkasLpj
      */
     public function untuk(JenisPerjadin $jenis): array
     {
-        return $this->hafalan[$jenis->value] ??= $this->baca($jenis);
+        return $this->hafalan[$jenis->value] ??= array_values(array_filter(
+            $this->baca($jenis),
+            fn (BerkasLpj $berkas) => $berkas !== BerkasLpj::NotaTransport || $jenis->bolehNotaTransport(),
+        ));
     }
 
     /**

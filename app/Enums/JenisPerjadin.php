@@ -45,6 +45,15 @@ enum JenisPerjadin: string
         };
     }
 
+    /**
+     * Nota empat ruas, dari rumah ke bandara sampai kembali ke rumah, khusus
+     * lintas pulau. Dalam kota yang tidak melewati bandara punya satu ruas.
+     */
+    public function bolehNotaTransport(): bool
+    {
+        return in_array($this, [self::LuarKota, self::DalamKota], true);
+    }
+
     /** Nama pendek untuk kolom tabel dan saringan yang sempit. */
     public function labelSingkat(): string
     {

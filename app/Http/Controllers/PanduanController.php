@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.64',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Status kiriman pada halaman rincian biaya hanya menyebut Daftar Pengeluaran Riil bila perjalanannya punya transport lokal. Nota empat ruas, dari rumah ke bandara sampai kembali, kini khusus perjalanan luar kota lintas pulau, dan pilihannya tidak lagi tersedia pada jalur dalam provinsi dan supervisi.',
+                ],
+            ],
+            [
                 'versi' => '2.5.63',
                 'tanggal' => '5 November 2026',
                 'butir' => [

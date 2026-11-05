@@ -947,7 +947,10 @@
                         // Sanggahannya ditampilkan di sini — tempat nominalnya
                         // diperbaiki — beserta pengiriman ulangnya; tanpa itu berkas
                         // buntu: pelaksana menunggu dan PPK tidak dapat menandatangani.
-                        $jalurBerkas = $berkasRiil ? [$berkasRiil->jalurRincian(), $berkasRiil->jalur()] : [];
+                        // Daftar riil hanya terbit bila ada transport lokalnya.
+                        $jalurBerkas = $berkasRiil
+                            ? array_filter([$berkasRiil->jalurRincian(), $berkasRiil->berlaku() ? $berkasRiil->jalur() : null])
+                            : [];
                         $jalurDisanggah = collect($jalurBerkas)->filter(fn ($jalur) => $jalur->sedangDisanggah());
                         $kirimUlang = (bool) $berkasRiil?->sudahDikirimKePegawai();
                     @endphp
@@ -956,7 +959,7 @@
                         <div class="w-full mb-3 px-4 py-2.5 bg-teal-50 border border-teal-100 rounded-xl">
                             <p class="text-xs font-bold text-teal-800 text-center">Sudah dikirim ke pelaksana</p>
                             @foreach ($jalurBerkas as $jalur)
-                                <p class="mt-1 flex items-start justify-between gap-2 text-[11px] text-teal-700">
+                                <p class="mt-1 flex items-start justify-between gap-2 text-[11px] text-teal-700" data-jalur-kiriman="{{ $jalur->jenis() }}">
                                     <span>{{ $jalur->nama() }}</span>
                                     <span class="font-semibold text-right">{{ $jalur->statusLabel() }}</span>
                                 </p>
@@ -976,7 +979,7 @@
                               action="{{ route('daftar-riil.kirim-pegawai', [$usulan->no_usulan, $pesertaUtama]) }}"
                               class="mb-3"
                               x-data
-                              @submit.prevent="if (confirm('{{ $kirimUlang ? 'Kirim ulang berkas yang sudah diperbaiki' : 'Kirim rincian biaya dan daftar pengeluaran riil' }} ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
+                              @submit.prevent="if (confirm('{{ $kirimUlang ? 'Kirim ulang berkas yang sudah diperbaiki' : ($berkasRiil?->berlaku() ? 'Kirim rincian biaya dan daftar pengeluaran riil' : 'Kirim rincian biaya') }} ke {{ addslashes($pesertaUtama->nama) }}?')) $el.submit()">
                             @csrf @method('PUT')
                             <button type="submit" @disabled($alasanTertahan !== null)
                                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition

@@ -54,6 +54,7 @@
 
                     <div class="p-4 space-y-2">
                         @foreach ($berkas as $item)
+                            @continue($item === \App\Enums\BerkasLpj::NotaTransport && ! $jenis->bolehNotaTransport())
                             <label class="flex items-start gap-3 px-3.5 py-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                                 <input type="checkbox" name="berkas[{{ $item->value }}]" value="{{ $item->value }}"
                                        @checked(in_array($item->value, $dipilih, true))

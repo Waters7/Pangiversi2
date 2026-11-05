@@ -139,6 +139,25 @@ class DaftarRiilLintasPulauTest extends TestCase
             ->assertSee('data-transport-lokal-riil', false);
     }
 
+    public function test_status_kiriman_hanya_menyebut_daftar_riil_bila_ada_transport_lokal(): void
+    {
+        $usulan = $this->usulan(JenisPerjadin::LuarKota);
+        $peserta = $usulan->peserta()->first();
+        $berkas = DaftarRiil::create(['id_usulan' => $usulan->id, 'id_peserta' => $peserta->id, 'total_riil' => 0]);
+        $berkas->kirimKePegawai();
+
+        $halaman = fn () => $this->actingAs($this->timKeuangan)->get(route('keuangan.detail', $usulan))->assertOk();
+
+        $halaman()
+            ->assertSee('Sudah dikirim ke pelaksana')
+            ->assertSee('data-jalur-kiriman="rincian"', false)
+            ->assertDontSee('data-jalur-kiriman="riil"', false);
+
+        $berkas->update(['total_riil' => 150_000]);
+
+        $halaman()->assertSee('data-jalur-kiriman="riil"', false);
+    }
+
     public function test_transport_lokal_tercetak_pada_rincian_dan_kolom_transport_nominatif(): void
     {
         $usulan = $this->usulan(JenisPerjadin::DalamKota);
