@@ -179,6 +179,22 @@ class PembebananAnggaranTest extends TestCase
         $this->assertDatabaseHas(AuditLog::class, ['aksi' => AuditLog::AKSI_BIAYA, 'objek' => 'pembebanan-nominatif']);
     }
 
+    /** Formulirnya hanya menyebut nama tim; angkanya ada pada ringkasan pagu dan realisasi. */
+    public function test_pilihan_tim_kerja_tidak_memuat_nominal(): void
+    {
+        $this->nominatif('KP.03.01/TIM/1/2026');
+
+        $pilihan = fn (array $alokasi) => $alokasi['pilihan'][$this->tahun->id][$this->akunBiasa->id];
+
+        $this->actingAs($this->admin)
+            ->get(route('pembebanan-anggaran'))
+            ->assertOk()
+            ->assertViewHas('alokasi', fn (array $alokasi) => $pilihan($alokasi) === [
+                ['tim' => $this->penjaminanMutu->id, 'nama' => 'Pusat Penjaminan Mutu', 'sumber' => $this->rm],
+            ])
+            ->assertDontSee('"pagu":', false);
+    }
+
     public function test_tim_kerja_harus_berpagu_pada_akun_dan_sumber_dananya(): void
     {
         $nominatif = $this->nominatif('ST/SALAH/2026');

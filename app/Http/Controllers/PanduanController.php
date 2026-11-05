@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.60',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Pilihan tim kerja pada formulir pembebanan kini hanya menyebut nama timnya, tanpa nominal.',
+                ],
+            ],
+            [
                 'versi' => '2.5.59',
                 'tanggal' => '5 November 2026',
                 'butir' => [

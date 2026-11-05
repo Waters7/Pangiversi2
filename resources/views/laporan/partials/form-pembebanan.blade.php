@@ -57,22 +57,17 @@
     window.alokasiTimKerja = @json($alokasi['pilihan'] ?? []);
 
     document.addEventListener('alpine:init', () => {
-        const rupiah = new Intl.NumberFormat('id-ID');
-
         Alpine.data('pembebananNominatif', (awal) => ({
             ...awal,
 
-            // Satu pilihan per tim; sumber dana dan pagunya disebut pada labelnya.
+            // Satu pilihan per tim, cukup namanya.
             pilihan() {
                 const baris = ((window.alokasiTimKerja[this.tahun] || {})[this.akun] || [])
                     .filter((b) => !this.sumber || String(b.sumber) === this.sumber);
                 const perTim = {};
                 baris.forEach((b) => { (perTim[b.tim] ||= []).push(b); });
 
-                return Object.values(perTim).map((alokasi) => ({
-                    tim: alokasi[0].tim,
-                    label: alokasi[0].nama + ' · ' + alokasi.map((b) => (b.sumber_kode || 'Tanpa sumber') + ' Rp ' + rupiah.format(b.pagu)).join(' / '),
-                }));
+                return Object.values(perTim).map((alokasi) => ({ tim: alokasi[0].tim, label: alokasi[0].nama }));
             },
 
             sesuaikanTim() {

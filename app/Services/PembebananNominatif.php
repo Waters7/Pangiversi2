@@ -23,7 +23,7 @@ class PembebananNominatif
      * Alokasi pagu tim kerja satu tahun anggaran, untuk mengisi pilihan
      * tim kerja menurut akun yang dipilih.
      *
-     * @return array<int, list<array{tim: int, nama: string, sumber: ?int, sumber_kode: ?string, pagu: float}>>
+     * @return array<int, list<array{tim: int, nama: string, sumber: ?int}>>
      */
     public function pilihanTim(?TahunAnggaran $tahun): array
     {
@@ -38,8 +38,6 @@ class PembebananNominatif
                     'tim' => $pagu->id_tim_kerja,
                     'nama' => $pagu->timKerja->nama,
                     'sumber' => $pagu->id_kategori_pembiayaan,
-                    'sumber_kode' => $pagu->sumberDana?->kode,
-                    'pagu' => (float) $pagu->pagu,
                 ])
                 ->values()
                 ->all())
@@ -51,7 +49,7 @@ class PembebananNominatif
      * untuk seluruh daftar yang tampil.
      *
      * @param  Collection<int, DaftarNominatif>  $daftar
-     * @return array{tahun: array<int, ?int>, pilihan: array<int, array<int, list<array{tim: int, nama: string, sumber: ?int, sumber_kode: ?string, pagu: float}>>>}
+     * @return array{tahun: array<int, ?int>, pilihan: array<int, array<int, list<array{tim: int, nama: string, sumber: ?int}>>>}
      */
     public function untukDaftar(Collection $daftar): array
     {
