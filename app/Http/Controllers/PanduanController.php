@@ -137,6 +137,13 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.61',
+                'tanggal' => '5 November 2026',
+                'butir' => [
+                    'Pembebanan Anggaran tidak lagi menampilkan pagu, realisasi, dan sisa; kartunya kini hanya menyebut tim kerja dan sumber dana tiap akun.',
+                ],
+            ],
+            [
                 'versi' => '2.5.60',
                 'tanggal' => '5 November 2026',
                 'butir' => [

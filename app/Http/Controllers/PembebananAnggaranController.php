@@ -22,7 +22,7 @@ use Illuminate\View\View;
  * Menu Pembebanan Anggaran: menetapkan sumber dana, akun pembiayaan, dan
  * tim kerja tiap daftar nominatif — yang masih menunggu tanda tangan PPK,
  * yang sudah ditandatangani, maupun yang sudah diterima tim keuangan —
- * berdampingan dengan pagu dan realisasi tiap tim kerja.
+ * berdampingan dengan tim kerja tiap akun.
  */
 class PembebananAnggaranController extends Controller
 {

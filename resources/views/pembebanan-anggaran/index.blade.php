@@ -37,12 +37,12 @@
         </p>
     </div>
 
-    {{-- Pagu dan realisasi tiap tim kerja per akun --}}
+    {{-- Tim kerja tiap akun --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6" data-anggaran-tim>
         <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h3 class="font-bold text-slate-800 text-sm">Pagu dan Realisasi per Tim Kerja{{ $tahunAnggaran ? ' — TA '.$tahunAnggaran->tahun : '' }}</h3>
-                <p class="text-xs text-slate-400">Realisasi dihitung dari daftar nominatif yang sudah diberi akun dan tim kerja.</p>
+                <h3 class="font-bold text-slate-800 text-sm">Tim Kerja per Akun{{ $tahunAnggaran ? ' — TA '.$tahunAnggaran->tahun : '' }}</h3>
+                <p class="text-xs text-slate-400">Tim kerja yang dapat dipilih pada tiap akun, beserta sumber dananya.</p>
             </div>
             @if ($pilihanTahun->count() > 1)
                 <form method="GET" action="{{ route('pembebanan-anggaran') }}">
@@ -63,26 +63,15 @@
 
         @forelse ($anggaranTim as $akun)
             <div class="px-6 py-4 border-b border-slate-100 last:border-b-0">
-                <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-                    <p class="text-sm font-bold text-slate-700">
-                        <span class="font-mono text-blue-700">{{ $akun['kode'] }}</span> {{ $akun['nama'] }}
-                    </p>
-                    <p class="text-xs text-slate-500">
-                        Pagu akun {{ $rupiah($akun['pagu']) }} · realisasi {{ $rupiah($akun['realisasi']) }}
-                        @if ($akun['belum_bertim'] > 0)
-                            · <span class="text-amber-600">{{ $rupiah($akun['belum_bertim']) }} belum bertim kerja</span>
-                        @endif
-                    </p>
-                </div>
+                <p class="text-sm font-bold text-slate-700 mb-2">
+                    <span class="font-mono text-blue-700">{{ $akun['kode'] }}</span> {{ $akun['nama'] }}
+                </p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-xs">
                         <thead>
                             <tr class="text-slate-400 text-left">
                                 <th class="py-1.5 pr-3 font-semibold">Tim Kerja</th>
-                                <th class="py-1.5 pr-3 font-semibold">Sumber</th>
-                                <th class="py-1.5 pr-3 font-semibold text-right">Pagu</th>
-                                <th class="py-1.5 pr-3 font-semibold text-right">Realisasi</th>
-                                <th class="py-1.5 font-semibold text-right">Sisa</th>
+                                <th class="py-1.5 font-semibold">Sumber</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50">
@@ -94,10 +83,7 @@
                                             <span class="text-slate-400">· {{ $tim['kewadiran'] }}</span>
                                         @endif
                                     </td>
-                                    <td class="py-1.5 pr-3 text-slate-500">{{ $tim['sumber'] ?? '—' }}</td>
-                                    <td class="py-1.5 pr-3 text-right text-slate-700 whitespace-nowrap">{{ $rupiah($tim['pagu']) }}</td>
-                                    <td class="py-1.5 pr-3 text-right text-slate-700 whitespace-nowrap">{{ $rupiah($tim['realisasi']) }}</td>
-                                    <td class="py-1.5 text-right whitespace-nowrap {{ $tim['melebihi'] ? 'text-red-600 font-bold' : 'text-slate-700' }}">{{ $rupiah($tim['sisa']) }}</td>
+                                    <td class="py-1.5 text-slate-500">{{ $tim['sumber'] ?? '—' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -105,7 +91,7 @@
                 </div>
             </div>
         @empty
-            <p class="px-6 py-5 text-xs text-slate-400">Belum ada pagu tim kerja pada tahun anggaran ini.</p>
+            <p class="px-6 py-5 text-xs text-slate-400">Belum ada tim kerja pada tahun anggaran ini.</p>
         @endforelse
     </div>
 

@@ -763,7 +763,7 @@
                 saja, juga sebelum PPK menandatanganinya, bagi super administrator dan peran yang diberi hak
                 <strong>Menetapkan akun dan tim kerja daftar nominatif</strong>; tiap daftarnya menyebut kegiatan dan nama
                 pelaksananya, dapat dicari menurut nomor surat tugas, nama pelaksana, atau kegiatan, dan
-                ringkasannya memuat pagu, realisasi, dan sisa tiap tim kerja. Rincian yang sudah ditandatangani pelaksana
+                ringkasannya menyebut tim kerja dan sumber dana tiap akun. Rincian yang sudah ditandatangani pelaksana
                 dan PPK langsung tampil di <strong>Arsip Rincian Lengkap</strong>. Arsip Daftar Riil, Arsip
                 Rincian Lengkap, dan List Daftar Nominatif punya tombol <strong>Export Excel</strong> yang
                 memuat seluruh baris pada saringan yang sedang dipilih. Menu <strong>Dokumen Perdin</strong>

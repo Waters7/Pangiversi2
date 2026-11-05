@@ -179,7 +179,7 @@ class PembebananAnggaranTest extends TestCase
         $this->assertDatabaseHas(AuditLog::class, ['aksi' => AuditLog::AKSI_BIAYA, 'objek' => 'pembebanan-nominatif']);
     }
 
-    /** Formulirnya hanya menyebut nama tim; angkanya ada pada ringkasan pagu dan realisasi. */
+    /** Formulirnya hanya menyebut nama tim. */
     public function test_pilihan_tim_kerja_tidak_memuat_nominal(): void
     {
         $this->nominatif('KP.03.01/TIM/1/2026');
@@ -263,7 +263,12 @@ class PembebananAnggaranTest extends TestCase
 
         $this->actingAs($this->admin)
             ->get(route('pembebanan-anggaran'))
-            ->assertSeeInOrder(['Pagu dan Realisasi per Tim Kerja', '524111', 'Pusat Penjaminan Mutu', 'Rp 41.564.000', 'Rp 8.558.568']);
+            ->assertSeeInOrder(['Tim Kerja per Akun', '524111', 'Pusat Penjaminan Mutu', 'RM'])
+            ->assertDontSee('Rp 41.564.000')
+            ->assertDontSee('Pagu akun')
+            ->assertDontSee('>Pagu</th>', false)
+            ->assertDontSee('>Realisasi</th>', false)
+            ->assertDontSee('>Sisa</th>', false);
     }
 
     public function test_pagu_tim_kerja_ta_2026_mengikuti_daftar_anggaran_fix(): void
