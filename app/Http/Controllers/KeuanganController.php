@@ -305,7 +305,9 @@ class KeuanganController extends Controller
         $ringkasanBayar = $this->ringkasan->untuk($usulan);
         $rincianTerhapus = $usulan->keuangan->rincianBiaya()->onlyTrashed()->latest('deleted_at')->get();
 
-        $data = compact('usulan', 'komponenBiaya', 'kategoriBiaya', 'ringkasanBayar', 'rincianTerhapus');
+        $tautanHubungiPelaksana = $this->penagih->tautanHubungiPelaksana($usulan);
+
+        $data = compact('usulan', 'komponenBiaya', 'kategoriBiaya', 'ringkasanBayar', 'rincianTerhapus', 'tautanHubungiPelaksana');
 
         if ($usulan->keuangan->status === 'lunas') {
             return view('keuangan.paid', $data);

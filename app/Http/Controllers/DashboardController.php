@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StatusUsulan;
-use App\Models\DaftarRiil;
 use App\Models\Keuangan;
 use App\Models\SuratPerjalananDinas;
-use App\Models\User;
 use App\Models\Usulan;
 use App\Services\AntreanPeran;
-use App\Services\JalurPersetujuan;
+use App\Services\DokumenTandaTanganSaya;
 use App\Services\PenagihDokumen;
 use App\Services\PengingatDokumen;
 use Illuminate\Support\Carbon;
@@ -38,6 +36,7 @@ class DashboardController extends Controller
         private PengingatDokumen $pengingat,
         private PenagihDokumen $penagih,
         private AntreanPeran $antrean,
+        private DokumenTandaTanganSaya $tandaTanganSaya,
     ) {}
 
     public function __invoke()
@@ -125,38 +124,9 @@ class DashboardController extends Controller
             // Berkas yang menunggu tindakan peran ini, bukan perjalanannya
             // sendiri. Kosong bagi pelaksana biasa, dan panelnya menghilang.
             'antrean' => $this->antrean->panel($user),
-            'tandaTanganSaya' => $this->dokumenMenungguTandaTangan($user),
+            'tandaTanganSaya' => $this->tandaTanganSaya->untuk($user),
             'pembayaran' => $this->ringkasanPembayaran($perjalanan),
         ]);
-    }
-
-    /**
-     * Rincian biaya dan daftar riil yang sudah dikirim tim keuangan dan
-     * menunggu tanda tangan pengguna ini sebagai pelaksana.
-     *
-     * Berlaku bagi semua peran, sebab pimpinan dan tim keuangan pun bisa
-     * menjadi pelaksana. Yang terdekat batas sanggahnya tampil lebih dulu.
-     *
-     * @return Collection<int, array{jalur: JalurPersetujuan, usulan: Usulan, tautan: string}>
-     */
-    private function dokumenMenungguTandaTangan(User $user): Collection
-    {
-        return DaftarRiil::with(['usulan.keuangan.rincianBiaya', 'rincian'])
-            ->whereNotNull('dikirim_ke_pegawai_at')
-            ->whereHas('peserta', fn ($query) => $query->where('id_user', $user->id))
-            ->orderBy('batas_sanggah')
-            ->get()
-            ->flatMap(fn (DaftarRiil $berkas) => [$berkas->jalurRincian(), $berkas->jalur()])
-            ->filter(fn (JalurPersetujuan $jalur) => $jalur->bolehDitandatanganiPelaksana())
-            ->map(fn (JalurPersetujuan $jalur) => [
-                'jalur' => $jalur,
-                'usulan' => $jalur->berkas()->usulan,
-                'tautan' => route(
-                    $jalur->jenis() === JalurPersetujuan::RINCIAN ? 'rincian-saya.rincian-biaya' : 'rincian-saya.daftar-riil',
-                    ['cari' => $jalur->berkas()->usulan->no_usulan],
-                ),
-            ])
-            ->values();
     }
 
     /**

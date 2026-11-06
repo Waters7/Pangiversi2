@@ -14,6 +14,8 @@ enum PesanWhatsapp: string
 {
     case PenagihanBerkas = 'penagihan_berkas';
 
+    case HubungiPelaksana = 'hubungi_pelaksana';
+
     case GangguanServer = 'gangguan_server';
 
     case PengingatServer = 'pengingat_server';
@@ -26,6 +28,7 @@ enum PesanWhatsapp: string
     {
         return match ($this) {
             self::PenagihanBerkas => 'Penagihan berkas pertanggungjawaban',
+            self::HubungiPelaksana => 'Menghubungi pelaksana',
             self::GangguanServer => 'Peringatan server tidak dapat diakses',
             self::PengingatServer => 'Pengingat server masih belum pulih',
             self::PulihServer => 'Kabar server kembali normal',
@@ -37,6 +40,7 @@ enum PesanWhatsapp: string
     {
         return match ($this) {
             self::PenagihanBerkas => 'Dikirim tim keuangan kepada pelaksana lewat tombol Tagih berkas pada menu Keuangan.',
+            self::HubungiPelaksana => 'Pembuka percakapan dari tombol Hubungi Pelaksana pada halaman input rincian biaya.',
             self::GangguanServer => 'Dikirim pemantau server ke nomor peringatan saat aplikasi pertama kali tidak dapat diakses.',
             self::PengingatServer => 'Diulang ke nomor peringatan selama gangguan belum pulih.',
             self::PulihServer => 'Dikirim ke nomor peringatan saat aplikasi kembali dapat diakses.',
@@ -47,7 +51,7 @@ enum PesanWhatsapp: string
     /** Pesan pemantau server — tetap terkirim meski basis data mati. */
     public function pesanServer(): bool
     {
-        return $this !== self::PenagihanBerkas;
+        return ! in_array($this, [self::PenagihanBerkas, self::HubungiPelaksana], true);
     }
 
     /**
@@ -65,6 +69,11 @@ enum PesanWhatsapp: string
                 'tanggal_selesai' => 'Tanggal perjalanan berakhir',
                 'daftar_berkas' => 'Daftar berkas yang belum diunggah, bernomor',
                 'jumlah_berkas' => 'Banyaknya berkas yang belum diunggah',
+            ],
+            self::HubungiPelaksana => [
+                'nama' => 'Nama pelaksana',
+                'no_usulan' => 'Nomor usulan perjadin',
+                'lokasi' => 'Tujuan perjalanan',
             ],
             self::GangguanServer => [
                 'sejak' => 'Waktu gangguan mulai terdeteksi',
@@ -119,6 +128,11 @@ enum PesanWhatsapp: string
                 'daftar_berkas' => "1. Tiket Pulang (boarding pass)\n2. Bill hotel",
                 'jumlah_berkas' => '2',
             ],
+            self::HubungiPelaksana => [
+                'nama' => 'Maya Sari Wulandari, S.Tr.Keb',
+                'no_usulan' => 'PJ-DIR-2026-10-001',
+                'lokasi' => 'Jakarta',
+            ],
             self::GangguanServer, self::PengingatServer => [
                 'lama' => '1 jam 5 menit',
                 'sejak' => '12 Okt 2026, 09.15 WITA',
@@ -147,6 +161,10 @@ enum PesanWhatsapp: string
                 ."{daftar_berkas}\n\n"
                 ."Mohon diunggah melalui aplikasi PANGI pada menu Dokumen agar pembayaran dapat kami proses.\n\n"
                 .'Terima kasih. — Tim Keuangan Poltekkes Kemenkes Manado',
+            self::HubungiPelaksana => "Selamat pagi/siang {nama},\n\n"
+                .'Kami dari Tim Keuangan Poltekkes Kemenkes Manado ingin mengonfirmasi rincian biaya '
+                ."perjalanan dinas {no_usulan} ke {lokasi}.\n\n"
+                .'Terima kasih.',
             self::GangguanServer => "*PERINGATAN — PANGI tidak dapat diakses*\n"
                 ."Sejak: {sejak}\n"
                 ."Alamat: {alamat}\n\n"

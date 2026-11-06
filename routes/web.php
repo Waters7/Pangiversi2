@@ -39,6 +39,7 @@ use App\Http\Controllers\PemantauanServerController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\PembebananAnggaranController;
 use App\Http\Controllers\PengaturanDokumenController;
+use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\PeranController;
 use App\Http\Controllers\PersetujuanController;
 use App\Http\Controllers\PersetujuanPpkController;
@@ -311,6 +312,16 @@ Route::middleware('auth')->group(function () {
     });
 
     // Panduan penggunaan — terbuka untuk seluruh peran
+    // Pengumuman dibaca semua pengguna, dikelola tim keuangan dan super administrator.
+    Route::get('/pengumuman', [PengumumanController::class, 'index'])->name('pengumuman.index');
+    Route::middleware('can:mengelola-pengumuman')->group(function () {
+        Route::get('/pengumuman/buat', [PengumumanController::class, 'create'])->name('pengumuman.create');
+        Route::post('/pengumuman', [PengumumanController::class, 'store'])->name('pengumuman.store');
+        Route::get('/pengumuman/{pengumuman}/ubah', [PengumumanController::class, 'edit'])->name('pengumuman.edit');
+        Route::put('/pengumuman/{pengumuman}', [PengumumanController::class, 'update'])->name('pengumuman.update');
+        Route::delete('/pengumuman/{pengumuman}', [PengumumanController::class, 'destroy'])->name('pengumuman.destroy');
+    });
+
     Route::get('/panduan', PanduanController::class)->name('panduan');
     Route::get('/panduan/unduh', [PanduanController::class, 'unduh'])->name('panduan.unduh');
 

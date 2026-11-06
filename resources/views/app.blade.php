@@ -227,6 +227,10 @@
   {{-- Jalan pintas melaporkan kendala, tersedia dari halaman mana pun --}}
   <x-tombol-bantuan />
 
+  @if ($popupMasuk)
+    <x-popup-masuk :pengumuman="$popupMasuk['pengumuman']" :dokumen="$popupMasuk['dokumen']" />
+  @endif
+
 @stack('scripts')
 </body>
 </html>

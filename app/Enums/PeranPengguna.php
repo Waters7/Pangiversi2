@@ -160,6 +160,7 @@ enum PeranPengguna: string
                 Kemampuan::MelihatDashboardEksekutif,
                 Kemampuan::MelihatLaporan,
                 Kemampuan::MelihatArsipPerjadin,
+                Kemampuan::MengelolaPengumuman,
             ],
 
             // Tim SDM melihat siapa saja yang akan berangkat dan mengelola akun

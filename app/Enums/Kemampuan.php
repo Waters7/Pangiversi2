@@ -93,6 +93,12 @@ enum Kemampuan: string
      */
     case MenetapkanAkunNominatif = 'menetapkan-akun-nominatif';
 
+    /**
+     * Membuat, mengubah, dan menghapus pengumuman. Membacanya terbuka bagi
+     * seluruh pengguna, jadi tidak memerlukan kemampuan apa pun.
+     */
+    case MengelolaPengumuman = 'mengelola-pengumuman';
+
     case MengelolaMasterData = 'mengelola-master-data';
 
     case MengelolaPengguna = 'mengelola-pengguna';
@@ -187,6 +193,7 @@ enum Kemampuan: string
             self::MelihatLaporan => 'Melihat laporan dan rekap',
             self::MelihatArsipPerjadin => 'Melihat arsip daftar riil dan nominatif',
             self::MenetapkanAkunNominatif => 'Menetapkan akun dan tim kerja daftar nominatif',
+            self::MengelolaPengumuman => 'Mengelola pengumuman',
             self::MengelolaMasterData => 'Mengelola master data',
             self::MengelolaPengguna => 'Mengelola pengguna',
             self::MelihatJejakAudit => 'Melihat jejak audit',

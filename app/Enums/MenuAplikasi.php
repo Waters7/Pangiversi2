@@ -33,6 +33,8 @@ enum MenuAplikasi: string
 
     case PembebananAnggaran = 'pembebanan-anggaran';
 
+    case Pengumuman = 'pengumuman';
+
     case MasterData = 'master-data';
 
     case JejakAudit = 'jejak-audit';
@@ -54,6 +56,7 @@ enum MenuAplikasi: string
             self::Keuangan => 'Keuangan',
             self::LaporanArsip => 'Laporan & Arsip',
             self::PembebananAnggaran => 'Pembebanan Anggaran',
+            self::Pengumuman => 'Pengumuman',
             self::MasterData => 'Master Data',
             self::JejakAudit => 'Jejak Audit',
             self::AdministrasiSistem => 'Administrasi Sistem',
@@ -75,6 +78,7 @@ enum MenuAplikasi: string
             self::Keuangan => 'Rincian biaya per usulan beserta validasinya.',
             self::LaporanArsip => 'Rekap anggaran, arsip daftar riil, rincian lengkap, dan daftar nominatif.',
             self::PembebananAnggaran => 'Menetapkan sumber dana, akun, dan tim kerja tiap daftar nominatif, baik yang masih diproses maupun yang sudah lengkap tanda tangannya.',
+            self::Pengumuman => 'Membuat pengumuman yang tampil pada menu Pengumuman dan popup saat masuk.',
             self::MasterData => 'Unit kerja, lokasi, kategori, komponen biaya, pangkat dan golongan, tahun anggaran, dan jenis kegiatan.',
             self::JejakAudit => 'Riwayat setiap tindakan pengguna.',
             self::AdministrasiSistem => 'Akun pengguna, impor & ekspor, pengaturan sistem, peran dan hak akses, tampilan dokumen cetak, berkas pertanggungjawaban, serta format pesan WhatsApp.',
@@ -101,6 +105,7 @@ enum MenuAplikasi: string
             self::Keuangan => [Kemampuan::MelihatKeuangan, Kemampuan::MengelolaBiaya, Kemampuan::MemvalidasiBiaya, Kemampuan::MenghapusRincianBiaya],
             self::LaporanArsip => [Kemampuan::MelihatArsipPerjadin, Kemampuan::MelihatLaporan],
             self::PembebananAnggaran => [Kemampuan::MenetapkanAkunNominatif],
+            self::Pengumuman => [Kemampuan::MengelolaPengumuman],
             self::MasterData => [Kemampuan::MengelolaMasterData, Kemampuan::MenghapusMasterData],
             self::JejakAudit => [Kemampuan::MelihatJejakAudit],
             self::AdministrasiSistem => [Kemampuan::MengelolaPengguna, Kemampuan::MenghapusPengguna, Kemampuan::MengelolaPeran, Kemampuan::MengaturDokumenCetak, Kemampuan::MengaturBerkasLpj, Kemampuan::MengaturFormatWhatsapp],

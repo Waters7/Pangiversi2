@@ -137,6 +137,15 @@ class PanduanController extends Controller
     {
         return [
             [
+                'versi' => '2.5.65',
+                'tanggal' => '6 November 2026',
+                'butir' => [
+                    'Saat masuk, popup Pemberitahuan untuk Anda memuat pengumuman yang sedang tayang dan dokumen pada Rincian Saya yang menunggu tanda tangan. Popup tidak muncul bila tidak ada yang perlu disampaikan.',
+                    'Menu Pengumuman terbuka bagi seluruh pengguna. Tim keuangan dan super administrator membuat, mengubah, dan menghapus pengumuman beserta masa tayangnya.',
+                    'Halaman input rincian biaya punya tombol Hubungi Pelaksana yang membuka WhatsApp ke nomor pada profil pelaksana. Kalimat pembukanya dapat diubah dari Format WhatsApp.',
+                ],
+            ],
+            [
                 'versi' => '2.5.64',
                 'tanggal' => '5 November 2026',
                 'butir' => [

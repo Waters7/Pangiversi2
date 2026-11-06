@@ -437,6 +437,23 @@ class PenagihDokumen
      * Mengembalikan null bila berkasnya sudah lengkap, atau nomor WhatsApp
      * pelaksana belum terdaftar.
      */
+    public function tautanHubungiPelaksana(Usulan $usulan): ?string
+    {
+        $nomor = $usulan->user?->nomor_whatsapp;
+
+        if (! $nomor) {
+            return null;
+        }
+
+        $pesan = $this->format->susun(PesanWhatsapp::HubungiPelaksana, [
+            'nama' => $usulan->user->nama,
+            'no_usulan' => (string) $usulan->no_usulan,
+            'lokasi' => (string) $usulan->lokasi,
+        ]);
+
+        return 'https://wa.me/'.$nomor.'?text='.rawurlencode($pesan);
+    }
+
     public function tautanWhatsapp(Usulan $usulan): ?string
     {
         $nomor = $usulan->user?->nomor_whatsapp;

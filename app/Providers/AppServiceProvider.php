@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Enums\Kemampuan;
+use App\Models\Pengumuman;
 use App\Models\User;
+use App\Services\DokumenTandaTanganSaya;
 use App\Services\PenentuHakAkses;
 use App\Services\PengaturanBerkasLpj;
 use App\Services\PengaturanDokumen;
@@ -39,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->daftarkanGateKemampuan();
         $this->bagikanNotifikasi();
+        $this->bagikanPopupMasuk();
     }
 
     /**
@@ -68,6 +71,30 @@ class AppServiceProvider extends ServiceProvider
                 'notifikasiBelumDibaca' => $pengguna?->notifikasi()->belumDibaca()->count() ?? 0,
                 'notifikasiTerbaru' => $pengguna?->notifikasi()->limit(5)->get() ?? collect(),
             ]);
+        });
+    }
+
+    /**
+     * Siapkan isi popup untuk halaman pertama setelah masuk. Penandanya
+     * langsung diambil, jadi popup hanya muncul sekali setiap masuk.
+     */
+    private function bagikanPopupMasuk(): void
+    {
+        ViewFacade::composer('app', function (View $view): void {
+            $pengguna = Auth::user();
+
+            if (! $pengguna || ! session()->pull('popup_masuk')) {
+                $view->with('popupMasuk', null);
+
+                return;
+            }
+
+            $pengumuman = Pengumuman::tayang()->latest('mulai_tayang')->latest('id')->limit(5)->get();
+            $dokumen = app(DokumenTandaTanganSaya::class)->untuk($pengguna);
+
+            $view->with('popupMasuk', $pengumuman->isEmpty() && $dokumen->isEmpty()
+                ? null
+                : ['pengumuman' => $pengumuman, 'dokumen' => $dokumen]);
         });
     }
 }

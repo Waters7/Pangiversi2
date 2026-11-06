@@ -24,6 +24,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $request->session()->put('popup_masuk', true);
             $this->catatLogin($request);
 
             return redirect()->intended(route('dashboard'));

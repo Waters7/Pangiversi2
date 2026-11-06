@@ -609,7 +609,9 @@
                 berstatus <strong>Sudah Dicek Tim Keuangan</strong> — dan pesan
                 <em>“Berkas menunggu tanda tangan Anda”</em> muncul di lonceng pemberitahuan.
                 Halaman muka juga menampilkannya pada panel <strong>Dokumen untuk Anda Tandatangani</strong>,
-                tertaut langsung ke dokumennya.
+                tertaut langsung ke dokumennya, dan popup <strong>Pemberitahuan untuk Anda</strong> menyebutkannya
+                setiap kali Anda masuk, bersama pengumuman yang sedang tayang. Semua pengumuman ada pada menu
+                <strong>Pengumuman</strong>.
                 Menu <strong>Rincian Saya</strong> di sidebar memuat keduanya, masing-masing pada
                 submenunya sendiri. Tiap kartu berkas memuat panel <strong>Pemantauan Berkas</strong>:
                 seluruh tanda tangan — tim keuangan, Anda, PPK, konfirmasi Direktur atas laporan,
@@ -707,7 +709,10 @@
                 hotel, atau biaya penyelenggaraan yang sudah diisi pelaksana beserta buktinya tidak
                 dapat ditambahkan lagi, sedangkan nominal yang Anda tetapkan lebih dulu mengunci
                 isian pelaksana untuk komponen itu. Baris transport menyebut tiket yang diwakilinya
-                — tiket pergi, pulang, keduanya (PP), atau bukan tiket pelaksana.
+                — tiket pergi, pulang, keduanya (PP), atau bukan tiket pelaksana. Tombol hijau
+                <strong>Hubungi Pelaksana</strong> di bawah Cetak Rincian Biaya membuka WhatsApp ke nomor
+                pada profil pelaksana, dengan kalimat pembuka yang dapat Anda ubah sebelum dikirim. Bila
+                nomornya belum terdaftar, catatan menggantikan tombolnya.
             </x-panduan-langkah>
 
             <x-panduan-langkah nomor="3" judul="Validasi tiap komponen">
@@ -755,7 +760,7 @@
                 kembali — dokumen yang sudah ditandatangani pelaksana tetap berlaku.
             </x-panduan-langkah>
 
-            <x-panduan-langkah nomor="7" judul="Pantau daftar nominatif dan arsip" :terakhir="true">
+            <x-panduan-langkah nomor="7" judul="Pantau daftar nominatif dan arsip">
                 Menu <strong>Laporan → List Daftar Nominatif</strong> memuat seluruh daftar yang
                 terbit — menunggu PPK, atau sudah ditandatangani dan langsung diterima tim keuangan —
                 beserta siapa saja pelaksana yang sudah menandatangani berkasnya; kategori, akun
@@ -772,6 +777,13 @@
                 memuat seluruh baris pada saringan yang sedang dipilih. Menu <strong>Dokumen Perdin</strong>
                 membuka seluruh perjalanan bagi tim keuangan, pimpinan, dan super administrator, dengan saringan
                 tahun, bulan, jalur, unit kerja, dan kelengkapan dokumen.
+            </x-panduan-langkah>
+
+            <x-panduan-langkah nomor="8" judul="Sampaikan pengumuman" :terakhir="true">
+                Menu <strong>Pengumuman</strong> memuat tombol <strong>Buat Pengumuman</strong>. Isi judul, isi,
+                dan masa tayangnya; tanggal selesai boleh kosong bila pengumuman tayang sampai dihapus. Selama
+                masa tayang, pengumuman tampil pada menu itu dan pada popup setiap pengguna masuk. Pengumuman yang
+                terjadwal dan yang sudah berakhir hanya terlihat oleh pengelolanya.
             </x-panduan-langkah>
 
             <div class="mt-6 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
